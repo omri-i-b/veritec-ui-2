@@ -19,11 +19,13 @@ Typography uses Inter across all surfaces. The overall feel is structured, tool-
 ## 2. Color Palette & Roles
 
 ### Background Surfaces
-- **Page Background** (`#ffffff`): Main content area
+- **Page Background** (`#ffffff`): Inbox content area, card interiors
+- **Detail Page Background** (`#f9fafb` / gray-50): Detail view page background (cards sit on top)
 - **Sidebar Background** (`#f9fafb` / gray-50): Left navigation panel
 - **Table Header** (`#f9fafb` / gray-50): Column header row
 - **Hover Row** (`#f9fafb` / gray-50): Table row hover state
 - **Active Nav Item** (`#eff6ff` / blue-50): Selected sidebar item background
+- **Filter Active** (`#eff6ff` / blue-50): Active filter button background
 
 ### Text & Content
 - **Primary Text** (`#18181b` / zinc-900): Headings, important labels
@@ -111,6 +113,20 @@ Typography uses Inter across all surfaces. The overall feel is structured, tool-
 | Row menu | Vertical dots | `DotsThreeVertical` |
 | Group | List bullets | `ListBullets` |
 | Upgrade | Diamond four | `DiamondsFour` |
+| Date Range filter | Calendar blank | `CalendarBlank` |
+| Document filter | File with text | `FileText` |
+| Classification filter | Tag | `Tag` |
+| Filing filter | Folder open | `FolderOpen` |
+| Reviewed filter | Check circle | `CheckCircle` |
+| Submenu expand | Caret right | `CaretRight` |
+| Undo action | Counter-clockwise | `ArrowCounterClockwise` |
+| Send message | Paper plane | `PaperPlaneTilt` |
+| Add sources | Plus | `Plus` |
+| Resync | Clockwise arrows | `ArrowsClockwise` |
+| Full preview | Eye | `Eye` |
+| Group header | Suitcase | `SuitcaseSimple` |
+| Group expand | Caret up | `CaretUp` |
+| Group collapse | Caret down | `CaretDown` |
 
 ## 5. Component Stylings
 
@@ -193,6 +209,75 @@ Typography uses Inter across all surfaces. The overall feel is structured, tool-
 - Avatar circle: 24px, zinc-100 bg, User icon 12px zinc-500
 - Name: 14px, zinc-700
 
+### Filter Popover
+
+**Components**: shadcn/ui `<Popover>`, `<PopoverContent>`, `<PopoverTrigger>`, `<Checkbox>`
+
+**Trigger Button States**
+- Default: standard outline button with Funnel icon
+- Open: blue-50 bg, blue-300 border, blue-800 text
+- Active (filters applied): same as open + blue-600 count badge (circle, 20px, white text)
+
+**Category List (Left Panel)**
+- Width: 200px
+- Items: icon (16px, zinc-500) + label (14px, zinc-700) + CaretRight (14px, zinc-400)
+- Hover: gray-50 bg
+- Active: gray-50 bg
+- Padding: 12px horizontal, 8px vertical
+
+**Filter Categories**
+| Category | Icon | Phosphor Name |
+|----------|------|---------------|
+| Date Range | Calendar | `CalendarBlank` |
+| Document | File | `FileText` |
+| Lead Lawyer | User | `User` |
+| Classification | Tag | `Tag` |
+| Filing | Folder | `FolderOpen` |
+| Reviewed | Check circle | `CheckCircle` |
+
+**Submenu Panel (Right Panel)**
+- Width: 200px
+- Border-left: 1px solid gray-200
+- Search input: height 32px (h-8), magnifying glass icon, 7px left padding
+- Checkbox list: scrollable, max-height 240px
+- Checkbox item: Checkbox + label (14px, zinc-700), 12px horizontal padding, 6px vertical
+- Checkbox checked: primary blue fill (shadcn default)
+
+**Filter Flow**
+1. Click Filter button → category list popover opens
+2. Click category → submenu expands with search + checkboxes
+3. Check options → filter badge count updates live on trigger button
+4. Close popover → table data filters in real-time
+5. Reopen → previous selections preserved
+
+### Grouped Table View
+
+**Trigger**: Group button in toolbar toggles between flat and grouped modes.
+
+**Group Button States**
+- Default: standard outline button with ListBullets icon
+- Active: blue-50 bg, blue-300 border, blue-800 text + blue-600 count badge (same pattern as Filter)
+
+**Group Header Row**
+- Full-width bar: gray-50 bg, hover gray-100, border-bottom gray-200
+- Layout: SuitcaseSimple icon (16px, zinc-500) + group name (14px semibold, zinc-900) + CaretUp/CaretDown (16px, zinc-400)
+- Padding: 16px horizontal, 10px vertical
+- Click toggles group open/closed
+
+**Grouped Data Rows**
+- Div-based layout (not HTML table) to support collapsible sections
+- Row layout: circle checkbox placeholder (20px) + filename (160px) + email/description (flex-1) + filing date (90px) + doc type badge (80px) + case number snippet (70px) + dots menu
+- Hover: gray-50 bg
+- Border-bottom: gray-200 between rows
+
+**Collapse/Expand**
+- Groups start expanded by default
+- Collapsed: header only, caret points down
+- Expanded: header + child rows, caret points up
+- Uses plain React state toggle (not Collapsible primitive, to avoid table DOM nesting issues)
+
+**Group By Field**: Project Name (current implementation)
+
 ### Upgrade Card (Sidebar Footer)
 - Background: white
 - Border: 1px solid slate-100
@@ -206,6 +291,71 @@ Typography uses Inter across all surfaces. The overall feel is structured, tool-
 - Border-bottom: 1px solid gray-200
 - Padding: 16px horizontal
 - Icon + title layout, vertically centered
+
+### Detail View (File Detail Page)
+
+**Layout Structure**
+- Full page: gray-50 background
+- Header bar: h-12, gray-50 bg, border-bottom gray-200
+- Content area: flex row, 16px padding and gap
+- Left: main content card (flex-1, white bg, rounded-[10px], border gray-200)
+- Right: two stacked sidebar cards (420px, white bg, rounded-[10px], border gray-200)
+
+**Breadcrumb Header**
+- Tray icon (bold, 16px) + "FileFlow Inbox" link + "/" divider + truncated title
+- Right side: "Reviewed by:" label + user avatar + name + vertical divider + Undo button + Approved badge
+- All in a single row, aligned center
+
+**Approved Badge**
+- Background: green-100, text: green-800
+- Border: transparent, rounded-full (pill shape)
+- Font: 12px medium
+
+**Tab Underline Style**
+- Custom tabs (not default shadcn style)
+- Active tab: semibold, blue-800 text, 3px blue-800 bottom border
+- Inactive tab: normal weight, zinc-700 text
+- Divider: 1px gray-200 line below tabs
+
+**Extracted Data Cards (Overview Tab)**
+- 2-column grid, 16px gap, fixed row height 104px
+- Card: rounded-[10px], border gray-200, 16px padding
+- Label: 12px semibold, zinc-500 (muted-foreground)
+- Value: 14px normal, zinc-900
+- Optional "Add Alert" ghost button on DATE card
+
+**AI Chat Input**
+- Outer: rounded-[10px], gray-50 bg, border gray-200
+- Inner: white bg, rounded-[10px], border zinc-200, 120px height
+- Placeholder: 14px, zinc-500
+- Footer: "Add Sources" ghost button (with gray-100 plus badge) + blue-800 rounded send button (50% opacity when empty)
+
+**Filing Sidebar Card**
+- Header: "Filling" (16px semibold)
+- Fields: label (12px semibold, zinc-500) + value (14px, zinc-900), 16px gap
+
+**Preview Sidebar Card**
+- Header: "Preview" + "Full Page Preview" link (with Eye icon)
+- Document thumbnail placeholders
+
+**Management Tab**
+- Classification section: 3-column grid (Name input, Type select, Project/Matter select)
+- Event section: bordered card with Date + Name inputs, "Other Reminders" list
+- Reminder items: CalendarBlank icon + date + vertical separator + label
+- Footer: Resync button + "Synced to Calendar" green badge
+
+### Detail View Icons
+
+| Context | Icon | Phosphor Name |
+|---------|------|---------------|
+| Breadcrumb back | Tray (bold) | `Tray` |
+| Undo action | Counter-clockwise arrow | `ArrowCounterClockwise` |
+| Add alert | Calendar | `CalendarBlank` |
+| Send message | Paper plane | `PaperPlaneTilt` |
+| Add sources | Plus | `Plus` |
+| Resync | Clockwise arrows | `ArrowsClockwise` |
+| Full preview | Eye | `Eye` |
+| User avatar | User silhouette | `User` |
 
 ## 6. Layout Principles
 
@@ -234,7 +384,7 @@ The design is data-dense but breathable. Tables use compact row heights with ade
 | Flat (0) | No shadow, white bg | Page content, table rows |
 | Surface (1) | gray-50 background | Sidebar, table headers |
 | Card (2) | White bg, 1px border, subtle backdrop-blur | Upgrade card |
-| Overlay (3) | Not yet implemented | Dropdowns, modals (future) |
+| Overlay (3) | White bg, shadow-md, ring-1 ring-foreground/10, rounded-lg | Filter popover, dropdowns |
 
 Veritec avoids drop shadows in favor of borders for depth. The sidebar uses a right border, the header uses a bottom border, and the table uses a full border container.
 
@@ -292,6 +442,10 @@ Veritec avoids drop shadows in favor of borders for depth. The sidebar uses a ri
 - `Input`
 - `Collapsible` (for expandable nav items)
 - `Tooltip` (via TooltipProvider in layout)
+- `Popover` (with PopoverTrigger, PopoverContent — used for filter dropdown)
+- `Checkbox` (for filter option selection — uses Phosphor Check icon)
+- `Separator` (vertical dividers in header, horizontal in sidebar)
+- `Tabs` (installed but custom tab implementation used for detail view underline style)
 
 ## 10. Agent Prompt Guide
 
