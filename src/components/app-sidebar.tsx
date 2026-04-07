@@ -1,22 +1,22 @@
 "use client"
 
 import {
-  MessageCircle,
-  Inbox,
-  Sparkles,
-  ClipboardList,
-  Workflow,
-  BarChart3,
+  ChatCircleText,
+  Tray,
+  Sparkle,
+  ClipboardText,
+  FlowArrow,
+  ChartBar,
   Brain,
-  PenTool,
-  Phone,
-  MoreHorizontal,
-  Briefcase,
+  PencilSimpleLine,
+  PhoneCall,
+  DotsThree,
+  SuitcaseSimple,
   FileText,
   Users,
-  ChevronDown,
-  Sparkle,
-} from "lucide-react"
+  CaretDown,
+  DiamondsFour,
+} from "@phosphor-icons/react"
 import {
   Sidebar,
   SidebarContent,
@@ -40,10 +40,10 @@ import {
 import { Button } from "@/components/ui/button"
 
 const mainNavItems = [
-  { title: "Chat", icon: MessageCircle, href: "/chat" },
+  { title: "Chat", icon: ChatCircleText, href: "/chat" },
   {
     title: "FileFlow Inbox",
-    icon: Inbox,
+    icon: Tray,
     href: "/fileflow-inbox",
     active: true,
     subItems: [
@@ -52,18 +52,18 @@ const mainNavItems = [
       { title: "Urgent", badge: 2 },
     ],
   },
-  { title: "Agents", icon: Sparkles, href: "/agents" },
-  { title: "Intake", icon: ClipboardList, href: "/intake" },
-  { title: "Workflows", icon: Workflow, href: "/workflows" },
-  { title: "Reporting", icon: BarChart3, href: "/reporting" },
+  { title: "Agents", icon: Sparkle, href: "/agents" },
+  { title: "Intake", icon: ClipboardText, href: "/intake" },
+  { title: "Workflows", icon: FlowArrow, href: "/workflows" },
+  { title: "Reporting", icon: ChartBar, href: "/reporting" },
   { title: "DocIntel", icon: Brain, href: "/docintel" },
-  { title: "Drafting", icon: PenTool, href: "/drafting" },
-  { title: "Voice", icon: Phone, href: "/voice" },
-  { title: "More", icon: MoreHorizontal, href: "/more" },
+  { title: "Drafting", icon: PencilSimpleLine, href: "/drafting" },
+  { title: "Voice", icon: PhoneCall, href: "/voice" },
+  { title: "More", icon: DotsThree, href: "/more" },
 ]
 
 const recordItems = [
-  { title: "Cases", icon: Briefcase, href: "/cases" },
+  { title: "Cases", icon: SuitcaseSimple, href: "/cases" },
   { title: "Documents", icon: FileText, href: "/documents" },
   { title: "Contacts", icon: Users, href: "/contacts" },
 ]
@@ -71,7 +71,7 @@ const recordItems = [
 export function AppSidebar() {
   return (
     <Sidebar className="border-r border-gray-200">
-      <SidebarHeader>
+      <SidebarHeader className="h-12 border-b border-gray-200 flex items-center justify-center px-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="gap-2">
@@ -81,7 +81,7 @@ export function AppSidebar() {
               <span className="font-semibold text-sm text-zinc-700">
                 John Lawyer
               </span>
-              <ChevronDown className="ml-auto h-4 w-4 text-zinc-500" />
+              <CaretDown className="ml-auto h-4 w-4 text-zinc-500" weight="bold" />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -107,7 +107,7 @@ export function AppSidebar() {
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                      <ChevronDown className="ml-auto h-3 w-3" />
+                      <CaretDown className="ml-auto h-3 w-3" weight="bold" />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
@@ -161,7 +161,7 @@ export function AppSidebar() {
             Get access to premium features in seconds.
           </p>
           <Button variant="outline" size="sm" className="mt-3 w-full text-sm">
-            <Sparkle className="mr-2 h-4 w-4" />
+            <DiamondsFour className="mr-2 h-4 w-4" />
             Upgrade
           </Button>
         </div>

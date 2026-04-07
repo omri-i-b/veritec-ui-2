@@ -1,16 +1,16 @@
 "use client"
 
 import {
-  Inbox,
-  Upload,
-  ArrowUpDown,
-  Filter,
-  LayoutGrid,
-  Search,
-  MoreVertical,
+  Tray,
+  UploadSimple,
+  SortAscending,
+  Funnel,
+  SquaresFour,
+  MagnifyingGlass,
+  DotsThreeVertical,
   User,
-  Group,
-} from "lucide-react"
+  ListBullets,
+} from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -265,7 +265,7 @@ export function FileFlowInbox() {
     <div className="flex flex-1 flex-col">
       {/* Top header bar */}
       <div className="flex h-12 items-center border-b border-gray-200 px-4">
-        <Inbox className="mr-2 h-4 w-4 text-zinc-500" />
+        <Tray className="mr-2 h-4 w-4 text-zinc-500" weight="bold" />
         <h1 className="text-sm font-semibold text-zinc-900">FileFlow Inbox</h1>
       </div>
 
@@ -275,7 +275,7 @@ export function FileFlowInbox() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-zinc-900">All Inboxes</h2>
           <Button variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
+            <UploadSimple className="mr-2 h-4 w-4" />
             Upload File
           </Button>
         </div>
@@ -289,22 +289,22 @@ export function FileFlowInbox() {
 
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm">
-              <Group className="mr-1.5 h-4 w-4" />
+              <ListBullets className="mr-1.5 h-4 w-4" />
               Group
             </Button>
             <Button variant="outline" size="sm">
-              <ArrowUpDown className="mr-1.5 h-4 w-4" />
+              <SortAscending className="mr-1.5 h-4 w-4" />
               Sort
             </Button>
             <Button variant="outline" size="sm">
-              <Filter className="mr-1.5 h-4 w-4" />
+              <Funnel className="mr-1.5 h-4 w-4" />
               Filter
             </Button>
             <Button variant="outline" size="icon" className="h-8 w-8">
-              <LayoutGrid className="h-4 w-4" />
+              <SquaresFour className="h-4 w-4" />
             </Button>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <MagnifyingGlass className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <Input
                 placeholder="Search Files"
                 className="h-8 w-48 pl-8 text-sm"
@@ -405,7 +405,7 @@ export function FileFlowInbox() {
                       size="icon"
                       className="h-6 w-6"
                     >
-                      <MoreVertical className="h-4 w-4 text-zinc-400" />
+                      <DotsThreeVertical className="h-4 w-4 text-zinc-400" weight="bold" />
                     </Button>
                   </TableCell>
                 </TableRow>
