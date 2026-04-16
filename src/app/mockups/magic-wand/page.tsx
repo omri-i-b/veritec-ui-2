@@ -109,7 +109,7 @@ export default function MagicWandMockup() {
             <span className="text-xs text-zinc-400">Prompt is rewritten, blue highlight confirms improvement</span>
           </div>
           <div className="rounded-[10px] bg-gray-50 border border-gray-200 overflow-clip">
-            <div className="bg-white rounded-[10px] border border-blue-200 ring-2 ring-blue-100 flex flex-col justify-between h-[120px] p-3">
+            <div className="bg-white rounded-[10px] border border-blue-200 ring-2 ring-blue-100 flex flex-col justify-between min-h-[120px] p-3">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <Sparkle className="h-3 w-3 text-blue-800" weight="fill" />
