@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import {
   MagnifyingGlass,
   FunnelSimple,
@@ -13,7 +14,6 @@ import {
   CircleNotch,
   Clock,
   SuitcaseSimple,
-  Warning,
   DotsThreeVertical,
   Copy,
   ArrowClockwise,
@@ -27,6 +27,11 @@ import {
   PhoneCall,
   UsersThree,
   ChartLineUp,
+  ArrowSquareOut,
+  PencilSimple,
+  FilePdf,
+  Hash,
+  Calendar as CalendarIcon,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -421,11 +426,233 @@ function PlaybookFilter({
   )
 }
 
+// ── Run Detail Drawer ──────────────────────────────────────────────────
+
+function RunDetailDrawer({ run, onClose }: { run: Run | null; onClose: () => void }) {
+  if (!run) return null
+  const playbook = PLAYBOOKS[run.playbookId]
+  const PlaybookIcon = playbook.icon
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-zinc-900/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-[560px] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 h-12 border-b border-gray-200 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <StatusPill status={run.status} />
+            <span className="font-mono text-xs text-zinc-600 shrink-0">{run.id}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Playbook context */}
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-1.5">Playbook</div>
+          <Link
+            href={`/workflows/${run.playbookId}/edit`}
+            className="group flex items-center gap-2 rounded-md bg-white border border-gray-200 px-2.5 py-2 hover:border-blue-300 transition-colors"
+          >
+            <div className={`flex items-center justify-center h-7 w-7 rounded-md ${playbook.bg}`}>
+              <PlaybookIcon className={`h-4 w-4 ${playbook.color}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-zinc-900 group-hover:text-blue-800 transition-colors truncate">
+                {playbook.name}
+              </div>
+              <div className="text-[11px] text-zinc-500">v8 · Published</div>
+            </div>
+            <ArrowSquareOut className="h-3.5 w-3.5 text-zinc-400 group-hover:text-blue-800 transition-colors" />
+          </Link>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-auto p-4 space-y-5">
+          {/* Inputs */}
+          <section>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">Inputs</h3>
+            <div className="rounded-[10px] border border-gray-200 bg-white p-3 space-y-2.5">
+              <div className="flex items-start gap-3 text-sm">
+                <span className="inline-flex items-center gap-1 text-zinc-500 w-24 shrink-0">
+                  <SuitcaseSimple className="h-3 w-3" weight="bold" />
+                  Case
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 rounded-md px-1.5 py-0.5 text-xs font-medium">
+                  <SuitcaseSimple className="h-3 w-3" weight="bold" />
+                  {run.case}
+                </span>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <span className="inline-flex items-center gap-1 text-zinc-500 w-24 shrink-0">
+                  <FilePdf className="h-3 w-3" weight="bold" />
+                  Records
+                </span>
+                <span className="text-zinc-900">42 uploaded PDFs (18.2 MB)</span>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <span className="inline-flex items-center gap-1 text-zinc-500 w-24 shrink-0">
+                  <PencilSimple className="h-3 w-3" weight="bold" />
+                  Plaintiff
+                </span>
+                <span className="text-zinc-900">Jane Doe</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Outputs */}
+          <section>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">Outputs</h3>
+            <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+              {/* Top: key metrics grid */}
+              {run.status === "success" && (
+                <div className="grid grid-cols-3 gap-px bg-gray-100 border-b border-gray-200">
+                  {run.output.map((f, i) => {
+                    const toneClass = {
+                      neutral: "text-zinc-900",
+                      success: "text-green-700",
+                      warning: "text-amber-700",
+                      danger: "text-red-700",
+                    }[f.tone ?? "neutral"]
+                    return (
+                      <div key={i} className="bg-white p-3">
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mb-1">
+                          {f.label}
+                        </div>
+                        <div className={`text-lg font-semibold tabular-nums ${toneClass}`}>{f.value}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Full output body */}
+              <div className="p-3">
+                {run.status === "failed" ? (
+                  <div className="text-sm">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-red-600 mb-1">Error</div>
+                    <div className="text-red-900 font-mono text-xs bg-red-50 border border-red-200 rounded p-2">
+                      {run.output[0]?.value ?? "Unknown error"}
+                    </div>
+                  </div>
+                ) : run.status === "running" || run.status === "queued" ? (
+                  <div className="text-sm text-zinc-500 italic">{run.output[0]?.value}</div>
+                ) : (
+                  <>
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 mb-1">Full output</div>
+                    <pre className="text-xs text-zinc-800 whitespace-pre-wrap font-mono bg-gray-50 border border-gray-200 rounded p-2 leading-relaxed">
+{`{
+${run.output.map((f) => `  "${f.label.toLowerCase().replace(/\s+/g, "_")}": ${typeof f.value === "string" && !f.value.match(/^[\d.$%]/) ? `"${f.value}"` : f.value}`).join(",\n")}
+}`}
+                    </pre>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Timeline */}
+          <section>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">Timeline</h3>
+            <div className="rounded-[10px] border border-gray-200 bg-white p-3 space-y-1.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <CalendarIcon className="h-3 w-3" weight="bold" />
+                  Started
+                </span>
+                <span className="text-zinc-900">{run.started}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <Clock className="h-3 w-3" weight="bold" />
+                  Duration
+                </span>
+                <span className="text-zinc-900 tabular-nums">{run.duration ?? "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <PencilSimple className="h-3 w-3" weight="bold" />
+                  Triggered by
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Avatar initials={run.triggeredBy.initials} color={run.triggeredBy.color} />
+                  <span className="text-zinc-900">{run.triggeredBy.name}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <Hash className="h-3 w-3" weight="bold" />
+                  Version
+                </span>
+                <span className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">
+                  v8
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Logs accordion */}
+          <section>
+            <details className="group rounded-[10px] border border-gray-200 bg-white">
+              <summary className="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Execution log</h3>
+                  <span className="inline-flex items-center justify-center h-[18px] min-w-[22px] rounded-full bg-gray-100 px-1.5 text-[11px] font-medium text-zinc-600">
+                    3 steps
+                  </span>
+                </div>
+                <CaretDown className="h-3.5 w-3.5 text-zinc-400 group-open:rotate-180 transition-transform" />
+              </summary>
+              <div className="px-3 pb-3 space-y-2">
+                {[
+                  { label: "Fetch records", duration: "1.2s", status: "success" },
+                  { label: "Analyze with LLM", duration: "16.4s", status: "success" },
+                  { label: "Parse structured output", duration: "0.6s", status: "success" },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-gray-100 text-[10px] font-semibold text-zinc-600">
+                      {i + 1}
+                    </span>
+                    <CheckCircle className="h-3.5 w-3.5 text-green-600" weight="fill" />
+                    <span className="flex-1 text-zinc-700">{step.label}</span>
+                    <span className="text-zinc-500 tabular-nums">{step.duration}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          </section>
+        </div>
+
+        {/* Actions */}
+        <div className="border-t border-gray-200 px-4 py-3 flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5">
+            <Copy className="h-4 w-4" />
+            Copy output
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5">
+            <ArrowClockwise className="h-4 w-4" />
+            Re-run
+          </Button>
+          <Button size="sm" className="flex-1 gap-1.5 bg-blue-800 hover:bg-blue-900">
+            <ArrowSquareOut className="h-4 w-4" />
+            Open full
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────
 
 export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?: string | null }) {
   const [playbookFilter, setPlaybookFilter] = useState<string | null>(initialPlaybookFilter ?? null)
   const [query, setQuery] = useState("")
+  const [selectedRun, setSelectedRun] = useState<Run | null>(null)
 
   const filtered = RUNS.filter((r) => {
     if (playbookFilter && r.playbookId !== playbookFilter) return false
@@ -492,6 +719,7 @@ export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?:
             {filtered.map((run) => (
               <TableRow
                 key={run.id}
+                onClick={() => setSelectedRun(run)}
                 className="group/row cursor-pointer hover:bg-gray-50 border-b border-gray-100"
               >
                 <TableCell className="py-2">
@@ -570,6 +798,8 @@ export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?:
           Live · 10s auto-refresh
         </span>
       </div>
+
+      <RunDetailDrawer run={selectedRun} onClose={() => setSelectedRun(null)} />
     </div>
   )
 }
