@@ -304,7 +304,7 @@ function PlaybookCard({ playbook }: { playbook: Playbook }) {
   const Icon = playbook.icon
   return (
     <Link
-      href={`/workflows/${playbook.id}`}
+      href={`/workflows/${playbook.id}/edit`}
       className="group relative flex flex-col rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-[0_2px_8px_rgba(30,64,175,0.08)] transition-all"
     >
       {/* Top row: icon + badges */}
@@ -432,7 +432,7 @@ function FeaturedStrip() {
 
 // ── Main ────────────────────────────────────────────────────────────────
 
-export function PlaybooksLibrary() {
+export function PlaybooksLibrary({ embedded = false }: { embedded?: boolean }) {
   const [activeCategory, setActiveCategory] = useState("All")
   const [query, setQuery] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
@@ -449,7 +449,7 @@ export function PlaybooksLibrary() {
 
   return (
     <div className="flex flex-1 flex-col bg-gray-50 min-h-0">
-      <LibraryHeader />
+      {!embedded && <LibraryHeader />}
       <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
       <LibraryToolbar query={query} setQuery={setQuery} view={view} setView={setView} />
 

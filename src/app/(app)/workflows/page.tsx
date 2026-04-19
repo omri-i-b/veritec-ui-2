@@ -1,5 +1,5 @@
-import { PlaybooksLibrary } from "@/components/playbooks-library"
+import { WorkflowsPage } from "@/components/workflows-page"
 
-export default function WorkflowsPage() {
-  return <PlaybooksLibrary />
+export default function Page() {
+  return <WorkflowsPage />
 }
