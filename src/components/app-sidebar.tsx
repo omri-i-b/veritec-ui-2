@@ -1,5 +1,6 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import {
   ChatCircleText,
   Tray,
@@ -45,7 +46,6 @@ const mainNavItems = [
     title: "FileFlow Inbox",
     icon: Tray,
     href: "/fileflow-inbox",
-    active: true,
     subItems: [
       { title: "Needs first response", badge: 8 },
       { title: "Needs response", badge: 3 },
@@ -69,6 +69,15 @@ const recordItems = [
 ]
 
 export function AppSidebar() {
+  const pathname = usePathname() ?? "/"
+  const isActive = (href: string) => {
+    // FileFlow Inbox is mounted at root, so "/" and "/fileflow-inbox/*" both count
+    if (href === "/fileflow-inbox") {
+      return pathname === "/" || pathname.startsWith("/fileflow-inbox")
+    }
+    if (href === "/") return pathname === "/"
+    return pathname === href || pathname.startsWith(href + "/")
+  }
   return (
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="h-12 border-b border-gray-200 flex items-center justify-center px-2">
@@ -90,50 +99,61 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {mainNavItems.map((item) =>
-              item.subItems ? (
-                <Collapsible key={item.title} defaultOpen={item.active}>
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger
-                      render={
-                        <SidebarMenuButton
-                          className={
-                            item.active
-                              ? "bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100"
-                              : ""
-                          }
-                        />
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                      <CaretDown className="ml-auto h-3 w-3" weight="bold" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.subItems.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton href="#">
-                              <span>{subItem.title}</span>
-                            </SidebarMenuSubButton>
-                            <SidebarMenuBadge className="text-xs text-gray-500 font-semibold">
-                              {subItem.badge}
-                            </SidebarMenuBadge>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : (
+            {mainNavItems.map((item) => {
+              const active = isActive(item.href)
+              if (item.subItems) {
+                return (
+                  <Collapsible key={item.title} defaultOpen={active}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger
+                        render={
+                          <SidebarMenuButton
+                            className={
+                              active
+                                ? "bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100"
+                                : ""
+                            }
+                          />
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                        <CaretDown className="ml-auto h-3 w-3" weight="bold" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.subItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <SidebarMenuSubButton href="#">
+                                <span>{subItem.title}</span>
+                              </SidebarMenuSubButton>
+                              <SidebarMenuBadge className="text-xs text-gray-500 font-semibold">
+                                {subItem.badge}
+                              </SidebarMenuBadge>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                )
+              }
+              return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton render={<a href={item.href} />}>
+                  <SidebarMenuButton
+                    render={<a href={item.href} />}
+                    className={
+                      active
+                        ? "bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100"
+                        : ""
+                    }
+                  >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )
-            )}
+            })}
           </SidebarMenu>
         </SidebarGroup>
 
@@ -142,14 +162,24 @@ export function AppSidebar() {
             Records
           </SidebarGroupLabel>
           <SidebarMenu>
-            {recordItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton render={<a href={item.href} />}>
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {recordItems.map((item) => {
+              const active = isActive(item.href)
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    render={<a href={item.href} />}
+                    className={
+                      active
+                        ? "bg-blue-50 text-blue-800 font-semibold hover:bg-blue-100"
+                        : ""
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

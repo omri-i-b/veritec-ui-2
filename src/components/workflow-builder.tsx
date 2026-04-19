@@ -534,7 +534,7 @@ function TestPanel() {
   )
 }
 
-// ── Builder View ───────────────────────────────────────────────────────
+// ── Builder View (standalone, kept for direct embeds) ──────────────────
 
 export function WorkflowBuilder() {
   const [inputs] = useState(INITIAL_INPUTS)
@@ -547,9 +547,7 @@ export function WorkflowBuilder() {
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* Left: Definition */}
       <div className="flex flex-col flex-1 min-w-0 bg-gray-50">
-        {/* Toolbar */}
         <div className="flex items-center gap-2 px-4 h-11 border-b border-gray-200 bg-white shrink-0">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700">
             <Warning className="h-3 w-3" weight="fill" />
@@ -572,37 +570,157 @@ export function WorkflowBuilder() {
 
         <div className="flex-1 overflow-auto p-4 space-y-3 max-w-[920px] w-full mx-auto">
           <InputsSection inputs={inputs} />
-
-          {/* Visual connector */}
           <div className="flex items-center justify-center py-1">
             <div className="h-5 w-px bg-gray-200" />
           </div>
-
           <StepsSection steps={steps} onToggle={toggleStep} />
-
           <div className="flex items-center justify-center py-1">
             <div className="h-5 w-px bg-gray-200" />
           </div>
-
           <OutputsSection outputs={outputs} />
-
-          {/* Settings collapsed */}
-          <section className="rounded-[10px] border border-gray-200 bg-white">
-            <button className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-zinc-900">Settings</h3>
-                <span className="text-[11px] text-zinc-500">Access, triggers, rate limits</span>
-              </div>
-              <CaretDown className="h-3.5 w-3.5 text-zinc-400" />
-            </button>
-          </section>
         </div>
       </div>
-
-      {/* Right: Test panel */}
       <div className="w-[420px] shrink-0">
         <TestPanel />
       </div>
+    </div>
+  )
+}
+
+// ── Inline Definition Panel (for embedding in workflow detail) ─────────
+
+export function DefinitionPanel() {
+  const [steps, setSteps] = useState(INITIAL_STEPS)
+  const toggleStep = (id: string) =>
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, expanded: !s.expanded } : s)))
+
+  return (
+    <div className="flex min-h-0">
+      {/* Left: definition sections */}
+      <div className="flex-1 min-w-0 overflow-auto p-4 space-y-3 bg-gray-50">
+        <InputsSection inputs={INITIAL_INPUTS} />
+        <div className="flex items-center justify-center py-1">
+          <div className="h-5 w-px bg-gray-200" />
+        </div>
+        <StepsSection steps={steps} onToggle={toggleStep} />
+        <div className="flex items-center justify-center py-1">
+          <div className="h-5 w-px bg-gray-200" />
+        </div>
+        <OutputsSection outputs={INITIAL_OUTPUTS} />
+      </div>
+      {/* Right: test panel */}
+      <div className="w-[380px] shrink-0 border-l border-gray-200">
+        <TestPanel />
+      </div>
+    </div>
+  )
+}
+
+// ── Schema Strip (collapsed definition summary) ────────────────────────
+
+export function DefinitionStrip({ onExpand }: { onExpand: () => void }) {
+  return (
+    <div className="flex items-center gap-3 px-4 h-12 border-b border-gray-200 bg-white text-xs">
+      {/* Inputs pills */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Inputs</span>
+        {INITIAL_INPUTS.map((f) => {
+          const Icon = FIELD_TYPES[f.type].icon
+          return (
+            <span
+              key={f.id}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-medium text-zinc-700"
+            >
+              <Icon className={`h-3 w-3 ${FIELD_TYPES[f.type].color}`} weight="bold" />
+              {f.name}
+            </span>
+          )
+        })}
+      </div>
+
+      {/* Arrow + steps chip */}
+      <div className="flex items-center gap-1.5 text-zinc-400 shrink-0">
+        <span>→</span>
+        <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-medium text-blue-800">
+          <Sparkle className="h-3 w-3" weight="fill" />
+          {INITIAL_STEPS.length} steps
+        </span>
+        <span>→</span>
+      </div>
+
+      {/* Outputs pills */}
+      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Outputs</span>
+        {INITIAL_OUTPUTS.map((f) => {
+          const Icon = FIELD_TYPES[f.type].icon
+          return (
+            <span
+              key={f.id}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-medium text-zinc-700"
+            >
+              <Icon className={`h-3 w-3 ${FIELD_TYPES[f.type].color}`} weight="bold" />
+              {f.name}
+            </span>
+          )
+        })}
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Meta */}
+      <div className="flex items-center gap-3 text-[11px] text-zinc-500 shrink-0">
+        <span>
+          Model:{" "}
+          <span className="font-medium text-zinc-700">Claude Sonnet 4.7</span>
+        </span>
+        <span>Edited 3m ago</span>
+      </div>
+
+      <button
+        onClick={onExpand}
+        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors shrink-0"
+      >
+        <Code className="h-3.5 w-3.5" />
+        Edit definition
+      </button>
+    </div>
+  )
+}
+
+// ── Expanded Definition Header (shown when expanded) ───────────────────
+
+export function ExpandedDefinitionHeader({ onCollapse }: { onCollapse: () => void }) {
+  return (
+    <div className="flex items-center gap-2 px-4 h-12 border-b border-gray-200 bg-white">
+      <div className="flex items-center gap-2">
+        <Code className="h-4 w-4 text-blue-800" />
+        <span className="text-sm font-semibold text-zinc-900">Definition</span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+          <Warning className="h-3 w-3" weight="fill" />
+          Unsaved changes
+        </span>
+        <span className="text-[11px] text-zinc-500">Last saved 3m ago</span>
+      </div>
+      <div className="flex-1" />
+      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
+        <ArrowClockwise className="h-3.5 w-3.5" />
+        Revert
+      </Button>
+      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
+        <FloppyDisk className="h-3.5 w-3.5" />
+        Save draft
+      </Button>
+      <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
+        Publish
+      </Button>
+      <div className="h-5 w-px bg-gray-200 mx-1" />
+      <button
+        onClick={onCollapse}
+        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
+      >
+        <CaretUp className="h-3.5 w-3.5" />
+        Collapse
+      </button>
     </div>
   )
 }

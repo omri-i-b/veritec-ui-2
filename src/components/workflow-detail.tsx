@@ -30,7 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { WorkflowBuilder } from "@/components/workflow-builder"
+import {
+  DefinitionPanel,
+  DefinitionStrip,
+  ExpandedDefinitionHeader,
+} from "@/components/workflow-builder"
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -622,9 +626,9 @@ function RunDetailDrawer({ run, onClose }: { run: Run | null; onClose: () => voi
 // ── Page Shell ──────────────────────────────────────────────────────────
 
 export function WorkflowDetail() {
-  const [activeTab, setActiveTab] = useState<Tab>("runs")
   const [query, setQuery] = useState("")
   const [selectedRun, setSelectedRun] = useState<Run | null>(null)
+  const [defExpanded, setDefExpanded] = useState(false)
 
   const filtered = RUNS.filter((r) => {
     const q = query.toLowerCase()
@@ -639,32 +643,40 @@ export function WorkflowDetail() {
   return (
     <div className="flex flex-1 flex-col bg-white min-h-0">
       <DetailHeader />
-      <DetailTabs active={activeTab} onChange={setActiveTab} />
-      {activeTab === "runs" && (
+
+      {/* Unified: schema strip OR expanded builder */}
+      {!defExpanded ? (
+        <DefinitionStrip onExpand={() => setDefExpanded(true)} />
+      ) : (
         <>
-          <RunsToolbar query={query} setQuery={setQuery} />
-          <RunsGrid runs={filtered} onSelect={setSelectedRun} />
-          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 bg-gray-50 text-xs text-zinc-500">
-            <span>
-              Showing <span className="font-medium text-zinc-900">{filtered.length}</span> of{" "}
-              <span className="font-medium text-zinc-900">{RUNS.length}</span> runs
-            </span>
-            <div className="flex items-center gap-3">
-              <span>Auto-refresh: <span className="font-medium text-zinc-900">10s</span></span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                Live
-              </span>
-            </div>
+          <ExpandedDefinitionHeader onCollapse={() => setDefExpanded(false)} />
+          <div className="max-h-[60vh] border-b-4 border-gray-100 flex flex-col min-h-0">
+            <DefinitionPanel />
           </div>
         </>
       )}
-      {activeTab === "builder" && <WorkflowBuilder />}
-      {(activeTab === "schedule" || activeTab === "settings") && (
-        <div className="flex-1 flex items-center justify-center text-sm text-zinc-400 bg-gray-50">
-          {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} view — coming soon
-        </div>
-      )}
+
+      {/* Runs section — always visible */}
+      <div className="flex items-center gap-2 px-4 h-10 bg-gray-50 border-b border-gray-200 shrink-0">
+        <span className="text-xs font-semibold text-zinc-700">Runs</span>
+        <span className="inline-flex items-center justify-center h-[18px] min-w-[22px] rounded-full bg-gray-200 px-1.5 text-[11px] font-medium text-zinc-600">
+          1.8k
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+          Live
+        </span>
+      </div>
+      <RunsToolbar query={query} setQuery={setQuery} />
+      <RunsGrid runs={filtered} onSelect={setSelectedRun} />
+      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 bg-gray-50 text-xs text-zinc-500 shrink-0">
+        <span>
+          Showing <span className="font-medium text-zinc-900">{filtered.length}</span> of{" "}
+          <span className="font-medium text-zinc-900">{RUNS.length}</span> runs
+        </span>
+        <span>Auto-refresh: <span className="font-medium text-zinc-900">10s</span></span>
+      </div>
+
       <RunDetailDrawer run={selectedRun} onClose={() => setSelectedRun(null)} />
     </div>
   )
