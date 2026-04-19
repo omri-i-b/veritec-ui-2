@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { WorkflowBuilder } from "@/components/workflow-builder"
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -658,7 +659,8 @@ export function WorkflowDetail() {
           </div>
         </>
       )}
-      {activeTab !== "runs" && (
+      {activeTab === "builder" && <WorkflowBuilder />}
+      {(activeTab === "schedule" || activeTab === "settings") && (
         <div className="flex-1 flex items-center justify-center text-sm text-zinc-400 bg-gray-50">
           {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} view — coming soon
         </div>
