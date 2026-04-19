@@ -618,7 +618,9 @@ export function DefinitionPanel() {
 
 // ── Schema Strip (collapsed definition summary) ────────────────────────
 
-export function DefinitionStrip({ onExpand }: { onExpand: () => void }) {
+import Link from "next/link"
+
+export function DefinitionStrip() {
   return (
     <div className="flex items-center gap-3 px-4 h-12 border-b border-gray-200 bg-white text-xs">
       {/* Inputs pills */}
@@ -676,13 +678,13 @@ export function DefinitionStrip({ onExpand }: { onExpand: () => void }) {
         <span>Edited 3m ago</span>
       </div>
 
-      <button
-        onClick={onExpand}
+      <Link
+        href="/workflows/medical-records-summary/edit"
         className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors shrink-0"
       >
         <Code className="h-3.5 w-3.5" />
         Edit definition
-      </button>
+      </Link>
     </div>
   )
 }

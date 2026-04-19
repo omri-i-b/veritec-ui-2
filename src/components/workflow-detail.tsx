@@ -30,11 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DefinitionPanel,
-  DefinitionStrip,
-  ExpandedDefinitionHeader,
-} from "@/components/workflow-builder"
+import { DefinitionStrip } from "@/components/workflow-builder"
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -628,7 +624,6 @@ function RunDetailDrawer({ run, onClose }: { run: Run | null; onClose: () => voi
 export function WorkflowDetail() {
   const [query, setQuery] = useState("")
   const [selectedRun, setSelectedRun] = useState<Run | null>(null)
-  const [defExpanded, setDefExpanded] = useState(false)
 
   const filtered = RUNS.filter((r) => {
     const q = query.toLowerCase()
@@ -644,17 +639,8 @@ export function WorkflowDetail() {
     <div className="flex flex-1 flex-col bg-white min-h-0">
       <DetailHeader />
 
-      {/* Unified: schema strip OR expanded builder */}
-      {!defExpanded ? (
-        <DefinitionStrip onExpand={() => setDefExpanded(true)} />
-      ) : (
-        <>
-          <ExpandedDefinitionHeader onCollapse={() => setDefExpanded(false)} />
-          <div className="max-h-[60vh] border-b-4 border-gray-100 flex flex-col min-h-0">
-            <DefinitionPanel />
-          </div>
-        </>
-      )}
+      {/* Schema strip (read-only preview, Edit definition navigates to /edit) */}
+      <DefinitionStrip />
 
       {/* Runs section — always visible */}
       <div className="flex items-center gap-2 px-4 h-10 bg-gray-50 border-b border-gray-200 shrink-0">
