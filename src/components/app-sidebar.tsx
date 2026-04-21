@@ -17,6 +17,7 @@ import {
   Users,
   CaretDown,
   DiamondsFour,
+  Books,
 } from "@phosphor-icons/react"
 import {
   Sidebar,
@@ -55,6 +56,7 @@ const mainNavItems = [
   { title: "Agents", icon: Sparkle, href: "/agents" },
   { title: "Intake", icon: ClipboardText, href: "/intake" },
   { title: "Workflows", icon: FlowArrow, href: "/workflows" },
+  { title: "Knowledge Base", icon: Books, href: "/knowledge" },
   { title: "Reporting", icon: ChartBar, href: "/reporting" },
   { title: "DocIntel", icon: Brain, href: "/docintel" },
   { title: "Drafting", icon: PencilSimpleLine, href: "/drafting" },
