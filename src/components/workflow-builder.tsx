@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import {
   Plus,
   DotsSixVertical,
@@ -28,30 +29,10 @@ import {
   CheckCircle,
   ArrowClockwise,
   X,
+  Books,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-
-// ── Types ──────────────────────────────────────────────────────────────
-
-type FieldType = "text" | "number" | "date" | "file" | "case-ref" | "enum" | "list"
-
-interface Field {
-  id: string
-  name: string
-  type: FieldType
-  required?: boolean
-  description?: string
-}
-
-type StepType = "fetch" | "prompt" | "extract" | "condition"
-
-interface Step {
-  id: string
-  type: StepType
-  name: string
-  detail: string
-  expanded?: boolean
-}
+import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 
 // ── Field type config ──────────────────────────────────────────────────
 
@@ -63,6 +44,7 @@ const FIELD_TYPES: Record<FieldType, { icon: typeof TextT; label: string; color:
   "case-ref": { icon: SuitcaseSimple, label: "Case", color: "text-blue-800" },
   enum: { icon: CheckSquare, label: "Enum", color: "text-purple-700" },
   list: { icon: ListBullets, label: "List", color: "text-sky-700" },
+  "kb-ref": { icon: Books, label: "Knowledge Base", color: "text-indigo-700" },
 }
 
 // ── Step type config ───────────────────────────────────────────────────
@@ -101,44 +83,13 @@ const STEP_TYPES: Record<
   },
 }
 
-// ── Sample Data ────────────────────────────────────────────────────────
+// ── Hook to get the current playbook from URL ─────────────────────────
 
-const INITIAL_INPUTS: Field[] = [
-  { id: "in_1", name: "Case", type: "case-ref", required: true, description: "The case this run is associated with" },
-  { id: "in_2", name: "Records", type: "file", required: true, description: "Medical records PDFs to analyze" },
-  { id: "in_3", name: "Plaintiff", type: "text", description: "Plaintiff name (auto-filled from Case if empty)" },
-]
-
-const INITIAL_STEPS: Step[] = [
-  {
-    id: "s1",
-    type: "fetch",
-    name: "Fetch records",
-    detail: "Load all PDFs from {{Records}} and extract text",
-    expanded: false,
-  },
-  {
-    id: "s2",
-    type: "prompt",
-    name: "Analyze with LLM",
-    detail:
-      "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary.",
-    expanded: true,
-  },
-  {
-    id: "s3",
-    type: "extract",
-    name: "Parse structured output",
-    detail: "Extract JSON: summary, gaps_found, confidence",
-    expanded: false,
-  },
-]
-
-const INITIAL_OUTPUTS: Field[] = [
-  { id: "out_1", name: "summary", type: "text", description: "Chronological summary of treatment" },
-  { id: "out_2", name: "gaps_found", type: "number", description: "Count of documentation gaps" },
-  { id: "out_3", name: "confidence", type: "number", description: "Confidence score (0–100)" },
-]
+function useCurrentPlaybook() {
+  const params = useParams()
+  const id = (params?.id as string | undefined) ?? "medical-records-summary"
+  return getPlaybook(id)
+}
 
 // ── Field Row ──────────────────────────────────────────────────────────
 
@@ -391,8 +342,168 @@ function OutputsSection({ outputs }: { outputs: Field[] }) {
 
 type TestStatus = "idle" | "running" | "success"
 
+// ── Sample input field (renders differently by type) ─────────────────
+
+function SampleInput({ field }: { field: Field }) {
+  const typeConfig = FIELD_TYPES[field.type]
+  const Icon = typeConfig.icon
+  const sample = field.sample ?? ""
+
+  if (field.type === "text") {
+    return (
+      <div>
+        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+          {field.name}
+          {field.required && <span className="text-rose-600 ml-1">*</span>}
+        </label>
+        <input
+          type="text"
+          defaultValue={sample}
+          className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+    )
+  }
+
+  if (field.type === "enum") {
+    return (
+      <div>
+        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+          {field.name}
+          {field.required && <span className="text-rose-600 ml-1">*</span>}
+        </label>
+        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
+          <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
+          <span className="flex-1 text-zinc-900 font-medium">{sample}</span>
+          <CaretDown className="h-3 w-3 text-zinc-400" />
+        </div>
+      </div>
+    )
+  }
+
+  if (field.type === "list") {
+    const items = sample ? sample.split(",").map((s) => s.trim()) : []
+    return (
+      <div>
+        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+          {field.name}
+          {field.required && <span className="text-rose-600 ml-1">*</span>}
+        </label>
+        <div className="flex flex-wrap gap-1 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 min-h-[32px]">
+          {items.map((it) => (
+            <span
+              key={it}
+              className="inline-flex items-center gap-1 rounded bg-white border border-gray-200 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700"
+            >
+              {it}
+              <X className="h-2.5 w-2.5 text-zinc-400" />
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // case-ref, file, kb-ref — card style
+  return (
+    <div>
+      <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+        {field.name}
+        {field.required && <span className="text-rose-600 ml-1">*</span>}
+      </label>
+      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
+        <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
+        <span className="flex-1 text-zinc-900 font-medium truncate">{sample}</span>
+        <CaretDown className="h-3 w-3 text-zinc-400" />
+      </div>
+    </div>
+  )
+}
+
+// ── Live output field (renders per output type) ──────────────────────
+
+function LiveOutputValue({ field, playbookId }: { field: Field; playbookId: string }) {
+  // Sample values per playbook per field
+  const sampleValues: Record<string, Record<string, string | string[]>> = {
+    "medical-records-summary": {
+      summary: "Plaintiff received continuous care from 2023-07 to 2024-03 with documented treatment for lumbar strain and cervical injury. Three gaps in documentation identified...",
+      gaps_found: "3",
+      confidence: "94%",
+    },
+    "depo-prep": {
+      questions: [
+        "On the date of the incident, were you using your phone in the 60 seconds leading up to the impact?",
+        "You previously testified you were in severe pain. Can you explain the Facebook photo dated March 3, 2024 showing you dancing at a wedding?",
+        "Between January 15 and April 22, you had no documented medical treatment. Can you describe the nature of your pain during that 97-day gap?",
+        "Dr. Roberts recommended you undergo steroid injections. You declined. What prompted that decision?",
+      ] as string[],
+      weaknesses: [
+        "Phone records show texting at 2:47pm, 30 seconds before impact — source: phone_records.pdf p.14",
+        "97-day treatment gap (Jan 15 - Apr 22) inconsistent with claimed severe pain — source: medical_timeline.pdf p.8",
+        "Social media shows physical activity during claimed injury period — source: investigation_report.pdf p.23",
+        "Declined steroid injection despite doctor recommendation — source: dr_roberts_notes.pdf p.4",
+      ] as string[],
+      treatment_gaps: "3",
+      estimated_duration: "3-4 hours",
+      question_count: "127",
+    },
+  }
+
+  const values = sampleValues[playbookId] ?? sampleValues["medical-records-summary"]
+  const value = values[field.name]
+  const typeConfig = FIELD_TYPES[field.type]
+  const Icon = typeConfig.icon
+
+  if (field.type === "list" && Array.isArray(value)) {
+    return (
+      <div>
+        <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-1 flex items-center gap-1">
+          <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
+          <span className="ml-auto text-zinc-400 tabular-nums">{value.length} items</span>
+        </div>
+        <div className="space-y-1 pl-1">
+          {value.slice(0, 4).map((item, i) => (
+            <div key={i} className="text-xs text-zinc-700 leading-snug flex items-start gap-1.5">
+              <span className="text-zinc-400 tabular-nums shrink-0">{i + 1}.</span>
+              <span className="flex-1 min-w-0">{item}</span>
+            </div>
+          ))}
+          {value.length > 4 && (
+            <div className="text-[11px] text-zinc-500 italic pl-4">+{value.length - 4} more…</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (field.type === "number") {
+    return (
+      <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
+        <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-0.5 flex items-center gap-1">
+          <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
+        </div>
+        <div className="text-lg font-semibold text-zinc-900 tabular-nums">{value ?? "—"}</div>
+      </div>
+    )
+  }
+
+  // text
+  return (
+    <div>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-1 flex items-center gap-1">
+        <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
+      </div>
+      <div className="text-sm text-zinc-900 leading-relaxed">{typeof value === "string" ? value : ""}</div>
+    </div>
+  )
+}
+
 function TestPanel() {
+  const playbook = useCurrentPlaybook()
   const [status, setStatus] = useState<TestStatus>("success")
+
+  const numericOutputs = playbook.outputs.filter((o) => o.type === "number")
+  const otherOutputs = playbook.outputs.filter((o) => o.type !== "number")
 
   return (
     <div className="flex flex-col h-full bg-gray-50 border-l border-gray-200">
@@ -413,30 +524,9 @@ function TestPanel() {
         <section>
           <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">Sample inputs</h4>
           <div className="rounded-[10px] border border-gray-200 bg-white p-3 space-y-2.5">
-            <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">Case</label>
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
-                <SuitcaseSimple className="h-3.5 w-3.5 text-blue-800" weight="bold" />
-                <span className="flex-1 text-zinc-900 font-medium">CVSA-1189</span>
-                <CaretDown className="h-3 w-3 text-zinc-400" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">Records</label>
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
-                <FilePdf className="h-3.5 w-3.5 text-rose-700" weight="bold" />
-                <span className="flex-1 text-zinc-900">42 PDFs (18.2 MB)</span>
-                <ArrowClockwise className="h-3 w-3 text-zinc-400" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">Plaintiff</label>
-              <input
-                type="text"
-                defaultValue="Jane Doe"
-                className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+            {playbook.inputs.map((f) => (
+              <SampleInput key={f.id} field={f} />
+            ))}
           </div>
           <button
             onClick={() => {
@@ -478,7 +568,6 @@ function TestPanel() {
           </div>
 
           <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
-            {/* Mimics a runs grid row */}
             <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
               Preview as it'll appear in the Runs grid
             </div>
@@ -492,29 +581,16 @@ function TestPanel() {
                 </>
               ) : (
                 <>
-                  <div>
-                    <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-1 flex items-center gap-1">
-                      <TextT className="h-2.5 w-2.5" /> summary
+                  {otherOutputs.map((f) => (
+                    <LiveOutputValue key={f.id} field={f} playbookId={playbook.id} />
+                  ))}
+                  {numericOutputs.length > 0 && (
+                    <div className={`grid grid-cols-${Math.min(numericOutputs.length, 3)} gap-2`}>
+                      {numericOutputs.map((f) => (
+                        <LiveOutputValue key={f.id} field={f} playbookId={playbook.id} />
+                      ))}
                     </div>
-                    <div className="text-sm text-zinc-900 leading-relaxed">
-                      Plaintiff received continuous care from 2023-07 to 2024-03 with documented treatment for lumbar
-                      strain and cervical injury. Three gaps in documentation identified...
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-0.5 flex items-center gap-1">
-                        <Hash className="h-2.5 w-2.5 text-emerald-700" /> gaps_found
-                      </div>
-                      <div className="text-lg font-semibold text-zinc-900 tabular-nums">3</div>
-                    </div>
-                    <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-0.5 flex items-center gap-1">
-                        <Hash className="h-2.5 w-2.5 text-emerald-700" /> confidence
-                      </div>
-                      <div className="text-lg font-semibold text-zinc-900 tabular-nums">94%</div>
-                    </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -537,9 +613,10 @@ function TestPanel() {
 // ── Builder View (standalone, kept for direct embeds) ──────────────────
 
 export function WorkflowBuilder() {
-  const [inputs] = useState(INITIAL_INPUTS)
-  const [outputs] = useState(INITIAL_OUTPUTS)
-  const [steps, setSteps] = useState(INITIAL_STEPS)
+  const playbook = useCurrentPlaybook()
+  const [inputs] = useState(playbook.inputs)
+  const [outputs] = useState(playbook.outputs)
+  const [steps, setSteps] = useState(playbook.steps)
 
   const toggleStep = (id: string) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, expanded: !s.expanded } : s)))
@@ -590,15 +667,16 @@ export function WorkflowBuilder() {
 // ── Inline Definition Panel (for embedding in workflow detail) ─────────
 
 export function DefinitionPanel() {
-  const [steps, setSteps] = useState(INITIAL_STEPS)
+  const playbook = useCurrentPlaybook()
+  const [steps, setSteps] = useState(playbook.steps)
   const toggleStep = (id: string) =>
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, expanded: !s.expanded } : s)))
 
   return (
-    <div className="flex min-h-0">
+    <div className="flex h-full w-full min-h-0 min-w-0">
       {/* Left: definition sections */}
       <div className="flex-1 min-w-0 overflow-auto p-4 space-y-3 bg-gray-50">
-        <InputsSection inputs={INITIAL_INPUTS} />
+        <InputsSection inputs={playbook.inputs} />
         <div className="flex items-center justify-center py-1">
           <div className="h-5 w-px bg-gray-200" />
         </div>
@@ -606,85 +684,12 @@ export function DefinitionPanel() {
         <div className="flex items-center justify-center py-1">
           <div className="h-5 w-px bg-gray-200" />
         </div>
-        <OutputsSection outputs={INITIAL_OUTPUTS} />
+        <OutputsSection outputs={playbook.outputs} />
       </div>
       {/* Right: test panel */}
       <div className="w-[380px] shrink-0 border-l border-gray-200">
         <TestPanel />
       </div>
-    </div>
-  )
-}
-
-// ── Schema Strip (collapsed definition summary) ────────────────────────
-
-import Link from "next/link"
-
-export function DefinitionStrip() {
-  return (
-    <div className="flex items-center gap-3 px-4 h-12 border-b border-gray-200 bg-white text-xs">
-      {/* Inputs pills */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Inputs</span>
-        {INITIAL_INPUTS.map((f) => {
-          const Icon = FIELD_TYPES[f.type].icon
-          return (
-            <span
-              key={f.id}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-medium text-zinc-700"
-            >
-              <Icon className={`h-3 w-3 ${FIELD_TYPES[f.type].color}`} weight="bold" />
-              {f.name}
-            </span>
-          )
-        })}
-      </div>
-
-      {/* Arrow + steps chip */}
-      <div className="flex items-center gap-1.5 text-zinc-400 shrink-0">
-        <span>→</span>
-        <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-medium text-blue-800">
-          <Sparkle className="h-3 w-3" weight="fill" />
-          {INITIAL_STEPS.length} steps
-        </span>
-        <span>→</span>
-      </div>
-
-      {/* Outputs pills */}
-      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Outputs</span>
-        {INITIAL_OUTPUTS.map((f) => {
-          const Icon = FIELD_TYPES[f.type].icon
-          return (
-            <span
-              key={f.id}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-medium text-zinc-700"
-            >
-              <Icon className={`h-3 w-3 ${FIELD_TYPES[f.type].color}`} weight="bold" />
-              {f.name}
-            </span>
-          )
-        })}
-      </div>
-
-      <div className="flex-1" />
-
-      {/* Meta */}
-      <div className="flex items-center gap-3 text-[11px] text-zinc-500 shrink-0">
-        <span>
-          Model:{" "}
-          <span className="font-medium text-zinc-700">Claude Sonnet 4.7</span>
-        </span>
-        <span>Edited 3m ago</span>
-      </div>
-
-      <Link
-        href="/workflows/medical-records-summary/edit"
-        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors shrink-0"
-      >
-        <Code className="h-3.5 w-3.5" />
-        Edit definition
-      </Link>
     </div>
   )
 }

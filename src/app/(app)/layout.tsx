@@ -11,7 +11,7 @@ export default function AppLayout({
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col min-w-0">{children}</main>
       </SidebarProvider>
     </TooltipProvider>
   );
