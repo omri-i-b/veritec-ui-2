@@ -15,7 +15,7 @@ That's the whole hand-off. You'll talk to Claude in chat, get screenshots back, 
 - Stack: Next.js 16 (static export), Tailwind CSS v4, shadcn/ui v2 (base-ui), Phosphor Icons
 - Route groups: `src/app/(app)/` for app pages (with sidebar), `src/app/mockups/` for standalone previews
 - Shared data: `src/lib/playbook-data.ts`
-- Start: `npm install && npm run dev` (port 3001)
+- Start: `npm install && npm run dev` (port 3002)
 - Deploy: push to `main`, GitHub Actions handles GitHub Pages
 
 ### I'm a **Claude / AI agent** working on this repo
@@ -45,7 +45,7 @@ Main entry points:
 
 ```bash
 npm install
-npm run dev    # starts on port 3001
+npm run dev    # starts on port 3002
 ```
 
 To build static export:
