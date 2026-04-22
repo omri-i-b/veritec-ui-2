@@ -5,8 +5,6 @@ import { useParams } from "next/navigation"
 import {
   Plus,
   DotsSixVertical,
-  CaretDown,
-  CaretUp,
   TextT,
   Hash,
   Calendar,
@@ -16,20 +14,10 @@ import {
   CheckSquare,
   Database,
   Sparkle,
-  Code,
-  GitBranch,
-  Play,
-  FloppyDisk,
-  DotsThreeVertical,
-  Trash,
-  Copy,
-  Warning,
-  ArrowSquareOut,
-  CircleNotch,
-  CheckCircle,
-  ArrowClockwise,
+  ArrowsOut,
   X,
   Books,
+  Trash,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -74,7 +62,7 @@ const STEP_TYPES: Record<
   },
 }
 
-// ── Hook to get the current playbook from URL ─────────────────────────
+// ── Hook to get current playbook ──────────────────────────────────────
 
 function useCurrentPlaybook() {
   const params = useParams()
@@ -82,15 +70,18 @@ function useCurrentPlaybook() {
   return getPlaybook(id)
 }
 
-// ── Field Row ──────────────────────────────────────────────────────────
+// ── Field Row (click to edit) ─────────────────────────────────────────
 
-function FieldRow({ field }: { field: Field }) {
+function FieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
   const typeConfig = FIELD_TYPES[field.type]
   const Icon = typeConfig.icon
   return (
-    <div className="group flex items-center gap-2 px-2.5 py-2 rounded-md border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all">
-      <DotsSixVertical className="h-3.5 w-3.5 text-zinc-300 cursor-grab shrink-0" />
-      <div className={`flex items-center justify-center h-6 w-6 rounded-md bg-gray-50 shrink-0`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full flex items-center gap-2 px-2.5 py-2 rounded-md border border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all text-left"
+    >
+      <div className="flex items-center justify-center h-6 w-6 rounded-md bg-gray-50 shrink-0">
         <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
       </div>
       <div className="min-w-0 flex-1">
@@ -108,274 +99,58 @@ function FieldRow({ field }: { field: Field }) {
         <Icon className={`h-3 w-3 ${typeConfig.color}`} weight="bold" />
         {typeConfig.label}
       </div>
-      <button className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <DotsThreeVertical className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    </button>
   )
 }
 
-// ── New Field Form (inline Add UI) ─────────────────────────────────────
-
-function NewFieldForm({
-  kind,
-  onAdd,
-  onCancel,
-}: {
-  kind: "input" | "output"
-  onAdd: (field: Field) => void
-  onCancel: () => void
-}) {
-  const [name, setName] = useState("")
-  const [type, setType] = useState<FieldType>("text")
-  const [description, setDescription] = useState("")
-  const [required, setRequired] = useState(false)
-  const [options, setOptions] = useState("")
-
-  const needsOptions = type === "enum" || type === "list"
-  const canAdd = name.trim().length > 0
-
-  const handleAdd = () => {
-    if (!canAdd) return
-    onAdd({
-      id: `new_${Date.now()}`,
-      name: name.trim(),
-      type,
-      required: kind === "input" && required,
-      description: description.trim() || undefined,
-      options: needsOptions
-        ? options.split("\n").map((s) => s.trim()).filter(Boolean)
-        : undefined,
-    })
-  }
-
-  // Input-friendly types come first
-  const TYPE_ORDER: FieldType[] =
-    kind === "input"
-      ? ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
-      : ["text", "number", "list", "date"]
-
-  return (
-    <div className="rounded-[10px] border-2 border-blue-200 bg-blue-50/30 p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-sm font-semibold text-zinc-900">New {kind}</h4>
-          <p className="text-[11px] text-zinc-500">
-            {kind === "input"
-              ? "A field the user will fill in when running this playbook"
-              : "A field this playbook will produce — becomes a column in the Runs grid"}
-          </p>
-        </div>
-        <button
-          onClick={onCancel}
-          className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-white text-zinc-400 hover:text-zinc-700"
-          title="Cancel"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Name */}
-      <div>
-        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
-          Name
-        </label>
-        <input
-          autoFocus
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={kind === "input" ? "e.g. Case, Records, Plaintiff name" : "e.g. summary, gaps_found"}
-          className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
-        />
-      </div>
-
-      {/* Type picker */}
-      <div>
-        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
-          Type
-        </label>
-        <div className="grid grid-cols-4 gap-1.5">
-          {TYPE_ORDER.map((t) => {
-            const cfg = FIELD_TYPES[t]
-            const Icon = cfg.icon
-            const active = type === t
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                title={cfg.description}
-                className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-md border text-[11px] font-medium transition-all ${
-                  active
-                    ? "border-blue-800 bg-white text-blue-800 ring-2 ring-blue-200"
-                    : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <Icon className={`h-4 w-4 ${active ? "text-blue-800" : cfg.color}`} weight="bold" />
-                {cfg.label}
-              </button>
-            )
-          })}
-        </div>
-        <p className="text-[11px] text-zinc-500 mt-1.5 italic">
-          {FIELD_TYPES[type].description}
-        </p>
-      </div>
-
-      {/* Options (for enum/list) */}
-      {needsOptions && (
-        <div>
-          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
-            Options <span className="text-zinc-400 normal-case tracking-normal">· one per line</span>
-          </label>
-          <textarea
-            value={options}
-            onChange={(e) => setOptions(e.target.value)}
-            placeholder={"Plaintiff\nDefendant\nExpert witness"}
-            rows={3}
-            className="w-full px-3 py-2 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none font-mono"
-          />
-        </div>
-      )}
-
-      {/* Description */}
-      <div>
-        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
-          Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
-        </label>
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Help text shown to the user"
-          className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
-        />
-      </div>
-
-      {/* Required toggle (inputs only) */}
-      {kind === "input" && (
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={required}
-            onChange={(e) => setRequired(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-blue-500"
-          />
-          <span className="text-sm text-zinc-700">Required</span>
-          <span className="text-[11px] text-zinc-500">— the user must fill this in</span>
-        </label>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <Button variant="outline" size="sm" onClick={onCancel} className="h-8">
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleAdd}
-          disabled={!canAdd}
-          className="h-8 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Add {kind}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ── Inputs Section ─────────────────────────────────────────────────────
-
-function InputsSection({ inputs: initial }: { inputs: Field[] }) {
-  const [inputs, setInputs] = useState(initial)
-  const [adding, setAdding] = useState(false)
-  return (
-    <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-zinc-900">Inputs</h3>
-          <span className="inline-flex items-center justify-center h-[18px] min-w-[22px] rounded-full bg-gray-200 px-1.5 text-[11px] font-medium text-zinc-600">
-            {inputs.length}
-          </span>
-          <span className="text-[11px] text-zinc-500">What users fill in when they run this playbook</span>
-        </div>
-      </div>
-      <div className="p-2 space-y-1.5">
-        {inputs.map((f) => (
-          <FieldRow key={f.id} field={f} />
-        ))}
-        {adding ? (
-          <NewFieldForm
-            kind="input"
-            onAdd={(f) => {
-              setInputs((prev) => [...prev, f])
-              setAdding(false)
-            }}
-            onCancel={() => setAdding(false)}
-          />
-        ) : (
-          <button
-            onClick={() => setAdding(true)}
-            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add input
-          </button>
-        )}
-      </div>
-    </section>
-  )
-}
-
-// ── Prompt with variable chips ─────────────────────────────────────────
+// ── Prompt with variable chips ────────────────────────────────────────
 
 function PromptWithChips({ text }: { text: string }) {
   const parts = text.split(/(\{\{[^}]+\}\})/g)
   return (
-    <div className="text-sm leading-relaxed text-zinc-800 whitespace-pre-wrap font-mono">
+    <div className="text-sm leading-relaxed text-zinc-800 whitespace-pre-wrap font-sans">
       {parts.map((part, i) => {
         if (part.startsWith("{{") && part.endsWith("}}")) {
           const name = part.slice(2, -2)
           return (
             <span
               key={i}
-              className="inline-flex items-center gap-0.5 mx-0.5 rounded bg-blue-100 text-blue-800 px-1.5 py-0 text-[12px] font-medium font-sans"
+              className="inline-flex items-center gap-0.5 mx-0.5 rounded bg-blue-100 text-blue-800 px-1.5 py-0 text-[12px] font-medium"
             >
               {name}
             </span>
           )
         }
-        return (
-          <span key={i} className="font-sans">
-            {part}
-          </span>
-        )
+        return <span key={i}>{part}</span>
       })}
     </div>
   )
 }
 
-// ── Step Row ───────────────────────────────────────────────────────────
+// ── Step Row (with drag handle; click to edit) ────────────────────────
 
 function StepRow({
   step,
   index,
-  onToggle,
+  onClick,
 }: {
   step: Step
   index: number
-  onToggle: () => void
+  onClick: () => void
 }) {
   const config = STEP_TYPES[step.type]
   const Icon = config.icon
   return (
     <div className={`rounded-md border border-gray-200 bg-white border-l-4 ${config.accent} overflow-hidden`}>
-      <div
-        className="group flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-gray-50"
-        onClick={onToggle}
+      <button
+        type="button"
+        onClick={onClick}
+        className="group w-full flex items-center gap-2 px-2.5 py-2.5 hover:bg-gray-50 text-left"
       >
-        <DotsSixVertical className="h-3.5 w-3.5 text-zinc-300 cursor-grab shrink-0" />
+        <DotsSixVertical
+          className="h-3.5 w-3.5 text-zinc-300 cursor-grab shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        />
         <span className="flex items-center justify-center h-5 w-5 rounded-full bg-gray-100 text-[10px] font-semibold text-zinc-600 shrink-0">
           {index + 1}
         </span>
@@ -385,68 +160,102 @@ function StepRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-medium text-zinc-900">{step.name}</span>
-            <span className={`inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0 text-[10px] font-medium ${config.iconColor}`}>
+            <span
+              className={`inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1 py-0 text-[10px] font-medium ${config.iconColor}`}
+            >
               {config.label}
             </span>
           </div>
-          {!step.expanded && <div className="text-[11px] text-zinc-500 truncate">{step.detail}</div>}
-        </div>
-        {step.expanded ? (
-          <CaretUp className="h-3.5 w-3.5 text-zinc-400" />
-        ) : (
-          <CaretDown className="h-3.5 w-3.5 text-zinc-400" />
-        )}
-      </div>
-      {step.expanded && (
-        <div className="border-t border-gray-200 bg-gray-50/50 p-3">
           {step.type === "prompt" ? (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Prompt</span>
-              </div>
-              <div className="rounded-md border border-gray-200 bg-white p-3">
-                <PromptWithChips text={step.detail} />
-              </div>
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-500 flex-wrap">
-                <span className="text-zinc-400">Insert variable:</span>
-                <button className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 font-medium hover:bg-blue-100">
-                  Case
-                </button>
-                <button className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 font-medium hover:bg-blue-100">
-                  Records
-                </button>
-                <button className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 font-medium hover:bg-blue-100">
-                  Plaintiff
-                </button>
-                <button className="text-zinc-400 hover:text-zinc-700">+ more</button>
-              </div>
-            </>
+            <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+              <PromptPreview text={step.detail} />
+            </div>
           ) : (
-            <p className="text-sm text-zinc-700">{step.detail}</p>
+            <div className="text-[11px] text-zinc-500 truncate mt-0.5">{step.detail}</div>
           )}
         </div>
-      )}
+      </button>
     </div>
   )
 }
 
-// ── Steps Section ──────────────────────────────────────────────────────
+function PromptPreview({ text }: { text: string }) {
+  // Render a truncated one-line preview, showing chips inline
+  const parts = text.split(/(\{\{[^}]+\}\})/g)
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith("{{") && part.endsWith("}}")) {
+          return (
+            <span
+              key={i}
+              className="inline-flex items-center rounded bg-blue-50 text-blue-800 px-1 py-0 text-[10px] font-medium mx-0.5"
+            >
+              {part.slice(2, -2)}
+            </span>
+          )
+        }
+        return <span key={i}>{part}</span>
+      })}
+    </span>
+  )
+}
 
-function StepsSection({ steps, onToggle }: { steps: Step[]; onToggle: (id: string) => void }) {
+// ── Sections (no counts, callbacks instead of inline forms) ────────────
+
+function InputsSection({
+  inputs,
+  onEdit,
+  onAdd,
+}: {
+  inputs: Field[]
+  onEdit: (field: Field) => void
+  onAdd: () => void
+}) {
+  return (
+    <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900">Inputs</h3>
+          <span className="text-[11px] text-zinc-500">What users fill in when they run this playbook</span>
+        </div>
+      </div>
+      <div className="p-2 space-y-1.5">
+        {inputs.map((f) => (
+          <FieldRow key={f.id} field={f} onClick={() => onEdit(f)} />
+        ))}
+        <button
+          onClick={onAdd}
+          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add input
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function StepsSection({
+  steps,
+  onEdit,
+  onAdd,
+}: {
+  steps: Step[]
+  onEdit: (step: Step) => void
+  onAdd: (type: StepType) => void
+}) {
   return (
     <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-zinc-900">Steps</h3>
-          <span className="inline-flex items-center justify-center h-[18px] min-w-[22px] rounded-full bg-gray-200 px-1.5 text-[11px] font-medium text-zinc-600">
-            {steps.length}
-          </span>
           <span className="text-[11px] text-zinc-500">The AI logic that transforms inputs into outputs</span>
         </div>
       </div>
       <div className="p-2 space-y-1.5">
         {steps.map((step, i) => (
-          <StepRow key={step.id} step={step} index={i} onToggle={() => onToggle(step.id)} />
+          <StepRow key={step.id} step={step} index={i} onClick={() => onEdit(step)} />
         ))}
         <div className="flex items-center gap-1.5">
           {(["fetch", "prompt"] as StepType[]).map((t) => {
@@ -455,6 +264,7 @@ function StepsSection({ steps, onToggle }: { steps: Step[]; onToggle: (id: strin
             return (
               <button
                 key={t}
+                onClick={() => onAdd(t)}
                 className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md border border-dashed border-gray-300 text-[11px] font-medium text-zinc-600 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
               >
                 <Icon className={`h-3.5 w-3.5 ${c.iconColor}`} weight="bold" />
@@ -468,430 +278,517 @@ function StepsSection({ steps, onToggle }: { steps: Step[]; onToggle: (id: strin
   )
 }
 
-// ── Outputs Section ────────────────────────────────────────────────────
-
-function OutputsSection({ outputs: initial }: { outputs: Field[] }) {
-  const [outputs, setOutputs] = useState(initial)
-  const [adding, setAdding] = useState(false)
+function OutputsSection({
+  outputs,
+  onEdit,
+  onAdd,
+}: {
+  outputs: Field[]
+  onEdit: (field: Field) => void
+  onAdd: () => void
+}) {
   return (
     <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-zinc-900">Outputs</h3>
-          <span className="inline-flex items-center justify-center h-[18px] min-w-[22px] rounded-full bg-gray-200 px-1.5 text-[11px] font-medium text-zinc-600">
-            {outputs.length}
-          </span>
           <span className="text-[11px] text-zinc-500">These become columns in the Runs grid</span>
         </div>
       </div>
       <div className="p-2 space-y-1.5">
         {outputs.map((f) => (
-          <FieldRow key={f.id} field={f} />
+          <FieldRow key={f.id} field={f} onClick={() => onEdit(f)} />
         ))}
-        {adding ? (
-          <NewFieldForm
-            kind="output"
-            onAdd={(f) => {
-              setOutputs((prev) => [...prev, f])
-              setAdding(false)
-            }}
-            onCancel={() => setAdding(false)}
-          />
-        ) : (
-          <button
-            onClick={() => setAdding(true)}
-            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add output
-          </button>
-        )}
+        <button
+          onClick={onAdd}
+          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add output
+        </button>
       </div>
     </section>
   )
 }
 
-// ── Test Panel ─────────────────────────────────────────────────────────
+// ── Drawer state ──────────────────────────────────────────────────────
 
-type TestStatus = "idle" | "running" | "success"
+type DrawerState =
+  | { kind: "input"; existing: Field | null }
+  | { kind: "output"; existing: Field | null }
+  | { kind: "step"; existing: Step | null; stepType?: StepType }
+  | null
 
-// ── Sample input field (renders differently by type) ─────────────────
+// ── Field Form (shared for input & output in drawer) ──────────────────
 
-function SampleInput({ field }: { field: Field }) {
-  const typeConfig = FIELD_TYPES[field.type]
-  const Icon = typeConfig.icon
-  const sample = field.sample ?? ""
+function FieldForm({
+  kind,
+  existing,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  kind: "input" | "output"
+  existing: Field | null
+  onSave: (f: Field) => void
+  onDelete: () => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(existing?.name ?? "")
+  const [type, setType] = useState<FieldType>(existing?.type ?? "text")
+  const [description, setDescription] = useState(existing?.description ?? "")
+  const [required, setRequired] = useState(existing?.required ?? false)
+  const [options, setOptions] = useState((existing?.options ?? []).join("\n"))
 
-  if (field.type === "text") {
-    return (
-      <div>
-        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
-          {field.name}
-          {field.required && <span className="text-rose-600 ml-1">*</span>}
-        </label>
-        <input
-          type="text"
-          defaultValue={sample}
-          className="w-full px-2 py-1.5 rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
-        />
-      </div>
-    )
+  const needsOptions = type === "enum" || type === "list"
+  const canSave = name.trim().length > 0
+  const isEditing = existing !== null
+
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({
+      id: existing?.id ?? `new_${Date.now()}`,
+      name: name.trim(),
+      type,
+      required: kind === "input" && required,
+      description: description.trim() || undefined,
+      options: needsOptions ? options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
+    })
   }
 
-  if (field.type === "enum") {
-    return (
-      <div>
-        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
-          {field.name}
-          {field.required && <span className="text-rose-600 ml-1">*</span>}
-        </label>
-        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
-          <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
-          <span className="flex-1 text-zinc-900 font-medium">{sample}</span>
-          <CaretDown className="h-3 w-3 text-zinc-400" />
-        </div>
-      </div>
-    )
-  }
-
-  if (field.type === "list") {
-    const items = sample ? sample.split(",").map((s) => s.trim()) : []
-    return (
-      <div>
-        <label className="text-[11px] font-medium text-zinc-500 block mb-1">
-          {field.name}
-          {field.required && <span className="text-rose-600 ml-1">*</span>}
-        </label>
-        <div className="flex flex-wrap gap-1 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 min-h-[32px]">
-          {items.map((it) => (
-            <span
-              key={it}
-              className="inline-flex items-center gap-1 rounded bg-white border border-gray-200 px-1.5 py-0.5 text-[11px] font-medium text-zinc-700"
-            >
-              {it}
-              <X className="h-2.5 w-2.5 text-zinc-400" />
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // case-ref, file, kb-ref — card style
-  return (
-    <div>
-      <label className="text-[11px] font-medium text-zinc-500 block mb-1">
-        {field.name}
-        {field.required && <span className="text-rose-600 ml-1">*</span>}
-      </label>
-      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-sm">
-        <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
-        <span className="flex-1 text-zinc-900 font-medium truncate">{sample}</span>
-        <CaretDown className="h-3 w-3 text-zinc-400" />
-      </div>
-    </div>
-  )
-}
-
-// ── Live output field (renders per output type) ──────────────────────
-
-function LiveOutputValue({ field, playbookId }: { field: Field; playbookId: string }) {
-  // Sample values per playbook per field
-  const sampleValues: Record<string, Record<string, string | string[]>> = {
-    "medical-records-summary": {
-      summary: "Plaintiff received continuous care from 2023-07 to 2024-03 with documented treatment for lumbar strain and cervical injury. Three gaps in documentation identified...",
-      gaps_found: "3",
-      confidence: "94%",
-    },
-    "depo-prep": {
-      questions: [
-        "On the date of the incident, were you using your phone in the 60 seconds leading up to the impact?",
-        "You previously testified you were in severe pain. Can you explain the Facebook photo dated March 3, 2024 showing you dancing at a wedding?",
-        "Between January 15 and April 22, you had no documented medical treatment. Can you describe the nature of your pain during that 97-day gap?",
-        "Dr. Roberts recommended you undergo steroid injections. You declined. What prompted that decision?",
-      ] as string[],
-      weaknesses: [
-        "Phone records show texting at 2:47pm, 30 seconds before impact — source: phone_records.pdf p.14",
-        "97-day treatment gap (Jan 15 - Apr 22) inconsistent with claimed severe pain — source: medical_timeline.pdf p.8",
-        "Social media shows physical activity during claimed injury period — source: investigation_report.pdf p.23",
-        "Declined steroid injection despite doctor recommendation — source: dr_roberts_notes.pdf p.4",
-      ] as string[],
-      treatment_gaps: "3",
-      estimated_duration: "3-4 hours",
-      question_count: "127",
-    },
-  }
-
-  const values = sampleValues[playbookId] ?? sampleValues["medical-records-summary"]
-  const value = values[field.name]
-  const typeConfig = FIELD_TYPES[field.type]
-  const Icon = typeConfig.icon
-
-  if (field.type === "list" && Array.isArray(value)) {
-    return (
-      <div>
-        <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-1 flex items-center gap-1">
-          <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
-          <span className="ml-auto text-zinc-400 tabular-nums">{value.length} items</span>
-        </div>
-        <div className="space-y-1 pl-1">
-          {value.slice(0, 4).map((item, i) => (
-            <div key={i} className="text-xs text-zinc-700 leading-snug flex items-start gap-1.5">
-              <span className="text-zinc-400 tabular-nums shrink-0">{i + 1}.</span>
-              <span className="flex-1 min-w-0">{item}</span>
-            </div>
-          ))}
-          {value.length > 4 && (
-            <div className="text-[11px] text-zinc-500 italic pl-4">+{value.length - 4} more…</div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  if (field.type === "number") {
-    return (
-      <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-0.5 flex items-center gap-1">
-          <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
-        </div>
-        <div className="text-lg font-semibold text-zinc-900 tabular-nums">{value ?? "—"}</div>
-      </div>
-    )
-  }
-
-  // text
-  return (
-    <div>
-      <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-400 mb-1 flex items-center gap-1">
-        <Icon className={`h-2.5 w-2.5 ${typeConfig.color}`} /> {field.name}
-      </div>
-      <div className="text-sm text-zinc-900 leading-relaxed">{typeof value === "string" ? value : ""}</div>
-    </div>
-  )
-}
-
-function TestPanel() {
-  const playbook = useCurrentPlaybook()
-  const [status, setStatus] = useState<TestStatus>("success")
-
-  const numericOutputs = playbook.outputs.filter((o) => o.type === "number")
-  const otherOutputs = playbook.outputs.filter((o) => o.type !== "number")
+  const TYPE_ORDER: FieldType[] =
+    kind === "input"
+      ? ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
+      : ["text", "number", "list", "date"]
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 border-l border-gray-200">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 h-11 border-b border-gray-200 bg-white shrink-0">
-        <div className="flex items-center gap-2">
-          <Play className="h-4 w-4 text-zinc-500" weight="fill" />
-          <h3 className="text-sm font-semibold text-zinc-900">Test</h3>
-          <span className="text-[11px] text-zinc-500">Try your playbook with sample data</span>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-5 space-y-5">
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+            Name
+          </label>
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={kind === "input" ? "e.g. Case, Records, Plaintiff name" : "e.g. summary, gaps_found"}
+            className="w-full h-10 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+          />
         </div>
-        <button className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-400">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {/* Test inputs */}
-        <section>
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">Sample inputs</h4>
-          <div className="rounded-[10px] border border-gray-200 bg-white p-3 space-y-2.5">
-            {playbook.inputs.map((f) => (
-              <SampleInput key={f.id} field={f} />
-            ))}
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Type</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {TYPE_ORDER.map((t) => {
+              const cfg = FIELD_TYPES[t]
+              const Icon = cfg.icon
+              const active = type === t
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs font-medium transition-all text-left ${
+                    active
+                      ? "border-blue-800 bg-blue-50/40 text-blue-800 ring-2 ring-blue-100"
+                      : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className={`flex items-center justify-center h-7 w-7 rounded-md bg-white border border-gray-200 shrink-0`}>
+                    <Icon className={`h-3.5 w-3.5 ${active ? "text-blue-800" : cfg.color}`} weight="bold" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold">{cfg.label}</div>
+                    <div className="text-[10px] text-zinc-500 font-normal truncate">{cfg.description}</div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
+        </div>
+
+        {needsOptions && (
+          <div>
+            <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+              Options <span className="text-zinc-400 normal-case tracking-normal">· one per line</span>
+            </label>
+            <textarea
+              value={options}
+              onChange={(e) => setOptions(e.target.value)}
+              placeholder="Plaintiff&#10;Defendant&#10;Expert witness"
+              rows={4}
+              className="w-full px-3 py-2 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none font-mono"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+            Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
+          </label>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Help text shown to the user"
+            className="w-full h-10 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        {kind === "input" && (
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={required}
+              onChange={(e) => setRequired(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-blue-500"
+            />
+            <span className="text-sm text-zinc-700">Required</span>
+            <span className="text-[11px] text-zinc-500">— the user must fill this in</span>
+          </label>
+        )}
+      </div>
+
+      <div className="border-t border-gray-200 px-5 py-3 flex items-center gap-2 shrink-0 bg-white">
+        {isEditing && (
           <button
-            onClick={() => {
-              setStatus("running")
-              setTimeout(() => setStatus("success"), 2000)
-            }}
-            className="w-full mt-2 inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-800 text-white px-3 py-2 text-sm font-medium hover:bg-blue-900 transition-colors"
+            onClick={onDelete}
+            className="flex items-center justify-center h-9 w-9 rounded-md hover:bg-red-50 text-red-600 transition-colors"
+            title="Delete"
           >
-            {status === "running" ? (
-              <>
-                <CircleNotch className="h-4 w-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" weight="fill" />
-                Run test
-              </>
-            )}
+            <Trash className="h-4 w-4" />
           </button>
-        </section>
-
-        {/* Live output */}
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Live output</h4>
-            {status === "success" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
-                <CheckCircle className="h-2.5 w-2.5" weight="fill" />
-                Success · 18.2s
-              </span>
-            )}
-            {status === "running" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
-                <CircleNotch className="h-2.5 w-2.5 animate-spin" weight="bold" />
-                Running
-              </span>
-            )}
-          </div>
-
-          <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
-            <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-              Preview as it'll appear in the Runs grid
-            </div>
-
-            <div className="p-3 space-y-3">
-              {status === "running" ? (
-                <>
-                  <div className="h-4 w-3/4 rounded bg-gray-100 animate-pulse" />
-                  <div className="h-4 w-full rounded bg-gray-100 animate-pulse" />
-                  <div className="h-4 w-2/3 rounded bg-gray-100 animate-pulse" />
-                </>
-              ) : (
-                <>
-                  {otherOutputs.map((f) => (
-                    <LiveOutputValue key={f.id} field={f} playbookId={playbook.id} />
-                  ))}
-                  {numericOutputs.length > 0 && (
-                    <div className={`grid grid-cols-${Math.min(numericOutputs.length, 3)} gap-2`}>
-                      {numericOutputs.map((f) => (
-                        <LiveOutputValue key={f.id} field={f} playbookId={playbook.id} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </section>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-9">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-9 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEditing ? "Save changes" : `Add ${kind}`}
+        </Button>
       </div>
     </div>
   )
 }
 
-// ── Builder View (standalone, kept for direct embeds) ──────────────────
+// ── Step Form (in drawer) ─────────────────────────────────────────────
 
-export function WorkflowBuilder() {
-  const playbook = useCurrentPlaybook()
-  const [inputs] = useState(playbook.inputs)
-  const [outputs] = useState(playbook.outputs)
-  const [steps, setSteps] = useState(playbook.steps)
+function StepForm({
+  existing,
+  stepType,
+  availableVars,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  existing: Step | null
+  stepType: StepType
+  availableVars: string[]
+  onSave: (s: Step) => void
+  onDelete: () => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(existing?.name ?? "")
+  const [detail, setDetail] = useState(existing?.detail ?? "")
+  const isEditing = existing !== null
+  const type = existing?.type ?? stepType
+  const cfg = STEP_TYPES[type]
+  const Icon = cfg.icon
+  const canSave = name.trim().length > 0 && detail.trim().length > 0
 
-  const toggleStep = (id: string) => {
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, expanded: !s.expanded } : s)))
+  const insertVariable = (v: string) => {
+    setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
+  }
+
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({
+      id: existing?.id ?? `new_${Date.now()}`,
+      type,
+      name: name.trim(),
+      detail: detail.trim(),
+    })
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
-      <div className="flex flex-col flex-1 min-w-0 bg-gray-50">
-        <div className="flex items-center gap-2 px-4 h-11 border-b border-gray-200 bg-white shrink-0">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-            <Warning className="h-3 w-3" weight="fill" />
-            Unsaved changes
-          </span>
-          <span className="text-[11px] text-zinc-500">Last saved 3 minutes ago</span>
-          <div className="flex-1" />
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
-            <ArrowClockwise className="h-3.5 w-3.5" />
-            Revert
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
-            <FloppyDisk className="h-3.5 w-3.5" />
-            Save draft
-          </Button>
-          <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
-            Publish
-          </Button>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-5 space-y-5">
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Type</label>
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 bg-white border-l-4 ${cfg.accent}`}
+          >
+            <div className={`flex items-center justify-center h-7 w-7 rounded-md ${cfg.iconBg}`}>
+              <Icon className={`h-4 w-4 ${cfg.iconColor}`} weight="bold" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-zinc-900">{cfg.label}</div>
+              <div className="text-[11px] text-zinc-500">{cfg.description}</div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 space-y-3 max-w-[920px] w-full mx-auto">
-          <InputsSection inputs={inputs} />
-          <div className="flex items-center justify-center py-1">
-            <div className="h-5 w-px bg-gray-200" />
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Name</label>
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={type === "fetch" ? "e.g. Fetch case records" : "e.g. Analyze case for weaknesses"}
+            className="w-full h-10 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+            {type === "fetch" ? "What to load" : "Prompt"}
+          </label>
+          <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder={
+                type === "fetch"
+                  ? "e.g. Load all PDFs from {{Records}} and extract text"
+                  : "e.g. Analyze the records for {{Case}} and identify treatment gaps..."
+              }
+              rows={8}
+              className="w-full px-3 py-2 text-sm bg-white focus:outline-none resize-none leading-relaxed"
+            />
+            {availableVars.length > 0 && (
+              <div className="border-t border-gray-200 bg-gray-50 px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mr-1">Insert variable:</span>
+                {availableVars.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => insertVariable(v)}
+                    className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <StepsSection steps={steps} onToggle={toggleStep} />
-          <div className="flex items-center justify-center py-1">
-            <div className="h-5 w-px bg-gray-200" />
-          </div>
-          <OutputsSection outputs={outputs} />
+          <p className="text-[11px] text-zinc-500 mt-1.5">
+            Use <span className="font-mono bg-gray-100 px-1 rounded">{`{{ }}`}</span> to reference inputs from above.
+          </p>
         </div>
       </div>
-      <div className="w-[420px] shrink-0">
-        <TestPanel />
+
+      <div className="border-t border-gray-200 px-5 py-3 flex items-center gap-2 shrink-0 bg-white">
+        {isEditing && (
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center h-9 w-9 rounded-md hover:bg-red-50 text-red-600 transition-colors"
+            title="Delete"
+          >
+            <Trash className="h-4 w-4" />
+          </button>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-9">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-9 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEditing ? "Save changes" : `Add ${cfg.label.toLowerCase()}`}
+        </Button>
       </div>
     </div>
   )
 }
 
-// ── Inline Definition Panel (for embedding in workflow detail) ─────────
+// ── Drawer shell ──────────────────────────────────────────────────────
+
+function EditorDrawer({
+  state,
+  availableVars,
+  onClose,
+  onSaveField,
+  onDeleteField,
+  onSaveStep,
+  onDeleteStep,
+}: {
+  state: DrawerState
+  availableVars: string[]
+  onClose: () => void
+  onSaveField: (kind: "input" | "output", field: Field) => void
+  onDeleteField: (kind: "input" | "output", field: Field) => void
+  onSaveStep: (step: Step) => void
+  onDeleteStep: (step: Step) => void
+}) {
+  if (!state) return null
+
+  const title = (() => {
+    if (state.kind === "input") return state.existing ? "Edit input" : "New input"
+    if (state.kind === "output") return state.existing ? "Edit output" : "New output"
+    return state.existing ? "Edit step" : "New step"
+  })()
+
+  const subtitle = (() => {
+    if (state.kind === "input") return "A field the user will fill in when running this playbook"
+    if (state.kind === "output") return "A field this playbook will produce — becomes a column in the Runs grid"
+    return "A step in your AI logic"
+  })()
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-zinc-900/15 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-[520px] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
+            <p className="text-[11px] text-zinc-500 truncate">{subtitle}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500"
+              title="Expand"
+            >
+              <ArrowsOut className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {state.kind === "input" && (
+          <FieldForm
+            kind="input"
+            existing={state.existing}
+            onSave={(f) => onSaveField("input", f)}
+            onDelete={() => state.existing && onDeleteField("input", state.existing)}
+            onCancel={onClose}
+          />
+        )}
+        {state.kind === "output" && (
+          <FieldForm
+            kind="output"
+            existing={state.existing}
+            onSave={(f) => onSaveField("output", f)}
+            onDelete={() => state.existing && onDeleteField("output", state.existing)}
+            onCancel={onClose}
+          />
+        )}
+        {state.kind === "step" && (
+          <StepForm
+            existing={state.existing}
+            stepType={state.existing?.type ?? state.stepType ?? "prompt"}
+            availableVars={availableVars}
+            onSave={onSaveStep}
+            onDelete={() => state.existing && onDeleteStep(state.existing)}
+            onCancel={onClose}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Main: Inline Definition Panel ─────────────────────────────────────
 
 export function DefinitionPanel() {
   const playbook = useCurrentPlaybook()
-  const [steps, setSteps] = useState(playbook.steps)
-  const toggleStep = (id: string) =>
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, expanded: !s.expanded } : s)))
+  const [inputs, setInputs] = useState<Field[]>(playbook.inputs)
+  const [outputs, setOutputs] = useState<Field[]>(playbook.outputs)
+  const [steps, setSteps] = useState<Step[]>(playbook.steps)
+  const [drawer, setDrawer] = useState<DrawerState>(null)
+
+  const availableVars = inputs.map((i) => i.name)
+
+  const saveField = (kind: "input" | "output", f: Field) => {
+    const setter = kind === "input" ? setInputs : setOutputs
+    setter((prev) => {
+      const idx = prev.findIndex((x) => x.id === f.id)
+      if (idx === -1) return [...prev, f]
+      const next = [...prev]
+      next[idx] = f
+      return next
+    })
+    setDrawer(null)
+  }
+
+  const deleteField = (kind: "input" | "output", f: Field) => {
+    const setter = kind === "input" ? setInputs : setOutputs
+    setter((prev) => prev.filter((x) => x.id !== f.id))
+    setDrawer(null)
+  }
+
+  const saveStep = (s: Step) => {
+    setSteps((prev) => {
+      const idx = prev.findIndex((x) => x.id === s.id)
+      if (idx === -1) return [...prev, s]
+      const next = [...prev]
+      next[idx] = s
+      return next
+    })
+    setDrawer(null)
+  }
+
+  const deleteStep = (s: Step) => {
+    setSteps((prev) => prev.filter((x) => x.id !== s.id))
+    setDrawer(null)
+  }
 
   return (
-    <div className="flex h-full w-full min-h-0 min-w-0">
-      {/* Left: definition sections */}
-      <div className="flex-1 min-w-0 overflow-auto p-4 space-y-3 bg-gray-50">
-        <InputsSection inputs={playbook.inputs} />
+    <div className="flex-1 overflow-auto p-6 space-y-4 bg-gray-50">
+      <div className="max-w-[920px] mx-auto space-y-4">
+        <InputsSection
+          inputs={inputs}
+          onEdit={(f) => setDrawer({ kind: "input", existing: f })}
+          onAdd={() => setDrawer({ kind: "input", existing: null })}
+        />
         <div className="flex items-center justify-center py-1">
           <div className="h-5 w-px bg-gray-200" />
         </div>
-        <StepsSection steps={steps} onToggle={toggleStep} />
+        <StepsSection
+          steps={steps}
+          onEdit={(s) => setDrawer({ kind: "step", existing: s })}
+          onAdd={(t) => setDrawer({ kind: "step", existing: null, stepType: t })}
+        />
         <div className="flex items-center justify-center py-1">
           <div className="h-5 w-px bg-gray-200" />
         </div>
-        <OutputsSection outputs={playbook.outputs} />
+        <OutputsSection
+          outputs={outputs}
+          onEdit={(f) => setDrawer({ kind: "output", existing: f })}
+          onAdd={() => setDrawer({ kind: "output", existing: null })}
+        />
       </div>
-      {/* Right: test panel */}
-      <div className="w-[380px] shrink-0 border-l border-gray-200">
-        <TestPanel />
-      </div>
+
+      <EditorDrawer
+        state={drawer}
+        availableVars={availableVars}
+        onClose={() => setDrawer(null)}
+        onSaveField={saveField}
+        onDeleteField={deleteField}
+        onSaveStep={saveStep}
+        onDeleteStep={deleteStep}
+      />
     </div>
   )
 }
 
-// ── Expanded Definition Header (shown when expanded) ───────────────────
+// ── Back-compat: WorkflowBuilder (exported, kept minimal) ─────────────
 
-export function ExpandedDefinitionHeader({ onCollapse }: { onCollapse: () => void }) {
-  return (
-    <div className="flex items-center gap-2 px-4 h-12 border-b border-gray-200 bg-white">
-      <div className="flex items-center gap-2">
-        <Code className="h-4 w-4 text-blue-800" />
-        <span className="text-sm font-semibold text-zinc-900">Definition</span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-          <Warning className="h-3 w-3" weight="fill" />
-          Unsaved changes
-        </span>
-        <span className="text-[11px] text-zinc-500">Last saved 3m ago</span>
-      </div>
-      <div className="flex-1" />
-      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
-        <ArrowClockwise className="h-3.5 w-3.5" />
-        Revert
-      </Button>
-      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
-        <FloppyDisk className="h-3.5 w-3.5" />
-        Save draft
-      </Button>
-      <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
-        Publish
-      </Button>
-      <div className="h-5 w-px bg-gray-200 mx-1" />
-      <button
-        onClick={onCollapse}
-        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
-      >
-        <CaretUp className="h-3.5 w-3.5" />
-        Collapse
-      </button>
-    </div>
-  )
+export function WorkflowBuilder() {
+  return <DefinitionPanel />
 }

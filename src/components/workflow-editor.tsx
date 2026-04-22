@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, PencilSimple, FloppyDisk } from "@phosphor-icons/react"
+import { ArrowLeft, FloppyDisk } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { DefinitionPanel } from "@/components/workflow-builder"
 import { getPlaybook } from "@/lib/playbook-data"
@@ -24,10 +24,6 @@ function EditorIdentityHeader({ playbookId }: { playbookId: string }) {
           <Icon className={`h-5 w-5 ${pb.iconColor}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 mb-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-            <PencilSimple className="h-3 w-3" />
-            Editing playbook
-          </div>
           <h1 className="text-base font-semibold text-zinc-900">{pb.name}</h1>
           <p className="text-xs text-zinc-500 mt-0.5 max-w-[720px] leading-relaxed">{pb.description}</p>
         </div>
