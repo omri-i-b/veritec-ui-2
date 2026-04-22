@@ -9,6 +9,7 @@ import {
   TextT,
   Hash,
   Calendar,
+  CaretDown,
   FilePdf,
   SuitcaseSimple,
   ListBullets,
@@ -25,7 +26,7 @@ import {
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
-import { getTemplate } from "@/lib/template-data"
+import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
 
@@ -34,14 +35,27 @@ const FIELD_TYPES: Record<
   { icon: typeof TextT; label: string; color: string; description: string }
 > = {
   text: { icon: TextT, label: "Short text", color: "text-zinc-600", description: "A few words or a sentence" },
+  long_text: { icon: TextT, label: "Long text", color: "text-zinc-600", description: "A paragraph or longer — summaries, narratives" },
   number: { icon: Hash, label: "Number", color: "text-emerald-700", description: "Any number — count, amount, score" },
   date: { icon: Calendar, label: "Date", color: "text-amber-700", description: "A calendar date" },
+  list: { icon: ListBullets, label: "List", color: "text-sky-700", description: "A list of items — questions, providers, citations" },
   file: { icon: FilePdf, label: "File", color: "text-rose-700", description: "One or more documents" },
   "case-ref": { icon: SuitcaseSimple, label: "Case", color: "text-blue-800", description: "A case from the system" },
   enum: { icon: CheckSquare, label: "Choice", color: "text-purple-700", description: "Pick one from a list you define" },
-  list: { icon: ListBullets, label: "Multiple choices", color: "text-sky-700", description: "Pick several from a list you define" },
   "kb-ref": { icon: Books, label: "Knowledge Base", color: "text-indigo-700", description: "A reference library (prior depos, templates, etc.)" },
+  document: {
+    icon: Stack,
+    label: "Document",
+    color: "text-teal-700",
+    description: "A formatted deliverable — the extractions fill a template",
+  },
 }
+
+/** Types valid for playbook inputs (what the user fills in to run) */
+const INPUT_TYPES: FieldType[] = ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
+
+/** Types valid for playbook outputs (what the AI extracts + the final deliverable) */
+const OUTPUT_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "document"]
 
 // ── Step type config ───────────────────────────────────────────────────
 
@@ -80,13 +94,21 @@ function useCurrentPlaybook() {
 function FieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
   const typeConfig = FIELD_TYPES[field.type]
   const Icon = typeConfig.icon
+  const isDocument = field.type === "document"
+  const template = field.templateId ? getTemplate(field.templateId) : undefined
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group w-full flex items-center gap-2 px-2.5 py-2 rounded-md border border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all text-left"
+      className={`group w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-left transition-all ${
+        isDocument
+          ? "border-teal-200 bg-teal-50/40 hover:border-teal-400 hover:shadow-sm"
+          : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
+      }`}
     >
-      <div className="flex items-center justify-center h-6 w-6 rounded-md bg-gray-50 shrink-0">
+      <div
+        className={`flex items-center justify-center h-6 w-6 rounded-md shrink-0 ${isDocument ? "bg-teal-100" : "bg-gray-50"}`}
+      >
         <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
       </div>
       <div className="min-w-0 flex-1">
@@ -95,15 +117,28 @@ function FieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
           {field.required && (
             <span className="text-[10px] font-medium text-rose-600 bg-rose-50 rounded px-1 py-0">required</span>
           )}
+          {isDocument && (
+            <span className="inline-flex items-center gap-1 rounded bg-teal-100 text-teal-800 px-1 py-0 text-[10px] font-semibold">
+              Deliverable
+            </span>
+          )}
         </div>
         {field.description && (
           <div className="text-[11px] text-zinc-500 truncate">{field.description}</div>
         )}
       </div>
-      <div className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 shrink-0">
-        <Icon className={`h-3 w-3 ${typeConfig.color}`} weight="bold" />
-        {typeConfig.label}
-      </div>
+      {isDocument && template ? (
+        <div className="inline-flex items-center gap-1.5 rounded-md border border-teal-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-teal-800 shrink-0">
+          <template.icon className={`h-3 w-3 ${template.iconColor}`} />
+          {template.name}
+          <span className="text-[10px] text-zinc-400">· {template.format}</span>
+        </div>
+      ) : (
+        <div className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 shrink-0">
+          <Icon className={`h-3 w-3 ${typeConfig.color}`} weight="bold" />
+          {typeConfig.label}
+        </div>
+      )}
     </button>
   )
 }
@@ -399,6 +434,101 @@ type DrawerState =
   | { kind: "step"; existing: Step | null; stepType?: StepType }
   | null
 
+// ── Template Picker (for "Document" output type) ──────────────────────
+
+function TemplatePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const all = Object.values(TEMPLATES)
+  const selected = value ? TEMPLATES[value] : undefined
+  return (
+    <div>
+      <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+        Applied to template <span className="text-rose-600">*</span>
+      </label>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full flex items-center gap-2 px-3 py-2 rounded-md border text-sm text-left transition-all ${
+          selected
+            ? "border-gray-200 bg-white hover:border-gray-300"
+            : "border-dashed border-gray-300 bg-gray-50 text-zinc-500 hover:border-blue-300"
+        }`}
+      >
+        {selected ? (
+          <>
+            <div className={`flex items-center justify-center h-7 w-7 rounded-md ${selected.iconBg} shrink-0`}>
+              <selected.icon className={`h-4 w-4 ${selected.iconColor}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-zinc-900 truncate">{selected.name}</span>
+                <span className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0 text-[10px] font-medium text-zinc-600">
+                  {selected.format}
+                </span>
+              </div>
+              <div className="text-[11px] text-zinc-500 truncate">
+                {selected.placeholders.length} placeholder{selected.placeholders.length !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <Stack className="h-4 w-4 text-zinc-400 shrink-0" />
+            <span className="flex-1">Pick a template…</span>
+          </>
+        )}
+        <CaretDown className="h-3 w-3 text-zinc-400 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="mt-1 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden max-h-[260px] overflow-y-auto">
+          {all.map((t) => {
+            const active = value === t.id
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  onChange(t.id)
+                  setOpen(false)
+                }}
+                className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 ${
+                  active ? "bg-blue-50/40" : ""
+                }`}
+              >
+                <div className={`flex items-center justify-center h-6 w-6 rounded-md ${t.iconBg} shrink-0`}>
+                  <t.icon className={`h-3.5 w-3.5 ${t.iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-zinc-900 truncate">{t.name}</span>
+                    <span className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-1 py-0 text-[10px] font-medium text-zinc-600">
+                      {t.format}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 truncate">{t.description}</div>
+                </div>
+              </button>
+            )
+          })}
+          <div className="border-t border-gray-200 p-2 bg-gray-50">
+            <Link
+              href="/templates"
+              className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-blue-800 hover:bg-white rounded font-medium"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Create new template
+            </Link>
+          </div>
+        </div>
+      )}
+      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+        The extractions above fill this template&apos;s placeholders. Output matches the template format exactly.
+      </p>
+    </div>
+  )
+}
+
 // ── Field Form (shared for input & output in drawer) ──────────────────
 
 function FieldForm({
@@ -419,9 +549,11 @@ function FieldForm({
   const [description, setDescription] = useState(existing?.description ?? "")
   const [required, setRequired] = useState(existing?.required ?? false)
   const [options, setOptions] = useState((existing?.options ?? []).join("\n"))
+  const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
 
-  const needsOptions = type === "enum" || type === "list"
-  const canSave = name.trim().length > 0
+  const needsOptions = type === "enum"
+  const needsTemplate = type === "document"
+  const canSave = name.trim().length > 0 && (!needsTemplate || !!templateId)
   const isEditing = existing !== null
 
   const handleSave = () => {
@@ -433,13 +565,11 @@ function FieldForm({
       required: kind === "input" && required,
       description: description.trim() || undefined,
       options: needsOptions ? options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
+      templateId: needsTemplate ? templateId : undefined,
     })
   }
 
-  const TYPE_ORDER: FieldType[] =
-    kind === "input"
-      ? ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
-      : ["text", "number", "list", "date"]
+  const TYPE_ORDER: FieldType[] = kind === "input" ? INPUT_TYPES : OUTPUT_TYPES
 
   return (
     <div className="flex flex-col h-full">
@@ -503,6 +633,8 @@ function FieldForm({
             />
           </div>
         )}
+
+        {needsTemplate && <TemplatePicker value={templateId} onChange={setTemplateId} />}
 
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
@@ -852,10 +984,6 @@ export function DefinitionPanel() {
           onEdit={(f) => setDrawer({ kind: "output", existing: f })}
           onAdd={() => setDrawer({ kind: "output", existing: null })}
         />
-        <div className="flex items-center justify-center py-1">
-          <div className="h-5 w-px bg-gray-200" />
-        </div>
-        <FormatSection templateId={playbook.templateId} />
       </div>
 
       <EditorDrawer

@@ -12,7 +12,17 @@ import {
   Microphone,
 } from "@phosphor-icons/react"
 
-export type FieldType = "text" | "number" | "date" | "file" | "case-ref" | "enum" | "list" | "kb-ref"
+export type FieldType =
+  | "text"
+  | "long_text"
+  | "number"
+  | "date"
+  | "file"
+  | "case-ref"
+  | "enum"
+  | "list"
+  | "kb-ref"
+  | "document"
 
 export interface Field {
   id: string
@@ -24,6 +34,8 @@ export interface Field {
   options?: string[]
   /** Default value or sample for test panel */
   sample?: string
+  /** If type is "document", the template this output is applied to */
+  templateId?: string
 }
 
 export type StepType = "fetch" | "prompt"
@@ -51,8 +63,6 @@ export interface PlaybookDef {
   inputs: Field[]
   steps: Step[]
   outputs: Field[]
-  /** Optional template ID — playbook outputs are applied to this template to produce the final deliverable */
-  templateId?: string
 }
 
 export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
@@ -86,11 +96,19 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
     ],
     outputs: [
-      { id: "out_1", name: "summary", type: "text", description: "Chronological summary of treatment" },
-      { id: "out_2", name: "gaps_found", type: "number", description: "Count of documentation gaps" },
-      { id: "out_3", name: "confidence", type: "number", description: "Confidence score (0–100)" },
+      { id: "out_1", name: "patient_name", type: "text", description: "Plaintiff / patient name from records" },
+      { id: "out_2", name: "treatment_start", type: "date", description: "First treatment date" },
+      { id: "out_3", name: "treatment_end", type: "date", description: "Most recent treatment date" },
+      { id: "out_4", name: "gaps_count", type: "number", description: "Number of treatment gaps >30 days" },
+      { id: "out_5", name: "providers", type: "list", description: "Treating providers with specialty and visit counts" },
+      {
+        id: "out_6",
+        name: "medical_summary_doc",
+        type: "document",
+        description: "Formatted summary memo — extractions above fill the template placeholders",
+        templateId: "medical-records-summary",
+      },
     ],
-    templateId: "medical-records-summary",
   },
 
   "depo-prep": {
@@ -158,16 +176,23 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
     ],
     outputs: [
+      { id: "out_1", name: "deponent_name", type: "text", description: "Name of the person being deposed" },
+      { id: "out_2", name: "question_count", type: "number", description: "Total questions generated" },
       {
-        id: "out_1",
+        id: "out_3",
         name: "questions",
         type: "list",
-        description: "Deposition questions with text, category, reasoning, and source citation (doc + page)",
+        description: "Each item: question text, category, reasoning, source document + page",
       },
-      { id: "out_2", name: "weaknesses", type: "list", description: "Vulnerabilities identified in the case data" },
-      { id: "out_3", name: "question_count", type: "number", description: "Total questions generated" },
+      { id: "out_4", name: "weaknesses", type: "list", description: "Vulnerabilities identified with document citations" },
+      {
+        id: "out_5",
+        name: "depo_outline_doc",
+        type: "document",
+        description: "Printable depo outline — extractions fill the template placeholders",
+        templateId: "depo-outline",
+      },
     ],
-    templateId: "depo-outline",
   },
 
   "depo-transcript-analysis": {
@@ -240,18 +265,24 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
     ],
     outputs: [
-      {
-        id: "out_1",
-        name: "qa_table",
-        type: "list",
-        description: "Full Q&A table — each row has deponent, question, answer, page:line reference, and linked exhibit",
-      },
-      { id: "out_2", name: "deponent", type: "text", description: "Name of person deposed" },
-      { id: "out_3", name: "deposition_date", type: "date", description: "Date the deposition took place" },
+      { id: "out_1", name: "deponent", type: "text", description: "Name of person deposed" },
+      { id: "out_2", name: "deposition_date", type: "date", description: "Date the deposition took place" },
+      { id: "out_3", name: "total_questions", type: "number", description: "Total Q&A pairs extracted" },
       { id: "out_4", name: "exhibits_count", type: "number", description: "Number of unique exhibits referenced" },
-      { id: "out_5", name: "total_questions", type: "number", description: "Total Q&A pairs extracted" },
+      {
+        id: "out_5",
+        name: "qa_rows",
+        type: "list",
+        description: "Each row: deponent, question, answer, page:line, linked exhibit",
+      },
+      {
+        id: "out_6",
+        name: "qa_summary_doc",
+        type: "document",
+        description: "Interactive Q&A summary table",
+        templateId: "qa-summary-table",
+      },
     ],
-    templateId: "qa-summary-table",
   },
 
   "depo-indexing": {
@@ -332,8 +363,14 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "number",
         description: "Documents that didn't fit cleanly — paralegal should review",
       },
+      {
+        id: "out_5",
+        name: "deposition_index_doc",
+        type: "document",
+        description: "Bookmark tree per deponent",
+        templateId: "deposition-index",
+      },
     ],
-    templateId: "deposition-index",
   },
 
   "demand-letter-draft": {
@@ -358,11 +395,17 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "s2", type: "prompt", name: "Draft letter", detail: "Draft demand letter for {{Case}} seeking {{Damages estimate}}. Return the draft, page count, and detected tone." },
     ],
     outputs: [
-      { id: "out_1", name: "draft", type: "text" },
-      { id: "out_2", name: "pages", type: "number" },
-      { id: "out_3", name: "tone", type: "text" },
+      { id: "out_1", name: "demand_amount", type: "number", description: "Total damages demand" },
+      { id: "out_2", name: "injuries", type: "list", description: "Injuries itemized with severity" },
+      { id: "out_3", name: "tone", type: "text", description: "Detected tone — Firm / Assertive / Aggressive" },
+      {
+        id: "out_4",
+        name: "demand_letter_doc",
+        type: "document",
+        description: "Firm's demand letter — extractions fill the template",
+        templateId: "demand-letter",
+      },
     ],
-    templateId: "demand-letter",
   },
 }
 
