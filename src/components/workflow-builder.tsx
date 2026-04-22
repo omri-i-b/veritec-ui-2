@@ -36,26 +36,30 @@ import { getPlaybook, type Field, type FieldType, type Step, type StepType } fro
 
 // ── Field type config ──────────────────────────────────────────────────
 
-const FIELD_TYPES: Record<FieldType, { icon: typeof TextT; label: string; color: string }> = {
-  text: { icon: TextT, label: "Text", color: "text-zinc-600" },
-  number: { icon: Hash, label: "Number", color: "text-emerald-700" },
-  date: { icon: Calendar, label: "Date", color: "text-amber-700" },
-  file: { icon: FilePdf, label: "File", color: "text-rose-700" },
-  "case-ref": { icon: SuitcaseSimple, label: "Case", color: "text-blue-800" },
-  enum: { icon: CheckSquare, label: "Enum", color: "text-purple-700" },
-  list: { icon: ListBullets, label: "List", color: "text-sky-700" },
-  "kb-ref": { icon: Books, label: "Knowledge Base", color: "text-indigo-700" },
+const FIELD_TYPES: Record<
+  FieldType,
+  { icon: typeof TextT; label: string; color: string; description: string }
+> = {
+  text: { icon: TextT, label: "Short text", color: "text-zinc-600", description: "A few words or a sentence" },
+  number: { icon: Hash, label: "Number", color: "text-emerald-700", description: "Any number — count, amount, score" },
+  date: { icon: Calendar, label: "Date", color: "text-amber-700", description: "A calendar date" },
+  file: { icon: FilePdf, label: "File", color: "text-rose-700", description: "One or more documents" },
+  "case-ref": { icon: SuitcaseSimple, label: "Case", color: "text-blue-800", description: "A case from the system" },
+  enum: { icon: CheckSquare, label: "Choice", color: "text-purple-700", description: "Pick one from a list you define" },
+  list: { icon: ListBullets, label: "Multiple choices", color: "text-sky-700", description: "Pick several from a list you define" },
+  "kb-ref": { icon: Books, label: "Knowledge Base", color: "text-indigo-700", description: "A reference library (prior depos, templates, etc.)" },
 }
 
 // ── Step type config ───────────────────────────────────────────────────
 
 const STEP_TYPES: Record<
   StepType,
-  { icon: typeof Database; label: string; iconColor: string; iconBg: string; accent: string }
+  { icon: typeof Database; label: string; description: string; iconColor: string; iconBg: string; accent: string }
 > = {
   fetch: {
     icon: Database,
     label: "Fetch",
+    description: "Pull data from the case, files, or a knowledge base",
     iconColor: "text-amber-700",
     iconBg: "bg-amber-50",
     accent: "border-l-amber-500",
@@ -63,23 +67,10 @@ const STEP_TYPES: Record<
   prompt: {
     icon: Sparkle,
     label: "Prompt",
+    description: "Ask an AI to analyze or generate something",
     iconColor: "text-blue-800",
     iconBg: "bg-blue-50",
     accent: "border-l-blue-500",
-  },
-  extract: {
-    icon: Code,
-    label: "Extract",
-    iconColor: "text-purple-700",
-    iconBg: "bg-purple-50",
-    accent: "border-l-purple-500",
-  },
-  condition: {
-    icon: GitBranch,
-    label: "Condition",
-    iconColor: "text-zinc-600",
-    iconBg: "bg-gray-50",
-    accent: "border-l-zinc-400",
   },
 }
 
@@ -124,9 +115,181 @@ function FieldRow({ field }: { field: Field }) {
   )
 }
 
+// ── New Field Form (inline Add UI) ─────────────────────────────────────
+
+function NewFieldForm({
+  kind,
+  onAdd,
+  onCancel,
+}: {
+  kind: "input" | "output"
+  onAdd: (field: Field) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState("")
+  const [type, setType] = useState<FieldType>("text")
+  const [description, setDescription] = useState("")
+  const [required, setRequired] = useState(false)
+  const [options, setOptions] = useState("")
+
+  const needsOptions = type === "enum" || type === "list"
+  const canAdd = name.trim().length > 0
+
+  const handleAdd = () => {
+    if (!canAdd) return
+    onAdd({
+      id: `new_${Date.now()}`,
+      name: name.trim(),
+      type,
+      required: kind === "input" && required,
+      description: description.trim() || undefined,
+      options: needsOptions
+        ? options.split("\n").map((s) => s.trim()).filter(Boolean)
+        : undefined,
+    })
+  }
+
+  // Input-friendly types come first
+  const TYPE_ORDER: FieldType[] =
+    kind === "input"
+      ? ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
+      : ["text", "number", "list", "date"]
+
+  return (
+    <div className="rounded-[10px] border-2 border-blue-200 bg-blue-50/30 p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-semibold text-zinc-900">New {kind}</h4>
+          <p className="text-[11px] text-zinc-500">
+            {kind === "input"
+              ? "A field the user will fill in when running this playbook"
+              : "A field this playbook will produce — becomes a column in the Runs grid"}
+          </p>
+        </div>
+        <button
+          onClick={onCancel}
+          className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-white text-zinc-400 hover:text-zinc-700"
+          title="Cancel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Name */}
+      <div>
+        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Name
+        </label>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={kind === "input" ? "e.g. Case, Records, Plaintiff name" : "e.g. summary, gaps_found"}
+          className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      {/* Type picker */}
+      <div>
+        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+          Type
+        </label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {TYPE_ORDER.map((t) => {
+            const cfg = FIELD_TYPES[t]
+            const Icon = cfg.icon
+            const active = type === t
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                title={cfg.description}
+                className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-md border text-[11px] font-medium transition-all ${
+                  active
+                    ? "border-blue-800 bg-white text-blue-800 ring-2 ring-blue-200"
+                    : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${active ? "text-blue-800" : cfg.color}`} weight="bold" />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] text-zinc-500 mt-1.5 italic">
+          {FIELD_TYPES[type].description}
+        </p>
+      </div>
+
+      {/* Options (for enum/list) */}
+      {needsOptions && (
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+            Options <span className="text-zinc-400 normal-case tracking-normal">· one per line</span>
+          </label>
+          <textarea
+            value={options}
+            onChange={(e) => setOptions(e.target.value)}
+            placeholder={"Plaintiff\nDefendant\nExpert witness"}
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none font-mono"
+          />
+        </div>
+      )}
+
+      {/* Description */}
+      <div>
+        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
+        </label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Help text shown to the user"
+          className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      {/* Required toggle (inputs only) */}
+      {kind === "input" && (
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={required}
+            onChange={(e) => setRequired(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-blue-800 focus:ring-blue-500"
+          />
+          <span className="text-sm text-zinc-700">Required</span>
+          <span className="text-[11px] text-zinc-500">— the user must fill this in</span>
+        </label>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-8">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleAdd}
+          disabled={!canAdd}
+          className="h-8 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Add {kind}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Inputs Section ─────────────────────────────────────────────────────
 
-function InputsSection({ inputs }: { inputs: Field[] }) {
+function InputsSection({ inputs: initial }: { inputs: Field[] }) {
+  const [inputs, setInputs] = useState(initial)
+  const [adding, setAdding] = useState(false)
   return (
     <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
@@ -142,10 +305,24 @@ function InputsSection({ inputs }: { inputs: Field[] }) {
         {inputs.map((f) => (
           <FieldRow key={f.id} field={f} />
         ))}
-        <button className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors">
-          <Plus className="h-3.5 w-3.5" />
-          Add input
-        </button>
+        {adding ? (
+          <NewFieldForm
+            kind="input"
+            onAdd={(f) => {
+              setInputs((prev) => [...prev, f])
+              setAdding(false)
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add input
+          </button>
+        )}
       </div>
     </section>
   )
@@ -226,19 +403,12 @@ function StepRow({
             <>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Prompt</span>
-                <div className="flex items-center gap-1 text-[11px] text-zinc-500">
-                  <span>Model:</span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 font-medium text-zinc-700">
-                    Claude Sonnet 4.7
-                    <CaretDown className="h-2.5 w-2.5" />
-                  </span>
-                </div>
               </div>
               <div className="rounded-md border border-gray-200 bg-white p-3">
                 <PromptWithChips text={step.detail} />
               </div>
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-zinc-500">
-                <span>Insert:</span>
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-500 flex-wrap">
+                <span className="text-zinc-400">Insert variable:</span>
                 <button className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 font-medium hover:bg-blue-100">
                   Case
                 </button>
@@ -251,15 +421,6 @@ function StepRow({
                 <button className="text-zinc-400 hover:text-zinc-700">+ more</button>
               </div>
             </>
-          ) : step.type === "extract" ? (
-            <div className="font-mono text-xs text-zinc-700 rounded-md bg-zinc-900 text-zinc-100 p-3 leading-relaxed">
-              <div className="text-zinc-400">// Extract these fields from LLM response</div>
-              {`{
-  "summary": `}<span className="text-emerald-300">string</span>{`,
-  "gaps_found": `}<span className="text-emerald-300">number</span>{`,
-  "confidence": `}<span className="text-emerald-300">number</span>{`
-}`}
-            </div>
           ) : (
             <p className="text-sm text-zinc-700">{step.detail}</p>
           )}
@@ -288,7 +449,7 @@ function StepsSection({ steps, onToggle }: { steps: Step[]; onToggle: (id: strin
           <StepRow key={step.id} step={step} index={i} onToggle={() => onToggle(step.id)} />
         ))}
         <div className="flex items-center gap-1.5">
-          {(["fetch", "prompt", "extract", "condition"] as StepType[]).map((t) => {
+          {(["fetch", "prompt"] as StepType[]).map((t) => {
             const c = STEP_TYPES[t]
             const Icon = c.icon
             return (
@@ -309,7 +470,9 @@ function StepsSection({ steps, onToggle }: { steps: Step[]; onToggle: (id: strin
 
 // ── Outputs Section ────────────────────────────────────────────────────
 
-function OutputsSection({ outputs }: { outputs: Field[] }) {
+function OutputsSection({ outputs: initial }: { outputs: Field[] }) {
+  const [outputs, setOutputs] = useState(initial)
+  const [adding, setAdding] = useState(false)
   return (
     <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
@@ -320,19 +483,29 @@ function OutputsSection({ outputs }: { outputs: Field[] }) {
           </span>
           <span className="text-[11px] text-zinc-500">These become columns in the Runs grid</span>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-800">
-          <ArrowSquareOut className="h-3 w-3" />
-          Live preview
-        </span>
       </div>
       <div className="p-2 space-y-1.5">
         {outputs.map((f) => (
           <FieldRow key={f.id} field={f} />
         ))}
-        <button className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors">
-          <Plus className="h-3.5 w-3.5" />
-          Add output
-        </button>
+        {adding ? (
+          <NewFieldForm
+            kind="output"
+            onAdd={(f) => {
+              setOutputs((prev) => [...prev, f])
+              setAdding(false)
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add output
+          </button>
+        )}
       </div>
     </section>
   )
@@ -596,15 +769,6 @@ function TestPanel() {
             </div>
           </div>
         </section>
-
-        {/* Token/cost hint */}
-        <div className="rounded-md border border-gray-200 bg-white p-2.5 text-[11px] text-zinc-500 flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <Sparkle className="h-3 w-3" />
-            Est. cost per run
-          </span>
-          <span className="tabular-nums font-medium text-zinc-700">~$0.04 · 12.3k tokens</span>
-        </div>
       </div>
     </div>
   )

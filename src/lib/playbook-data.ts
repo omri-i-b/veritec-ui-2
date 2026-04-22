@@ -26,7 +26,7 @@ export interface Field {
   sample?: string
 }
 
-export type StepType = "fetch" | "prompt" | "extract" | "condition"
+export type StepType = "fetch" | "prompt"
 
 export interface Step {
   id: string
@@ -34,7 +34,6 @@ export interface Step {
   name: string
   detail: string
   expanded?: boolean
-  model?: string
 }
 
 export interface PlaybookDef {
@@ -80,11 +79,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "prompt",
         name: "Analyze with LLM",
         detail:
-          "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary.",
+          "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary. Return: summary (text), gaps_found (number), confidence (0-100).",
         expanded: true,
-        model: "Claude Sonnet 4.7",
       },
-      { id: "s3", type: "extract", name: "Parse structured output", detail: "Extract JSON: summary, gaps_found, confidence" },
     ],
     outputs: [
       { id: "out_1", name: "summary", type: "text", description: "Chronological summary of treatment" },
@@ -172,22 +169,13 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         detail:
           "Analyze case data for {{Case}}. Find things to attack in the depo: treatment gaps >30 days, inconsistencies between pain claims and documented activity, liability factors ({{Focus areas}}), missed or refused treatments, credibility issues, prior conditions. For each weakness, cite the specific document + page. Prioritize by {{Focus areas}}.",
         expanded: true,
-        model: "Claude Sonnet 4.7",
       },
       {
         id: "s4",
         type: "prompt",
         name: "Generate depo questions",
         detail:
-          "For each identified weakness, craft deposition questions that exploit it. Match the tone and phrasing patterns of the retrieved samples — do not copy their content. Scale question count to {{Aggressiveness}}: Light=20-40 questions, Moderate=50-80, Aggressive=100-150. Each question must include: text, topic category, intended outcome, and source document + page reference.",
-        expanded: false,
-        model: "Claude Sonnet 4.7",
-      },
-      {
-        id: "s5",
-        type: "extract",
-        name: "Parse structured output",
-        detail: "Extract JSON: questions[], weaknesses[], treatment_gaps, estimated_duration, question_count",
+          "For each identified weakness, craft deposition questions that exploit it. Match the tone and phrasing patterns of the retrieved samples — do not copy their content. Scale question count to {{Aggressiveness}}: Light=20-40 questions, Moderate=50-80, Aggressive=100-150. Each question must include: text, topic category, intended outcome, and source document + page reference. Return: questions[], weaknesses[], treatment_gaps (number), estimated_duration, question_count.",
       },
     ],
     outputs: [
@@ -223,8 +211,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     ],
     steps: [
       { id: "s1", type: "fetch", name: "Fetch case facts", detail: "Load {{Case}} context" },
-      { id: "s2", type: "prompt", name: "Draft letter", detail: "Draft demand letter for {{Case}} seeking {{Damages estimate}}." },
-      { id: "s3", type: "extract", name: "Parse", detail: "Extract final draft" },
+      { id: "s2", type: "prompt", name: "Draft letter", detail: "Draft demand letter for {{Case}} seeking {{Damages estimate}}. Return the draft, page count, and detected tone." },
     ],
     outputs: [
       { id: "out_1", name: "draft", type: "text" },
