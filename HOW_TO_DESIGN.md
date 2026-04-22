@@ -106,19 +106,20 @@ The #1 reason a request fails is that it's too vague. Give Claude **a reference*
 
 ## What patterns already exist (so you can reference them)
 
-Ask Claude to look at these when you want a new screen to match:
+See **[REFERENCE.md](./REFERENCE.md)** for a visual gallery of every pattern with screenshots. Quick index:
 
-| Pattern you need | Reference file |
-|---|---|
-| List + filter + table | `src/components/fileflow-inbox.tsx` |
-| Detail view with tabs + sidebar cards | `src/components/file-detail-view.tsx` |
-| Card grid library page | `src/components/playbooks-library.tsx` |
-| Data grid with click-to-drawer | `src/components/unified-runs.tsx` |
-| Form-like builder with live preview | `src/components/workflow-builder.tsx` |
-| File upload + search + tabs | `src/components/knowledge-detail.tsx` |
-| Tabbed page shell | `src/components/workflows-page.tsx` |
+| Pattern you need | Reference file | Live route |
+|---|---|---|
+| List + filter + table | `src/components/fileflow-inbox.tsx` | `/` |
+| Detail view with tabs + sidebar cards | `src/components/file-detail-view.tsx` | `/fileflow-inbox/0` |
+| Card grid library page | `src/components/playbooks-library.tsx` | `/workflows` (Playbooks tab) |
+| Data grid with click-to-drawer | `src/components/unified-runs.tsx` | `/workflows` (Runs tab) |
+| Form-like builder with live preview | `src/components/workflow-builder.tsx` | `/workflows/depo-prep/edit` |
+| File upload + search + tabs | `src/components/knowledge-detail.tsx` | `/knowledge/plaintiff-depositions` |
+| Knowledge base list (cards with status) | `src/components/knowledge-list.tsx` | `/knowledge` |
+| Tabbed page shell | `src/components/workflows-page.tsx` | `/workflows` |
 
-When in doubt, just say: **"Look at the existing components in `src/components/` and pick the one closest to what I'm describing, then adapt."**
+When in doubt, just say: **"Look at REFERENCE.md, pick the pattern closest to what I'm describing, and adapt it."**
 
 ---
 

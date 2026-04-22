@@ -73,7 +73,7 @@ Apply these automatically unless the user explicitly asks otherwise:
 
 ## Component patterns (reference, don't re-invent)
 
-When building a new screen, **look at the closest existing component** and adapt it. Do NOT build from scratch unless none of these match:
+When building a new screen, **look at the closest existing component** and adapt it. A visual gallery with screenshots lives in [`REFERENCE.md`](./REFERENCE.md) — read it when the user references a pattern by name or route. Do NOT build from scratch unless none of these match:
 
 | Pattern | Example |
 |---|---|

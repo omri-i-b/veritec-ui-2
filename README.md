@@ -24,6 +24,9 @@ That's the whole hand-off. You'll talk to Claude in chat, get screenshots back, 
 ### I want the full design system spec
 → **[DESIGN.md](./DESIGN.md)** — colors, typography, spacing, component patterns
 
+### I want to see what patterns already exist (with screenshots)
+→ **[REFERENCE.md](./REFERENCE.md)** — visual gallery of every pattern
+
 ---
 
 ## Live preview
