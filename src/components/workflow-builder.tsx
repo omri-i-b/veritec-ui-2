@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
+import Link from "next/link"
 import {
   Plus,
   DotsSixVertical,
@@ -18,9 +19,13 @@ import {
   X,
   Books,
   Trash,
+  Stack,
+  ArrowSquareOut,
+  PencilSimple,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getTemplate } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
 
@@ -306,6 +311,81 @@ function OutputsSection({
           <Plus className="h-3.5 w-3.5" />
           Add output
         </button>
+      </div>
+    </section>
+  )
+}
+
+// ── Format Section (applied template) ──────────────────────────────────
+
+function FormatSection({ templateId }: { templateId?: string }) {
+  const template = templateId ? getTemplate(templateId) : undefined
+  return (
+    <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900">Format</h3>
+          <span className="text-[11px] text-zinc-500">
+            Apply the outputs above to this template to produce the deliverable
+          </span>
+        </div>
+      </div>
+      <div className="p-2">
+        {template ? (
+          <Link
+            href={`/templates/${template.id}`}
+            className="group flex items-center gap-3 px-3 py-3 rounded-md border border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all"
+          >
+            <div className={`flex items-center justify-center h-10 w-10 rounded-[10px] ${template.iconBg} shrink-0`}>
+              <template.icon className={`h-5 w-5 ${template.iconColor}`} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-800 transition-colors">
+                  {template.name}
+                </span>
+                <span className="inline-flex items-center rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+                  {template.format}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                    template.sourceType === "placeholder"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : "border-purple-200 bg-purple-50 text-purple-700"
+                  }`}
+                >
+                  {template.sourceType === "placeholder" ? (
+                    <>
+                      <span className="font-mono text-[10px]">{"{{ }}"}</span>
+                      Placeholder
+                    </>
+                  ) : (
+                    "Example-based"
+                  )}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 line-clamp-1">{template.description}</p>
+              <div className="flex items-center gap-3 mt-1 text-[11px] text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <Stack className="h-2.5 w-2.5" />
+                  {template.sampleCount} sample{template.sampleCount !== 1 ? "s" : ""}
+                </span>
+                {template.placeholders.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-mono text-[10px]">{"{{ }}"}</span>
+                    {template.placeholders.length} fields
+                  </span>
+                )}
+              </div>
+            </div>
+            <ArrowSquareOut className="h-4 w-4 text-zinc-400 group-hover:text-blue-800 transition-colors shrink-0" />
+          </Link>
+        ) : (
+          <button className="w-full flex items-center justify-center gap-1.5 px-2.5 py-3 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors">
+            <Plus className="h-3.5 w-3.5" />
+            Apply output to a template
+          </button>
+        )}
       </div>
     </section>
   )
@@ -772,6 +852,10 @@ export function DefinitionPanel() {
           onEdit={(f) => setDrawer({ kind: "output", existing: f })}
           onAdd={() => setDrawer({ kind: "output", existing: null })}
         />
+        <div className="flex items-center justify-center py-1">
+          <div className="h-5 w-px bg-gray-200" />
+        </div>
+        <FormatSection templateId={playbook.templateId} />
       </div>
 
       <EditorDrawer

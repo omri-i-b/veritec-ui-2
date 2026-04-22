@@ -51,6 +51,8 @@ export interface PlaybookDef {
   inputs: Field[]
   steps: Step[]
   outputs: Field[]
+  /** Optional template ID — playbook outputs are applied to this template to produce the final deliverable */
+  templateId?: string
 }
 
 export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
@@ -88,6 +90,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "out_2", name: "gaps_found", type: "number", description: "Count of documentation gaps" },
       { id: "out_3", name: "confidence", type: "number", description: "Confidence score (0–100)" },
     ],
+    templateId: "medical-records-summary",
   },
 
   "depo-prep": {
@@ -164,6 +167,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "out_2", name: "weaknesses", type: "list", description: "Vulnerabilities identified in the case data" },
       { id: "out_3", name: "question_count", type: "number", description: "Total questions generated" },
     ],
+    templateId: "depo-outline",
   },
 
   "depo-transcript-analysis": {
@@ -247,6 +251,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "out_4", name: "exhibits_count", type: "number", description: "Number of unique exhibits referenced" },
       { id: "out_5", name: "total_questions", type: "number", description: "Total Q&A pairs extracted" },
     ],
+    templateId: "qa-summary-table",
   },
 
   "depo-indexing": {
@@ -328,6 +333,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         description: "Documents that didn't fit cleanly — paralegal should review",
       },
     ],
+    templateId: "deposition-index",
   },
 
   "demand-letter-draft": {
@@ -356,6 +362,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "out_2", name: "pages", type: "number" },
       { id: "out_3", name: "tone", type: "text" },
     ],
+    templateId: "demand-letter",
   },
 }
 
