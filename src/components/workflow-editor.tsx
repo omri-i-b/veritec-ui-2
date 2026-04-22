@@ -11,7 +11,7 @@ function EditorHeader({ playbookId }: { playbookId: string }) {
   const pb = getPlaybook(playbookId)
   const Icon = pb.icon
   return (
-    <div className="flex h-[46px] items-center gap-2 border-b border-gray-200 bg-white px-3 shrink-0">
+    <div className="flex h-12 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 shrink-0">
       <Link
         href={`/workflows/${pb.id}`}
         className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors"
@@ -24,7 +24,7 @@ function EditorHeader({ playbookId }: { playbookId: string }) {
       </div>
       <span className="text-sm font-semibold text-zinc-900 truncate">{pb.name}</span>
       <div className="flex-1" />
-      <Button size="sm" className="h-7 gap-1.5 bg-blue-800 hover:bg-blue-900">
+      <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
         <FloppyDisk className="h-3.5 w-3.5" />
         Save
       </Button>
