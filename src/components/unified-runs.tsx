@@ -734,10 +734,13 @@ ${run.output.map((f) => `  "${f.label.toLowerCase().replace(/\s+/g, "_")}": ${ty
             <ArrowClockwise className="h-4 w-4" />
             Re-run
           </Button>
-          <Button size="sm" className="flex-1 gap-1.5 bg-blue-800 hover:bg-blue-900">
+          <Link
+            href={`/runs/${run.id}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-800 text-white hover:bg-blue-900 h-8 px-3 text-sm font-medium transition-colors"
+          >
             <ArrowSquareOut className="h-4 w-4" />
             Open full
-          </Button>
+          </Link>
         </div>
       </div>
     </div>
