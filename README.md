@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Veritec AI — Design Exploration
 
-## Getting Started
+A living design system and mockup environment for Veritec AI, built with Next.js + shadcn + Tailwind + Claude Code. Designed collaboratively between non-developers and AI agents.
 
-First, run the development server:
+---
+
+## 📘 Who are you?
+
+### I'm a **designer / PM / non-developer** and I want to create new screens
+→ Read **[HOW_TO_DESIGN.md](./HOW_TO_DESIGN.md)**
+
+That's the whole hand-off. You'll talk to Claude in chat, get screenshots back, iterate, and deploy shareable links. You don't need to read any code.
+
+### I'm an **engineer** and I want to understand the codebase
+- Stack: Next.js 16 (static export), Tailwind CSS v4, shadcn/ui v2 (base-ui), Phosphor Icons
+- Route groups: `src/app/(app)/` for app pages (with sidebar), `src/app/mockups/` for standalone previews
+- Shared data: `src/lib/playbook-data.ts`
+- Start: `npm install && npm run dev` (port 3001)
+- Deploy: push to `main`, GitHub Actions handles GitHub Pages
+
+### I'm a **Claude / AI agent** working on this repo
+→ Read **[AGENTS.md](./AGENTS.md)** — it has the conventions you should follow automatically
+
+### I want the full design system spec
+→ **[DESIGN.md](./DESIGN.md)** — colors, typography, spacing, component patterns
+
+---
+
+## Live preview
+
+https://omri-i-b.github.io/veritec-ui-2
+
+Main entry points:
+- `/` — FileFlow Inbox
+- `/workflows` — Playbooks + Runs
+- `/knowledge` — Knowledge Base
+- `/mockups/*` — design exploration sandboxes
+
+---
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev    # starts on port 3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To build static export:
+```bash
+npm run build  # outputs to /out
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Philosophy
 
-## Learn More
+This repo is a **design tool**, not a production app. We build real, clickable, deployable screens to explore ideas — faster and more concrete than Figma alone. Non-developers describe what they want, Claude builds it, stakeholders get a shareable URL.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If you're adding to this repo, preserve that: match existing patterns, reuse components, keep sample data realistic, and deploy eagerly.
