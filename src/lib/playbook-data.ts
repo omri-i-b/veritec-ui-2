@@ -249,6 +249,87 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     ],
   },
 
+  "depo-indexing": {
+    id: "depo-indexing",
+    name: "Deposition Indexing",
+    description:
+      "Auto-organizes deposition-related documents into standard bookmark categories (Notice, Transcript, Errata, Exhibits) grouped by deponent. Paralegal confirms.",
+    category: "Litigation",
+    status: "Published",
+    version: "v1",
+    icon: FileText,
+    iconColor: "text-purple-700",
+    iconBg: "bg-purple-50",
+    totalRuns: 92,
+    lastRun: "14m ago",
+    inputs: [
+      {
+        id: "in_1",
+        name: "Case",
+        type: "case-ref",
+        required: true,
+        description: "The case whose deposition documents need indexing. Includes all uploaded files.",
+        sample: "CVSA-1189",
+      },
+      {
+        id: "in_2",
+        name: "Index template",
+        type: "kb-ref",
+        description: "Firm's indexing taxonomy or past examples (optional — uses standard categories if omitted)",
+        sample: "Firm Indexing Templates",
+      },
+      {
+        id: "in_3",
+        name: "Scope",
+        type: "enum",
+        required: true,
+        description: "Which deponents to include",
+        options: ["All deponents", "Plaintiff only", "Defendant only", "Experts only"],
+        sample: "All deponents",
+      },
+    ],
+    steps: [
+      {
+        id: "s1",
+        type: "fetch",
+        name: "Load case documents",
+        detail:
+          "Load every deposition-related document from {{Case}} — notices, transcripts, errata sheets, exhibits, cover pages.",
+      },
+      {
+        id: "s2",
+        type: "prompt",
+        name: "Classify each document",
+        detail:
+          "For each document, assign it to one of the four standard categories: Notice of Deposition, Transcript, Errata Page, or Exhibits. Flag any document that doesn't fit cleanly.",
+        expanded: true,
+      },
+      {
+        id: "s3",
+        type: "prompt",
+        name: "Group by deponent",
+        detail:
+          "Associate each document with the right deponent (Cruz Lopez, John Doe, Dr. Marín, etc.) based on filename, cover page, and content. Respect {{Scope}} — include only matching deponents. Return nested tree: deponent → category → docs.",
+      },
+    ],
+    outputs: [
+      {
+        id: "out_1",
+        name: "index_tree",
+        type: "list",
+        description: "Nested structure — deponent → category → linked documents with filenames",
+      },
+      { id: "out_2", name: "total_docs", type: "number", description: "Total deposition documents indexed" },
+      { id: "out_3", name: "deponents_covered", type: "number", description: "Number of distinct deponents indexed" },
+      {
+        id: "out_4",
+        name: "uncategorized",
+        type: "number",
+        description: "Documents that didn't fit cleanly — paralegal should review",
+      },
+    ],
+  },
+
   "demand-letter-draft": {
     id: "demand-letter-draft",
     name: "Demand Letter Draft",
