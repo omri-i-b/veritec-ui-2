@@ -94,7 +94,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     id: "depo-prep",
     name: "Deposition Prep",
     description:
-      "Analyzes case data to find weaknesses and generates targeted deposition questions with document citations, using prior depositions as tone reference.",
+      "Analyzes case files to find weaknesses and generates targeted deposition questions with reasoning and document citations.",
     category: "Litigation",
     status: "Published",
     version: "v3",
@@ -104,25 +104,24 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     totalRuns: 324,
     lastRun: "2m ago",
     inputs: [
-      { id: "in_1", name: "Case", type: "case-ref", required: true, description: "The case this depo is for", sample: "CVSA-1189" },
       {
-        id: "in_2",
-        name: "Case files",
-        type: "file",
+        id: "in_1",
+        name: "Case",
+        type: "case-ref",
         required: true,
-        description: "Documents to analyze — medical records, police report, phone records, social media, etc.",
-        sample: "47 files (236 MB)",
+        description: "The case you're preparing to depose someone for. Includes all case files — medical records, police report, interrogatories, etc.",
+        sample: "CVSA-1189",
       },
       {
-        id: "in_3",
+        id: "in_2",
         name: "Deposition samples",
         type: "kb-ref",
         required: true,
-        description: "Knowledge base of prior depositions. Used for tone and style, not content.",
+        description: "Knowledge base of prior depositions. Used for tone and style reference.",
         sample: "Plaintiff Depositions (23 files)",
       },
       {
-        id: "in_4",
+        id: "in_3",
         name: "Deponent type",
         type: "enum",
         required: true,
@@ -130,52 +129,29 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         options: ["Plaintiff", "Medical Expert", "Defendant", "Police Officer", "Lay Witness"],
         sample: "Plaintiff",
       },
-      {
-        id: "in_5",
-        name: "Focus areas",
-        type: "list",
-        description: "What to target. Controls question distribution.",
-        options: ["Liability", "Injury severity", "Treatment gaps", "Credibility", "Timeline", "Prior conditions"],
-        sample: "Liability, Treatment gaps, Credibility",
-      },
-      {
-        id: "in_6",
-        name: "Aggressiveness",
-        type: "enum",
-        description: "How hard to push. Controls question count and tone.",
-        options: ["Light", "Moderate", "Aggressive"],
-        sample: "Aggressive",
-      },
     ],
     steps: [
       {
         id: "s1",
         type: "fetch",
-        name: "Fetch case context",
+        name: "Load case context",
         detail:
-          "Load {{Case files}}, events timeline, and medical events for {{Case}}. Extract timestamps, provider names, diagnoses, and witness statements.",
+          "Load all files from {{Case}} — medical records, police reports, interrogatories, phone records, witness statements. Extract timestamps, diagnoses, and key events.",
       },
       {
         id: "s2",
         type: "fetch",
         name: "Retrieve depo samples",
         detail:
-          "Pull top 10 sample chunks from {{Deposition samples}} filtered by deponent type = {{Deponent type}}. Use for tone/style reference only.",
+          "Pull top sample chunks from {{Deposition samples}} filtered by {{Deponent type}}. Used for tone and phrasing patterns — not for copying content.",
       },
       {
         id: "s3",
         type: "prompt",
-        name: "Identify weaknesses",
+        name: "Find weaknesses & generate questions",
         detail:
-          "Analyze case data for {{Case}}. Find things to attack in the depo: treatment gaps >30 days, inconsistencies between pain claims and documented activity, liability factors ({{Focus areas}}), missed or refused treatments, credibility issues, prior conditions. For each weakness, cite the specific document + page. Prioritize by {{Focus areas}}.",
+          "Analyze the case files for {{Case}}. Find things to attack when deposing the {{Deponent type}}: discrepancies, inconsistencies between testimony and records, liability gaps, treatment gaps, credibility issues, prior conditions. For each weakness, generate a targeted deposition question with: the question text, a reasoning explanation, and the source document + page citation. Match the tone of samples from {{Deposition samples}}.",
         expanded: true,
-      },
-      {
-        id: "s4",
-        type: "prompt",
-        name: "Generate depo questions",
-        detail:
-          "For each identified weakness, craft deposition questions that exploit it. Match the tone and phrasing patterns of the retrieved samples — do not copy their content. Scale question count to {{Aggressiveness}}: Light=20-40 questions, Moderate=50-80, Aggressive=100-150. Each question must include: text, topic category, intended outcome, and source document + page reference. Return: questions[], weaknesses[], treatment_gaps (number), estimated_duration, question_count.",
       },
     ],
     outputs: [
@@ -183,12 +159,93 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         id: "out_1",
         name: "questions",
         type: "list",
-        description: "Deposition questions with text, category, rationale, and source citation (doc + page)",
+        description: "Deposition questions with text, category, reasoning, and source citation (doc + page)",
       },
       { id: "out_2", name: "weaknesses", type: "list", description: "Vulnerabilities identified in the case data" },
-      { id: "out_3", name: "treatment_gaps", type: "number", description: "Count of documentation gaps >30 days" },
-      { id: "out_4", name: "estimated_duration", type: "text", description: "Expected depo length — e.g. '3-4 hours'" },
-      { id: "out_5", name: "question_count", type: "number", description: "Total questions generated" },
+      { id: "out_3", name: "question_count", type: "number", description: "Total questions generated" },
+    ],
+  },
+
+  "depo-transcript-analysis": {
+    id: "depo-transcript-analysis",
+    name: "Deposition Transcript Analysis",
+    description:
+      "Turn a completed deposition transcript into an interactive Q&A table with exhibit links, page references, and auto-indexing by document category.",
+    category: "Litigation",
+    status: "Published",
+    version: "v1",
+    icon: FileText,
+    iconColor: "text-teal-700",
+    iconBg: "bg-teal-50",
+    totalRuns: 187,
+    lastRun: "5m ago",
+    inputs: [
+      {
+        id: "in_1",
+        name: "Case",
+        type: "case-ref",
+        required: true,
+        description: "The case the deposition belongs to. Includes the transcript file and related exhibits.",
+        sample: "CVSA-1189",
+      },
+      {
+        id: "in_2",
+        name: "Reference library",
+        type: "kb-ref",
+        description: "Prior transcripts to use as summary style reference (optional)",
+        sample: "Plaintiff Depositions (23 files)",
+      },
+      {
+        id: "in_3",
+        name: "Output detail",
+        type: "enum",
+        required: true,
+        description: "How detailed should the summary be",
+        options: ["Quick summary", "Detailed table", "Full Q&A with exhibits"],
+        sample: "Full Q&A with exhibits",
+      },
+    ],
+    steps: [
+      {
+        id: "s1",
+        type: "fetch",
+        name: "Load transcript from case",
+        detail: "Load the deposition transcript file and any related exhibits from {{Case}}",
+      },
+      {
+        id: "s2",
+        type: "prompt",
+        name: "Parse deponent, date, and Q&A pairs",
+        detail:
+          "Identify the deponent name and type (Plaintiff / Defendant / Medical Expert / etc.) and the deposition date. Extract every question/answer pair from the transcript along with its page:line reference. Match verbosity to {{Output detail}}.",
+        expanded: true,
+      },
+      {
+        id: "s3",
+        type: "prompt",
+        name: "Detect exhibits referenced",
+        detail:
+          "Scan the transcript for exhibit references (EX-001, Exhibit 4, Defendant's Ex. A, etc.). For each unique exhibit, link it to every Q&A row where it was referenced. Return exhibit identifier, name, and the rows it touches.",
+      },
+      {
+        id: "s4",
+        type: "prompt",
+        name: "Auto-index by category",
+        detail:
+          "Assign related documents from {{Case}} to the standard deposition index categories: Notice of Deposition, Transcript, Errata Page, Exhibits. Return structured index organized by deponent.",
+      },
+    ],
+    outputs: [
+      {
+        id: "out_1",
+        name: "qa_table",
+        type: "list",
+        description: "Full Q&A table — each row has deponent, question, answer, page:line reference, and linked exhibit",
+      },
+      { id: "out_2", name: "deponent", type: "text", description: "Name of person deposed" },
+      { id: "out_3", name: "deposition_date", type: "date", description: "Date the deposition took place" },
+      { id: "out_4", name: "exhibits_count", type: "number", description: "Number of unique exhibits referenced" },
+      { id: "out_5", name: "total_questions", type: "number", description: "Total Q&A pairs extracted" },
     ],
   },
 

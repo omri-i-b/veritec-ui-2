@@ -4,6 +4,7 @@ export function generateStaticParams() {
   return [
     { id: "medical-records-summary" },
     { id: "depo-prep" },
+    { id: "depo-transcript-analysis" },
     { id: "demand-letter-draft" },
     { id: "case-timeline" },
     { id: "damage-calculator" },
