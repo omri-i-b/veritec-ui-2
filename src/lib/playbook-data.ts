@@ -23,6 +23,7 @@ export type FieldType =
   | "list"
   | "kb-ref"
   | "document"
+  | "records"
 
 export interface Field {
   id: string
@@ -36,6 +37,8 @@ export interface Field {
   sample?: string
   /** If type is "document", the template this output is applied to */
   templateId?: string
+  /** If type is "records", the column schema for each row */
+  itemSchema?: Field[]
 }
 
 export type StepType = "fetch" | "prompt"
@@ -177,20 +180,25 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     ],
     outputs: [
       { id: "out_1", name: "Deponent name", type: "text", description: "Name of the person being deposed" },
-      { id: "out_2", name: "Question count", type: "number", description: "Total questions generated" },
+      { id: "out_2", name: "Deponent type", type: "text", description: "Classification — Plaintiff, Defendant, Medical Expert, etc." },
+      { id: "out_3", name: "Question count", type: "number", description: "Total questions generated" },
       {
-        id: "out_3",
+        id: "out_4",
         name: "Questions",
-        type: "list",
-        description: "Each item: question text, category, reasoning, source document + page",
-      },
-      { id: "out_4", name: "Weaknesses", type: "list", description: "Vulnerabilities identified with document citations" },
-      {
-        id: "out_5",
-        name: "Deposition outline",
-        type: "document",
-        description: "Printable depo outline — extractions fill the template placeholders",
-        templateId: "depo-outline",
+        type: "records",
+        description: "One row per question — the core deliverable",
+        itemSchema: [
+          { id: "col_q", name: "Question", type: "long_text", description: "The question as it would be asked to the deponent" },
+          {
+            id: "col_flag",
+            name: "Flag",
+            type: "enum",
+            description: "Why this question matters — the attack angle",
+            options: ["Discrepancy", "Contradiction", "Liability", "Medical", "Standard", "Evidence", "Damages"],
+          },
+          { id: "col_reason", name: "Reasoning", type: "long_text", description: "Why this question is being asked" },
+          { id: "col_source", name: "Source", type: "text", description: "Document and page where the fact came from" },
+        ],
       },
     ],
   },

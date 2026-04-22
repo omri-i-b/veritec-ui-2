@@ -23,6 +23,7 @@ import {
   Stack,
   ArrowSquareOut,
   PencilSimple,
+  Table,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -49,13 +50,22 @@ const FIELD_TYPES: Record<
     color: "text-teal-700",
     description: "A formatted deliverable — the extractions fill a template",
   },
+  records: {
+    icon: Table,
+    label: "Records",
+    color: "text-violet-700",
+    description: "A table of rows — each with typed columns you define",
+  },
 }
 
 /** Types valid for playbook inputs (what the user fills in to run) */
 const INPUT_TYPES: FieldType[] = ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
 
 /** Types valid for playbook outputs (what the AI extracts + the final deliverable) */
-const OUTPUT_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "document"]
+const OUTPUT_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records", "document"]
+
+/** Types valid for columns inside a Records field (simpler subset — no nesting) */
+const COLUMN_TYPES: FieldType[] = ["text", "long_text", "number", "date", "enum"]
 
 // ── Step type config ───────────────────────────────────────────────────
 
@@ -95,48 +105,80 @@ function FieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
   const typeConfig = FIELD_TYPES[field.type]
   const Icon = typeConfig.icon
   const isDocument = field.type === "document"
+  const isRecords = field.type === "records"
   const template = field.templateId ? getTemplate(field.templateId) : undefined
+  const columns = field.itemSchema ?? []
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full flex items-center gap-2 px-2.5 py-2 rounded-md border text-left transition-all ${
+      className={`group w-full flex flex-col rounded-md border text-left transition-all ${
         isDocument
           ? "border-teal-200 bg-teal-50/40 hover:border-teal-400 hover:shadow-sm"
-          : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
+          : isRecords
+            ? "border-violet-200 bg-violet-50/30 hover:border-violet-400 hover:shadow-sm"
+            : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
       }`}
     >
-      <div
-        className={`flex items-center justify-center h-6 w-6 rounded-md shrink-0 ${isDocument ? "bg-teal-100" : "bg-gray-50"}`}
-      >
-        <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium text-zinc-900">{field.name}</span>
-          {field.required && (
-            <span className="text-[10px] font-medium text-rose-600 bg-rose-50 rounded px-1 py-0">required</span>
-          )}
-          {isDocument && (
-            <span className="inline-flex items-center gap-1 rounded bg-teal-100 text-teal-800 px-1 py-0 text-[10px] font-semibold">
-              Deliverable
-            </span>
+      <div className="flex items-center gap-2 px-2.5 py-2 w-full">
+        <div
+          className={`flex items-center justify-center h-6 w-6 rounded-md shrink-0 ${
+            isDocument ? "bg-teal-100" : isRecords ? "bg-violet-100" : "bg-gray-50"
+          }`}
+        >
+          <Icon className={`h-3.5 w-3.5 ${typeConfig.color}`} weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-medium text-zinc-900">{field.name}</span>
+            {field.required && (
+              <span className="text-[10px] font-medium text-rose-600 bg-rose-50 rounded px-1 py-0">required</span>
+            )}
+            {isDocument && (
+              <span className="inline-flex items-center gap-1 rounded bg-teal-100 text-teal-800 px-1 py-0 text-[10px] font-semibold">
+                Deliverable
+              </span>
+            )}
+            {isRecords && (
+              <span className="inline-flex items-center gap-1 rounded bg-violet-100 text-violet-800 px-1 py-0 text-[10px] font-semibold">
+                {columns.length} column{columns.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {field.description && (
+            <div className="text-[11px] text-zinc-500 truncate">{field.description}</div>
           )}
         </div>
-        {field.description && (
-          <div className="text-[11px] text-zinc-500 truncate">{field.description}</div>
+        {isDocument && template ? (
+          <div className="inline-flex items-center gap-1.5 rounded-md border border-teal-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-teal-800 shrink-0">
+            <template.icon className={`h-3 w-3 ${template.iconColor}`} />
+            {template.name}
+            <span className="text-[10px] text-zinc-400">· {template.format}</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 shrink-0">
+            <Icon className={`h-3 w-3 ${typeConfig.color}`} weight="bold" />
+            {typeConfig.label}
+          </div>
         )}
       </div>
-      {isDocument && template ? (
-        <div className="inline-flex items-center gap-1.5 rounded-md border border-teal-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-teal-800 shrink-0">
-          <template.icon className={`h-3 w-3 ${template.iconColor}`} />
-          {template.name}
-          <span className="text-[10px] text-zinc-400">· {template.format}</span>
-        </div>
-      ) : (
-        <div className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600 shrink-0">
-          <Icon className={`h-3 w-3 ${typeConfig.color}`} weight="bold" />
-          {typeConfig.label}
+      {/* Records: inline column preview strip */}
+      {isRecords && columns.length > 0 && (
+        <div className="flex items-center gap-1 px-2.5 pb-2 pt-0 flex-wrap">
+          {columns.map((col) => {
+            const cfg = FIELD_TYPES[col.type]
+            const ColIcon = cfg.icon
+            return (
+              <span
+                key={col.id}
+                className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
+              >
+                <ColIcon className={`h-2.5 w-2.5 ${cfg.color}`} weight="bold" />
+                <span className="font-medium">{col.name}</span>
+                <span className="text-zinc-400">{cfg.label.toLowerCase()}</span>
+              </span>
+            )
+          })}
         </div>
       )}
     </button>
@@ -434,6 +476,229 @@ type DrawerState =
   | { kind: "step"; existing: Step | null; stepType?: StepType }
   | null
 
+// ── Columns Editor (for "Records" output type) ────────────────────────
+
+function ColumnsEditor({
+  columns,
+  onChange,
+}: {
+  columns: Field[]
+  onChange: (c: Field[]) => void
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+
+  const saveColumn = (col: Field) => {
+    if (columns.find((c) => c.id === col.id)) {
+      onChange(columns.map((c) => (c.id === col.id ? col : c)))
+    } else {
+      onChange([...columns, col])
+    }
+    setEditingId(null)
+    setAdding(false)
+  }
+
+  const deleteColumn = (id: string) => {
+    onChange(columns.filter((c) => c.id !== id))
+    setEditingId(null)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+          Columns <span className="text-rose-600">*</span>
+        </label>
+        <span className="text-[10px] text-zinc-500">One typed field per column. Like a spreadsheet.</span>
+      </div>
+      <div className="rounded-md border border-gray-200 bg-gray-50 p-1.5 space-y-1">
+        {columns.map((col) => {
+          const cfg = FIELD_TYPES[col.type]
+          const ColIcon = cfg.icon
+          const isEditing = editingId === col.id
+          if (isEditing) {
+            return (
+              <ColumnForm
+                key={col.id}
+                existing={col}
+                onSave={saveColumn}
+                onDelete={() => deleteColumn(col.id)}
+                onCancel={() => setEditingId(null)}
+              />
+            )
+          }
+          return (
+            <button
+              key={col.id}
+              type="button"
+              onClick={() => {
+                setEditingId(col.id)
+                setAdding(false)
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-transparent bg-white hover:border-blue-300 transition-colors text-left"
+            >
+              <DotsSixVertical className="h-3 w-3 text-zinc-300 shrink-0" />
+              <div className={`flex items-center justify-center h-5 w-5 rounded bg-gray-50 shrink-0`}>
+                <ColIcon className={`h-3 w-3 ${cfg.color}`} weight="bold" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-zinc-900 truncate">{col.name}</div>
+                {col.description && (
+                  <div className="text-[11px] text-zinc-500 truncate">{col.description}</div>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-1 py-0 text-[10px] font-medium text-zinc-600 shrink-0">
+                {cfg.label}
+              </span>
+            </button>
+          )
+        })}
+
+        {adding ? (
+          <ColumnForm
+            existing={null}
+            onSave={saveColumn}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Add column
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Column Form (small inline editor used within ColumnsEditor) ───────
+
+function ColumnForm({
+  existing,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  existing: Field | null
+  onSave: (f: Field) => void
+  onDelete?: () => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(existing?.name ?? "")
+  const [type, setType] = useState<FieldType>(existing?.type ?? "text")
+  const [description, setDescription] = useState(existing?.description ?? "")
+  const [options, setOptions] = useState((existing?.options ?? []).join("\n"))
+  const needsOptions = type === "enum"
+  const canSave = name.trim().length > 0
+
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({
+      id: existing?.id ?? `col_${Date.now()}`,
+      name: name.trim(),
+      type,
+      description: description.trim() || undefined,
+      options: needsOptions ? options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
+    })
+  }
+
+  return (
+    <div className="rounded-md border-2 border-blue-200 bg-white p-2.5 space-y-2.5">
+      <div>
+        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Column name
+        </label>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Question, Flag, Reasoning, Source"
+          className="w-full h-8 px-2 text-sm rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+      <div>
+        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">Type</label>
+        <div className="grid grid-cols-5 gap-1">
+          {COLUMN_TYPES.map((t) => {
+            const cfg = FIELD_TYPES[t]
+            const ColIcon = cfg.icon
+            const active = type === t
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className={`flex flex-col items-center gap-0.5 px-1 py-1.5 rounded border text-[10px] font-medium transition-all ${
+                  active
+                    ? "border-blue-800 bg-blue-50/40 text-blue-800 ring-2 ring-blue-100"
+                    : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300"
+                }`}
+              >
+                <ColIcon className={`h-3.5 w-3.5 ${active ? "text-blue-800" : cfg.color}`} weight="bold" />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {needsOptions && (
+        <div>
+          <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+            Options <span className="text-zinc-400 normal-case tracking-normal">· one per line</span>
+          </label>
+          <textarea
+            value={options}
+            onChange={(e) => setOptions(e.target.value)}
+            placeholder="Discrepancy&#10;Contradiction&#10;Liability&#10;Medical&#10;Standard"
+            rows={4}
+            className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none font-mono"
+          />
+        </div>
+      )}
+      <div>
+        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
+        </label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What this column represents"
+          className="w-full h-8 px-2 text-sm rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-red-50 text-red-600 transition-colors"
+            title="Delete column"
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-7 text-xs">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-7 text-xs bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {existing ? "Save" : "Add column"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Template Picker (for "Document" output type) ──────────────────────
 
 function TemplatePicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
@@ -550,10 +815,15 @@ function FieldForm({
   const [required, setRequired] = useState(existing?.required ?? false)
   const [options, setOptions] = useState((existing?.options ?? []).join("\n"))
   const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
+  const [columns, setColumns] = useState<Field[]>(existing?.itemSchema ?? [])
 
   const needsOptions = type === "enum"
   const needsTemplate = type === "document"
-  const canSave = name.trim().length > 0 && (!needsTemplate || !!templateId)
+  const needsColumns = type === "records"
+  const canSave =
+    name.trim().length > 0 &&
+    (!needsTemplate || !!templateId) &&
+    (!needsColumns || columns.length > 0)
   const isEditing = existing !== null
 
   const handleSave = () => {
@@ -566,6 +836,7 @@ function FieldForm({
       description: description.trim() || undefined,
       options: needsOptions ? options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
       templateId: needsTemplate ? templateId : undefined,
+      itemSchema: needsColumns ? columns : undefined,
     })
   }
 
@@ -635,6 +906,8 @@ function FieldForm({
         )}
 
         {needsTemplate && <TemplatePicker value={templateId} onChange={setTemplateId} />}
+
+        {needsColumns && <ColumnsEditor columns={columns} onChange={setColumns} />}
 
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
