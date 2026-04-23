@@ -519,6 +519,110 @@ components:
     backgroundColor: "{colors.primary-container}"
     textColor: "{colors.on-primary-container}"
 
+  empty-add-card:
+    backgroundColor: "transparent"
+    borderStyle: "dashed"
+    borderColor: "{colors.outline-strong}"
+    borderWidth: "1px"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.xl}"
+    minHeight: "220px"
+    iconTileSize: "40px"
+    iconTileRounded: "{rounded.md}"
+    iconTileBackground: "{colors.primary-container}"
+    iconSize: "{sizing.icon-lg}"
+    iconColor: "{colors.primary}"
+    titleTypography: "{typography.headline-sm}"
+    titleColor: "{colors.on-surface}"
+    bodyTypography: "{typography.body-sm}"
+    bodyColor: "{colors.on-surface-muted}"
+    alignment: "center"
+
+  empty-add-card-hover:
+    borderColor: "{colors.primary-soft}"
+    backgroundColor: "{colors.primary-container}"
+
+  stats-band:
+    backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline}"
+    borderWidth: "1px"
+    rounded: "{rounded.lg}"
+    layout: "horizontal row with 1px {colors.outline} vertical dividers between cells"
+    cellPaddingX: "{spacing.xl}"
+    cellPaddingY: "{spacing.lg}"
+    eyebrowTypography: "{typography.eyebrow}"
+    eyebrowColor: "{colors.on-surface-muted}"
+    valueTypography: "{typography.headline-lg}"
+    valueColor: "{colors.on-surface}"
+    valueNumericFont: "tabular-nums"
+    hintTypography: "{typography.body-xs}"
+    hintColor: "{colors.on-surface-muted}"
+    position: "directly below the page header on library pages"
+
+  library-card:
+    backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline}"
+    borderWidth: "1px"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.xl}"
+    iconTileSize: "40px"
+    iconTileRounded: "{rounded.md}"
+    iconTileBackground: "{colors.tertiary-*-container}"
+    iconTileColor: "{colors.tertiary-*}"
+    iconSize: "{sizing.icon-lg}"
+    titleTypography: "{typography.headline-sm}"
+    titleColor: "{colors.on-surface}"
+    descriptionTypography: "{typography.body-sm}"
+    descriptionColor: "{colors.on-surface-muted}"
+    descriptionClamp: "2"
+    statStripBackground: "{colors.surface-container-low}"
+    statStripBorder: "1px solid {colors.outline-variant}"
+    statStripRounded: "{rounded.DEFAULT}"
+    statStripPaddingX: "{spacing.lg}"
+    statStripPaddingY: "{spacing.md}"
+    statStripLayout: "3-col grid of mini stats (eyebrow + value)"
+    footerBorderTop: "1px solid {colors.outline-variant}"
+    footerPaddingTop: "{spacing.lg}"
+    anatomy: "iconTile+title+statusPill header → description → statStrip → footer(chip + link)"
+
+  library-card-hover:
+    borderColor: "{colors.primary-soft}"
+    shadow: "{elevation.card-hover}"
+    titleColor: "{colors.on-primary-container}"
+
+  count-badge-neutral:
+    backgroundColor: "{colors.surface}"
+    borderColor: "{colors.outline}"
+    borderWidth: "1px"
+    textColor: "{colors.on-surface-muted}"
+    rounded: "{rounded.pill}"
+    typography: "{typography.label-xs}"
+    paddingX: "{spacing.sm}"
+    numericFont: "tabular-nums"
+    useCase: "header count next to a page title, sidebar nav item count"
+
+  filter-chip-count:
+    inactiveBackground: "{colors.surface-container}"
+    inactiveTextColor: "{colors.on-surface-muted}"
+    activeBackground: "{colors.surface}"
+    activeTextColor: "{colors.on-primary-container}"
+    rounded: "{rounded.pill}"
+    fontSize: "10px"
+    fontWeight: "600"
+    numericFont: "tabular-nums"
+    paddingX: "{spacing.xs}"
+    position: "nested inside a filter-chip, right of the label"
+
+  status-pill-paused:
+    backgroundColor: "{colors.warning-container}"
+    borderColor: "{colors.warning-outline}"
+    textColor: "{colors.on-warning-container}"
+    rounded: "{rounded.pill}"
+    typography: "{typography.label-xs}"
+    iconWeight: "fill"
+    iconName: "PauseCircle"
+    note: "Paused is an alias for warning — reuses the warning palette"
+
   kbd-key:
     backgroundColor: "{colors.surface-container}"
     borderColor: "{colors.outline}"
@@ -607,8 +711,16 @@ Focus states use a 3px-offset ring in blue (15% alpha) rather than a shadow — 
 
 - **Content card** is white, 1px gray-200 border, `rounded-[10px]`, 12–16px padding. A soft hover shadow appears on interactive cards only.
 - **Section panel** is a content card with a header strip: `bg-gray-50`, 1px gray-200 bottom border, 14px semibold title, 11px zinc-500 subtitle on the same line. Example: "Inputs — What users fill in when they run this playbook".
+- **Library card** is the most-repeated card composition — used on every library page (Playbooks, Knowledge Base, Templates, Agents). Anatomy top-to-bottom:
+  1. *Header row*: 40×40 colored icon tile (category-tinted, `rounded-[8px]`) on the left, name + 11px status pill on the right, optional "…" or pin on the far right.
+  2. *Description*: 12px zinc-500 body, 2-line clamp.
+  3. *Stat strip*: a nested `bg-gray-50` block with 1px `outline-variant` border and 6px radius containing a 2–3 column grid of mini stats (uppercase 10px eyebrow + 14px tabular-nums value).
+  4. *Footer*: 1px `outline-variant` top border with left-aligned "Used on N cases" case chip and a right-aligned "View" ghost link.
+  Hover: border softens to `primary-soft`, title turns blue-800, soft brand-tinted shadow.
 - **Field rows** (input/output definitions in the playbook editor) are white cards with an icon container on the left, field name + type pill on the right, optional description line. Document-type rows wear a teal tint and "Deliverable" badge. Records-type rows wear a violet tint and show a column-preview strip beneath the main row.
 - **Step rows** in the playbook editor have a 4px colored left border by type (amber for Fetch, blue for Prompt), drag handle, step number, icon tile, name, type pill, and one-line detail preview.
+- **Stats band** sits directly below the page header on library and dashboard pages. It's a single white `rounded-[10px]` card with 1px vertical dividers between cells — NOT a row of separate cards. Each cell: uppercase eyebrow, 18px semibold tabular-nums value, optional 11px zinc-500 hint line. 4–6 cells is typical.
+- **"Create" card** — the large dashed-border variant of the add-button pattern. Sits at the end of every library grid as the last cell. 40×40 dashed icon tile with `Plus` inside, 14px semibold "Create <thing>" title, 12px zinc-500 one-sentence body. Matches the surrounding card's dimensions but uses a transparent background with dashed outline-strong border.
 
 ### Navigation
 
@@ -619,6 +731,10 @@ Focus states use a 3px-offset ring in blue (15% alpha) rather than a shadow — 
 ### Status & Feedback
 
 - **Status pills** are the main semantic device. Always `bg-{color}-50 text-{color}-700 border-{color}-200`, 11px medium, 16px line-height, 8px horizontal padding, 2px vertical, rounded-full. Icon fills the pill at 12px. Filtering tags, category labels, state badges, and flag chips all use this pattern.
+- **Four status tones cover everything**: success (green), warning (amber), error (red), info (blue). Plus a neutral fifth for generic counts and meta.
+- **"Paused" is an alias for warning.** Any paused/idle state (paused agent, paused workflow, paused playbook) reuses the warning palette with a `PauseCircle` fill icon. Do not introduce a sixth tone for paused.
+- **"Running" is an alias for info.** In-progress states use the info (blue) palette with a spinning `CircleNotch` icon.
+- **Count badges** come in two flavors. *Neutral count* (next to page titles, in sidebar nav counts): white bg, 1px gray-200 border, zinc-500 text, rounded-full, 11px. *Accent count* (inside status pills and filter chips): inherits the pill's text color, no background, tabular-nums.
 - **"Live" indicator.** 6px green-500 dot with a pulse animation. Used on the runs grid footer and anywhere data auto-refreshes.
 - **Avatar initials.** 20px (list contexts) or 24px (detail) perfect circles, pastel-100 background with saturated-800 text, two uppercase initials at 10px semibold. Each person in the sample data has a consistent color.
 
@@ -641,3 +757,12 @@ Focus states use a 3px-offset ring in blue (15% alpha) rather than a shadow — 
 - **Never stack more than 3 vertical paddings in a row.** Collapse with dividers instead.
 - **Never use a colored background larger than 48×48 unless it's a status pill or a sidebar/header strip.** Category color lives in icon containers, never in card bodies.
 - **Always show density.** The UI is designed for users with 300+ active cases. If a list has 50 items, show 20 at a time, not 5. Sparse layouts feel wrong here.
+
+---
+
+## Changelog
+
+This file evolves through clean-room tests against the `design-tester` subagent. Each test surfaces compositional gaps and those additions land here.
+
+- **2026-04 rev.2** — Added `stats-band`, `library-card` + hover, `empty-add-card` + hover, `count-badge-neutral`, `filter-chip-count`, `status-pill-paused`. Documented "Paused = warning alias" and "Running = info alias" rules. Expanded Library Card anatomy in prose (header row → description → stat strip → footer). Added Stats Band usage rule (one card with dividers, not separate cards). Discovered via agent-library clean-room test.
+- **2026-04 rev.1** — Initial structured rewrite following the google-labs-code design.md spec. YAML frontmatter with 11 sections and 40+ named component tokens; prose body covering Brand & Style, Colors, Typography, Layout & Spacing, Elevation & Depth, Shapes, and Components.
