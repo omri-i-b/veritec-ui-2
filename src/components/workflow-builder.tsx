@@ -1155,6 +1155,181 @@ function StepForm({
   )
 }
 
+// ── Inline Step Editor (renders in the canvas, not the rail) ──────────
+
+function StepEditor({
+  existing,
+  stepType,
+  index,
+  availableVars,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  existing: Step | null
+  stepType: StepType
+  index: number
+  availableVars: string[]
+  onSave: (s: Step) => void
+  onDelete: () => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(existing?.name ?? "")
+  const [detail, setDetail] = useState(existing?.detail ?? "")
+  const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
+  const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
+  const type = existing?.type ?? stepType
+  const cfg = STEP_TYPES[type]
+  const Icon = cfg.icon
+  const isFormat = type === "format"
+  const isEditing = existing !== null
+  const canSave =
+    name.trim().length > 0 &&
+    detail.trim().length > 0 &&
+    (!isFormat || !!templateId)
+
+  const insertVariable = (v: string) => {
+    setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
+  }
+
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({
+      id: existing?.id ?? `new_${Date.now()}`,
+      type,
+      name: name.trim(),
+      detail: detail.trim(),
+      returns: returns.length > 0 ? returns : undefined,
+      templateId: isFormat ? templateId : undefined,
+    })
+  }
+
+  const RETURN_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records"]
+
+  return (
+    <div className={`w-full rounded-[10px] border border-blue-500 bg-white shadow-[0_0_0_3px_rgba(30,64,175,0.12)] overflow-hidden border-l-4 ${cfg.accent}`}>
+      {/* Header strip */}
+      <div className="px-3 py-2 flex items-center gap-2 border-b border-gray-100">
+        <div className={`flex items-center justify-center h-6 w-6 rounded-md ${cfg.iconBg}`}>
+          <Icon className={`h-3.5 w-3.5 ${cfg.iconColor}`} weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1 flex items-center gap-1.5">
+          <span className={`text-[10px] font-semibold uppercase tracking-wide ${cfg.iconColor}`}>
+            {cfg.label}
+          </span>
+          <span className="text-[10px] text-zinc-300">·</span>
+          <span className="text-[10px] font-medium text-zinc-500">
+            Step {index + 1}
+          </span>
+        </div>
+        <button
+          onClick={onCancel}
+          className="flex items-center justify-center h-6 w-6 rounded text-zinc-400 hover:text-zinc-700 hover:bg-gray-100 transition-colors"
+          title="Close"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 py-3 space-y-4">
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+            Name
+          </label>
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={
+              type === "fetch"
+                ? "e.g. Fetch case records"
+                : type === "format"
+                  ? "e.g. Fill demand letter"
+                  : "e.g. Analyze case for weaknesses"
+            }
+            className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+            {type === "fetch" ? "What to load" : type === "format" ? "How to fill the template" : "Prompt"}
+          </label>
+          <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder={
+                type === "fetch"
+                  ? "e.g. Load all PDFs from {{Records}} and extract text"
+                  : type === "format"
+                    ? "e.g. Fill the demand letter using {{Facts}} and {{Damages}}"
+                    : "e.g. Analyze the records for {{Case}} and identify treatment gaps..."
+              }
+              rows={6}
+              className="w-full px-3 py-2 text-sm bg-white focus:outline-none resize-none leading-relaxed"
+            />
+            {availableVars.length > 0 && (
+              <div className="border-t border-gray-200 bg-gray-50 px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mr-1">
+                  Insert:
+                </span>
+                {availableVars.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => insertVariable(v)}
+                    className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
+
+        <ColumnsEditor
+          columns={returns}
+          onChange={setReturns}
+          label="Returns"
+          helper="What this step produces"
+          fieldTypes={RETURN_TYPES}
+          required={false}
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-gray-100 px-3 py-2 flex items-center gap-1.5 bg-gray-50/60">
+        {isEditing && (
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-red-50 text-red-600 transition-colors"
+            title="Delete step"
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-7 text-xs">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-7 text-xs bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEditing ? "Save changes" : `Add ${cfg.label.toLowerCase()}`}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main: Inline Definition Panel ─────────────────────────────────────
 
 export function DefinitionPanel() {
@@ -1210,7 +1385,11 @@ export function DefinitionPanel() {
           backgroundSize: "16px 16px",
         }}
       >
-        <div className="max-w-[480px] mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch">
+        <div
+          className={`mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch transition-[max-width] duration-200 ${
+            selection?.kind === "step" ? "max-w-[680px]" : "max-w-[480px]"
+          }`}
+        >
           {/* What this produces — derived from last step's returns */}
           {deliverable.length > 0 && (
             <div className="mb-3 rounded-md border border-blue-200 bg-blue-50/40 px-3 py-2 flex items-start gap-2">
@@ -1264,51 +1443,80 @@ export function DefinitionPanel() {
           {steps.map((step, i) => {
             const stepCfg = STEP_TYPES[step.type]
             const StepIcon = stepCfg.icon
-            const isActiveStep =
+            const editingThis =
               selection?.kind === "step" && selection.existing?.id === step.id
             const isLast = i === steps.length - 1
             return (
               <Fragment key={step.id}>
-                <FlowNode
-                  icon={StepIcon}
-                  iconBg={stepCfg.iconBg}
-                  iconColor={stepCfg.iconColor}
-                  title={step.name}
-                  subtitle={step.detail || "No description"}
-                  isSelected={isActiveStep}
-                  onClick={() => setSelection({ kind: "step", existing: step })}
-                  returns={step.returns}
-                  isLast={isLast}
-                />
+                {editingThis ? (
+                  <StepEditor
+                    existing={step}
+                    stepType={step.type}
+                    index={i}
+                    availableVars={availableVars}
+                    onSave={saveStep}
+                    onDelete={() => deleteStep(step)}
+                    onCancel={() => setSelection(null)}
+                  />
+                ) : (
+                  <FlowNode
+                    icon={StepIcon}
+                    iconBg={stepCfg.iconBg}
+                    iconColor={stepCfg.iconColor}
+                    title={step.name}
+                    subtitle={step.detail || "No description"}
+                    onClick={() => setSelection({ kind: "step", existing: step })}
+                    returns={step.returns}
+                    isLast={isLast}
+                  />
+                )}
                 <FlowConnector />
               </Fragment>
             )
           })}
 
-          {/* Add step buttons */}
-          <div className="flex items-center justify-center gap-2 my-1 mb-3 flex-wrap">
-            <button
-              onClick={() => setSelection({ kind: "step", existing: null, stepType: "fetch" })}
-              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
-            >
-              <Database className="h-3.5 w-3.5" weight="bold" />
-              Add Fetch
-            </button>
-            <button
-              onClick={() => setSelection({ kind: "step", existing: null, stepType: "prompt" })}
-              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-            >
-              <Sparkle className="h-3.5 w-3.5" weight="bold" />
-              Add Prompt
-            </button>
-            <button
-              onClick={() => setSelection({ kind: "step", existing: null, stepType: "format" })}
-              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700 transition-colors"
-            >
-              <Stack className="h-3.5 w-3.5" weight="bold" />
-              Add Format
-            </button>
-          </div>
+          {/* New step being added — appears at end */}
+          {selection?.kind === "step" && selection.existing === null && (
+            <>
+              <StepEditor
+                existing={null}
+                stepType={selection.stepType ?? "prompt"}
+                index={steps.length}
+                availableVars={availableVars}
+                onSave={saveStep}
+                onDelete={() => setSelection(null)}
+                onCancel={() => setSelection(null)}
+              />
+              <FlowConnector />
+            </>
+          )}
+
+          {/* Add step buttons — hidden while editing/adding a step */}
+          {selection?.kind !== "step" && (
+            <div className="flex items-center justify-center gap-2 my-1 mb-3 flex-wrap">
+              <button
+                onClick={() => setSelection({ kind: "step", existing: null, stepType: "fetch" })}
+                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+              >
+                <Database className="h-3.5 w-3.5" weight="bold" />
+                Add Fetch
+              </button>
+              <button
+                onClick={() => setSelection({ kind: "step", existing: null, stepType: "prompt" })}
+                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              >
+                <Sparkle className="h-3.5 w-3.5" weight="bold" />
+                Add Prompt
+              </button>
+              <button
+                onClick={() => setSelection({ kind: "step", existing: null, stepType: "format" })}
+                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700 transition-colors"
+              >
+                <Stack className="h-3.5 w-3.5" weight="bold" />
+                Add Format
+              </button>
+            </div>
+          )}
         </div>
 
         <FloatingCanvasToolbar />
@@ -1416,17 +1624,14 @@ function FlowNode({
           </div>
         </div>
       )}
-      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-white border border-gray-300" />
     </Wrapper>
   )
 }
 
 function FlowConnector() {
   return (
-    <div className="flex flex-col items-center py-1 -my-1 relative">
-      <div className="h-6 w-px bg-gray-300" />
-      <CaretDown className="h-3 w-3 text-gray-400 -my-1" weight="bold" />
-      <div className="h-2 w-2 rounded-full bg-white border border-gray-300" />
+    <div className="flex justify-center py-1.5" aria-hidden>
+      <div className="h-5 w-px bg-gray-300" />
     </div>
   )
 }
@@ -1558,33 +1763,20 @@ function RightSidebar({
   onDeleteStep: (s: Step) => void
 }) {
   const deliverableCount = deliverable.length
-  // EDIT MODE — sidebar shows the inline edit form
-  if (selection) {
+  // EDIT MODE — sidebar swaps only for input editing. Step editing happens inline in the canvas.
+  if (selection && selection.kind === "input") {
     return (
       <div className="w-[360px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
         <SidebarEditHeader selection={selection} onBack={onBack} />
         <div className="flex-1 min-h-0 flex flex-col">
-          {selection.kind === "input" && (
-            <FieldForm
-              key={`input-${selection.existing?.id ?? "new"}`}
-              kind="input"
-              existing={selection.existing}
-              onSave={onSaveField}
-              onDelete={() => selection.existing && onDeleteField(selection.existing)}
-              onCancel={onBack}
-            />
-          )}
-          {selection.kind === "step" && (
-            <StepForm
-              key={`step-${selection.existing?.id ?? `new-${selection.stepType ?? "prompt"}`}`}
-              existing={selection.existing}
-              stepType={selection.existing?.type ?? selection.stepType ?? "prompt"}
-              availableVars={availableVars}
-              onSave={onSaveStep}
-              onDelete={() => selection.existing && onDeleteStep(selection.existing)}
-              onCancel={onBack}
-            />
-          )}
+          <FieldForm
+            key={`input-${selection.existing?.id ?? "new"}`}
+            kind="input"
+            existing={selection.existing}
+            onSave={onSaveField}
+            onDelete={() => selection.existing && onDeleteField(selection.existing)}
+            onCancel={onBack}
+          />
         </div>
       </div>
     )
