@@ -603,7 +603,7 @@ function ContextEntryForm({
           className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 resize-none leading-relaxed"
         />
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {onDelete && (
           <button
             onClick={onDelete}
@@ -614,17 +614,19 @@ function ContextEntryForm({
           </button>
         )}
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={onCancel} className="h-7 text-xs">
+        <button
+          onClick={onCancel}
+          className="h-7 px-2 text-xs font-medium text-zinc-600 hover:bg-gray-100 rounded transition-colors"
+        >
           Cancel
-        </Button>
-        <Button
-          size="sm"
+        </button>
+        <button
           onClick={handleSave}
           disabled={!canSave}
-          className="h-7 text-xs bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-7 px-2 text-xs font-medium text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         >
-          {existing ? "Save" : "Add memory"}
-        </Button>
+          {existing ? "Done" : "Add"}
+        </button>
       </div>
     </div>
   )
@@ -837,7 +839,7 @@ function ColumnForm({
           className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none leading-relaxed"
         />
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {onDelete && (
           <button
             onClick={onDelete}
@@ -848,17 +850,19 @@ function ColumnForm({
           </button>
         )}
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={onCancel} className="h-7 text-xs">
+        <button
+          onClick={onCancel}
+          className="h-7 px-2 text-xs font-medium text-zinc-600 hover:bg-gray-100 rounded transition-colors"
+        >
           Cancel
-        </Button>
-        <Button
-          size="sm"
+        </button>
+        <button
           onClick={handleSave}
           disabled={!canSave}
-          className="h-7 text-xs bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-7 px-2 text-xs font-medium text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         >
-          {existing ? "Save" : "Add column"}
-        </Button>
+          {existing ? "Done" : "Add"}
+        </button>
       </div>
     </div>
   )
