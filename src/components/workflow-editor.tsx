@@ -169,7 +169,7 @@ export function WorkflowEditor() {
       {dirty && view === "editor" && (
         <StatusBanner onPublish={() => setDirty(false)} onDiscard={() => setDirty(false)} />
       )}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex">
         {view === "editor" ? <DefinitionPanel /> : <RunsTabBody playbookId={playbookId} />}
       </div>
     </div>

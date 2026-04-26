@@ -1613,9 +1613,10 @@ function RightSidebar({
     return (
       <div className="w-[360px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
         <SidebarEditHeader selection={selection} onBack={onBack} />
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="flex-1 min-h-0 flex flex-col">
           {selection.kind === "input" && (
             <FieldForm
+              key={`input-${selection.existing?.id ?? "new"}`}
               kind="input"
               existing={selection.existing}
               onSave={(f) => onSaveField("input", f)}
@@ -1625,6 +1626,7 @@ function RightSidebar({
           )}
           {selection.kind === "output" && (
             <FieldForm
+              key={`output-${selection.existing?.id ?? "new"}`}
               kind="output"
               existing={selection.existing}
               onSave={(f) => onSaveField("output", f)}
@@ -1634,6 +1636,7 @@ function RightSidebar({
           )}
           {selection.kind === "step" && (
             <StepForm
+              key={`step-${selection.existing?.id ?? `new-${selection.stepType ?? "prompt"}`}`}
               existing={selection.existing}
               stepType={selection.existing?.type ?? selection.stepType ?? "prompt"}
               availableVars={availableVars}
@@ -1658,7 +1661,7 @@ function RightSidebar({
             </span>
             <h3 className="text-sm font-semibold text-zinc-900">{playbook.name}</h3>
           </div>
-          <p className="text-xs text-zinc-600 leading-relaxed">{playbook.description}</p>
+          <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{playbook.description}</p>
         </div>
 
         <div>
@@ -1696,7 +1699,7 @@ function RightSidebar({
       </div>
 
       {/* Helpful resources at bottom */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="shrink-0 p-4 border-t border-gray-100 bg-white">
         <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
           Helpful resources
         </h4>
