@@ -20,6 +20,7 @@ import {
   Books,
   Stack,
   BookOpen,
+  Compass,
 } from "@phosphor-icons/react"
 import {
   Sidebar,
@@ -44,6 +45,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 const mainNavItems = [
+  { title: "Tour", icon: Compass, href: "/tour" },
   { title: "Chat", icon: ChatCircleText, href: "/chat" },
   {
     title: "FileFlow Inbox",
