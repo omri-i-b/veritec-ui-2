@@ -66,6 +66,13 @@ interface QuestionRow {
   source: string
 }
 
+interface RunDocument {
+  name: string
+  format: string // "DOCX" | "PDF" | "Markdown"
+  pageCount: number
+  bodyMarkdown: string
+}
+
 interface RunData {
   id: string
   playbookId: string
@@ -81,6 +88,7 @@ interface RunData {
   inputs: { label: string; value: string; icon?: typeof TextT }[]
   scalars: RunScalar[]
   questions?: QuestionRow[]
+  document?: RunDocument
   logSteps: { name: string; duration: string; status: "success" | "failed" }[]
 }
 
@@ -161,7 +169,91 @@ const QUESTIONS: QuestionRow[] = [
   },
 ]
 
+const DEMAND_LETTER_BODY = `# Smith v. Park, et al. — Demand for Settlement
+
+**Re:** Maria Lopez (Plaintiff) — CVSA-1189
+**Date of incident:** March 12, 2024
+**Total demand:** $2,400,000
+
+---
+
+## I. Summary
+
+This letter constitutes a formal demand for settlement of all claims arising
+from the motor-vehicle collision of March 12, 2024, in which our client
+sustained serious bodily injury due to your insured's negligent operation of
+his vehicle.
+
+## II. Liability
+
+Liability is clear. Your insured was cited at the scene for failure to obey
+a traffic signal and admitted to investigating officers that he was reaching
+for his cell phone at the time of impact (Police Report, p. 4). Photographic
+evidence and an eyewitness statement corroborate that our client had a green
+signal and was traveling within posted limits.
+
+## III. Damages
+
+### Special damages
+- Past medical specials: **$184,732**
+- Future medical specials (life-care plan): **$612,500**
+- Past lost wages: **$48,300**
+- Future loss of earning capacity: **$1,210,000**
+
+### General damages
+- Pain and suffering, past and future: **$344,468**
+
+**Total demand: $2,400,000**
+
+## IV. Demand and deadline
+
+We demand your insured's policy limits in full settlement of all claims.
+This demand will remain open for **thirty (30) days** from the date of this
+letter, after which time we will be forced to file suit and proceed with
+formal discovery.
+
+We trust that your insurer will evaluate this matter in good faith.
+
+Very truly yours,
+
+**James Rivera, Esq.**
+Veritec Law`
+
 const RUNS: Record<string, RunData> = {
+  run_02DLD: {
+    id: "run_02DLD",
+    playbookId: "demand-letter-draft",
+    playbookName: "Demand Letter Draft",
+    playbookIcon: Notepad,
+    playbookIconColor: "text-purple-700",
+    playbookIconBg: "bg-purple-50",
+    status: "success",
+    case: "CVSA-1189",
+    started: "8 minutes ago",
+    duration: "42.1s",
+    triggeredBy: { name: "James Rivera", initials: "JR", color: "bg-purple-100 text-purple-700" },
+    inputs: [
+      { label: "Case", value: "CVSA-1189", icon: SuitcaseSimple },
+      { label: "Tone", value: "Firm" },
+      { label: "Deadline", value: "30 days" },
+    ],
+    scalars: [
+      { name: "Total demand", value: "$2.4M", icon: Hash, tone: "success" },
+      { name: "Pages", value: "5", icon: Hash },
+      { name: "Tone", value: "Firm", icon: TextT },
+    ],
+    document: {
+      name: "Smith Demand Letter.docx",
+      format: "DOCX",
+      pageCount: 5,
+      bodyMarkdown: DEMAND_LETTER_BODY,
+    },
+    logSteps: [
+      { name: "Fetch case facts", duration: "0.9s", status: "success" },
+      { name: "Extract damages and injuries", duration: "12.4s", status: "success" },
+      { name: "Write Demand Letter from template", duration: "28.8s", status: "success" },
+    ],
+  },
   run_01HMW: {
     id: "run_01HMW",
     playbookId: "depo-prep",
@@ -348,6 +440,114 @@ function ScalarCard({ scalar }: { scalar: RunScalar }) {
 }
 
 // ── Questions Table (Records output rendered as a real table) ─────────
+
+// ── Document Section (for Format-step deliverables) ────────────────────
+
+function DocumentSection({ document: doc }: { document: RunDocument }) {
+  const lines = doc.bodyMarkdown.split("\n")
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+          Deliverable
+        </h2>
+        <span className="text-[11px] text-zinc-400">· filled {doc.format} document</span>
+      </div>
+      <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+        {/* Header strip */}
+        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-center h-8 w-8 rounded-md bg-teal-50">
+            <FileDoc className="h-4 w-4 text-teal-700" weight="bold" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-zinc-900 truncate">{doc.name}</span>
+              <span className="inline-flex items-center rounded border border-gray-200 bg-white px-1.5 py-0 text-[10px] font-medium text-zinc-600">
+                {doc.format}
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-500">
+              {doc.pageCount} page{doc.pageCount !== 1 ? "s" : ""} · generated from template
+            </div>
+          </div>
+          <button className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors">
+            <DownloadSimple className="h-3.5 w-3.5" />
+            Download
+          </button>
+          <button className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors">
+            <Printer className="h-3.5 w-3.5" />
+            Print
+          </button>
+        </div>
+        {/* Body — paper-style preview */}
+        <div className="bg-gray-100 px-6 py-6">
+          <div className="mx-auto max-w-[680px] bg-white rounded-md shadow-sm border border-gray-200 px-10 py-10 text-[13px] leading-[1.7] text-zinc-800 font-serif">
+            {lines.map((line, i) => {
+              if (line.startsWith("# ")) {
+                return (
+                  <h1 key={i} className="text-[20px] font-semibold text-zinc-900 mb-1 font-sans">
+                    {line.slice(2)}
+                  </h1>
+                )
+              }
+              if (line.startsWith("## ")) {
+                return (
+                  <h2 key={i} className="text-[15px] font-semibold text-zinc-900 mt-5 mb-2 font-sans">
+                    {line.slice(3)}
+                  </h2>
+                )
+              }
+              if (line.startsWith("### ")) {
+                return (
+                  <h3 key={i} className="text-[13px] font-semibold text-zinc-900 mt-3 mb-1 font-sans">
+                    {line.slice(4)}
+                  </h3>
+                )
+              }
+              if (line.startsWith("- ")) {
+                return (
+                  <li key={i} className="ml-6 list-disc">
+                    <MarkdownInline text={line.slice(2)} />
+                  </li>
+                )
+              }
+              if (line.startsWith("---")) {
+                return <hr key={i} className="my-4 border-gray-200" />
+              }
+              if (line.trim() === "") {
+                return <div key={i} className="h-3" />
+              }
+              return (
+                <p key={i}>
+                  <MarkdownInline text={line} />
+                </p>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function MarkdownInline({ text }: { text: string }) {
+  // Simple **bold** rendering only — keeps the demo lightweight
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.startsWith("**") && p.endsWith("**")) {
+          return (
+            <strong key={i} className="font-semibold text-zinc-900">
+              {p.slice(2, -2)}
+            </strong>
+          )
+        }
+        return <span key={i}>{p}</span>
+      })}
+    </>
+  )
+}
 
 function QuestionsTable({ questions }: { questions: QuestionRow[] }) {
   const [activeFlag, setActiveFlag] = useState<string | null>(null)
@@ -620,7 +820,10 @@ export function RunDetail() {
               </div>
             </section>
 
-            {/* Questions table (the main deliverable) */}
+            {/* Document deliverable (Format step output) */}
+            {run.document && <DocumentSection document={run.document} />}
+
+            {/* Questions table (records-shaped deliverable) */}
             {run.questions && <QuestionsTable questions={run.questions} />}
           </div>
 

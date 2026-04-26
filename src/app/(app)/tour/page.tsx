@@ -69,16 +69,29 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
         ],
       },
       {
-        title: "Run detail",
+        title: "Run — records deliverable",
         blurb:
-          "Drill into a single playbook run — inputs used, steps executed, deliverable rendered.",
-        href: "/runs/run_03DPT",
+          "Drill into a depo-prep run — the deliverable is a typed Questions table.",
+        href: "/runs/run_01HMW",
         icon: Play,
         iconBg: "bg-green-50",
         iconColor: "text-green-700",
         bullets: [
-          "Sample: depo-prep run on CVSA-1189 (Cruz Lopez deposition)",
-          "Records-shaped deliverable with the question table inline",
+          "Sample: depo-prep on CVSA-1189 (Maria Lopez deposition)",
+          "Records-shaped deliverable rendered inline",
+        ],
+      },
+      {
+        title: "Run — document deliverable",
+        blurb:
+          "Drill into a demand-letter run — the deliverable is a filled DOCX.",
+        href: "/runs/run_02DLD",
+        icon: Play,
+        iconBg: "bg-teal-50",
+        iconColor: "text-teal-700",
+        bullets: [
+          "Sample: demand-letter-draft on CVSA-1189",
+          "Filled document rendered as a paper-style preview",
         ],
       },
     ],

@@ -218,11 +218,25 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "kb-ref",
         required: true,
         description:
-          "Historical deposition transcripts organized by deponent role. Used in step 5 for proactive standard questions experienced attorneys always ask.",
+          "Historical deposition transcripts organized by deponent role. Used by the KB-application step for proactive standard questions experienced attorneys always ask.",
         sample: "Plaintiff Depositions (23 files)",
       },
     ],
     steps: [
+      {
+        id: "s0",
+        type: "fetch",
+        name: "Load case documents",
+        detail:
+          "Pull every document attached to {{Case}} into memory: police report, medical records, interrogatory responses, discovery production, prior deposition transcripts, expert reports.",
+        context: [
+          {
+            id: "ctx_case_docs",
+            name: "Case documents",
+            description: "All documents attached to the case, normalized for downstream extraction",
+          },
+        ],
+      },
       {
         id: "s1",
         type: "prompt",
@@ -243,7 +257,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "prompt",
         name: "Extract facts from each document",
         detail:
-          "Read every document in {{Case}}. Extract structured atoms of fact tailored to each document type. Police report: date, location, weather, speed, party statements at scene, citations, diagram, witnesses. Medical records: diagnoses, visit dates, treatments, referrals, medications, restrictions, prognosis, prior conditions. Interrogatory responses: sworn version of events, witnesses identified, damages claimed, medical history disclosed. Discovery: phone records, vehicle maintenance, photos, surveillance, communications. Prior depo transcripts: locked-in testimony. Expert reports: opinions, methodology, data relied upon, qualifications. Every fact retains a citation: document + page/section.",
+          "For each item in {{Case documents}}, extract structured atoms of fact tailored to that document type. Police report: date, location, weather, speed, party statements at scene, citations, diagram, witnesses. Medical records: diagnoses, visit dates, treatments, referrals, medications, restrictions, prognosis, prior conditions. Interrogatory responses: sworn version of events, witnesses identified, damages claimed, medical history disclosed. Discovery: phone records, vehicle maintenance, photos, surveillance, communications. Prior depo transcripts: locked-in testimony. Expert reports: opinions, methodology, data relied upon, qualifications. Every fact retains a citation: document + page/section.",
         returns: [
           {
             id: "r2_a",
