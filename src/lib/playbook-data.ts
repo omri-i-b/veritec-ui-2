@@ -43,14 +43,31 @@ export interface Field {
 
 export type StepType = "fetch" | "prompt" | "format"
 
+/**
+ * Unstructured context a step writes into the run's "memory".
+ * Fetch steps declare context (no typed schema — it's just blobs the AI reads).
+ * Prompt steps may also declare context if they emit free-text the next step
+ * should reference (rare; prefer typed `returns`).
+ */
+export interface ContextEntry {
+  id: string
+  name: string
+  description?: string
+}
+
 export interface Step {
   id: string
   type: StepType
   name: string
   detail: string
   expanded?: boolean
-  /** What this step produces. Last step's returns is the playbook's deliverable. */
+  /**
+   * Typed structured fields this step synthesizes.
+   * Used by prompt + format steps. The last step's returns is the deliverable.
+   */
   returns?: Field[]
+  /** Unstructured material this step adds to memory (Fetch steps mostly). */
+  context?: ContextEntry[]
   /** For format steps — the template this step fills */
   templateId?: string
 }
@@ -104,8 +121,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Fetch records",
         detail: "Load all PDFs from {{Records}} and extract text",
-        returns: [
-          { id: "r1_a", name: "Records text", type: "long_text", description: "Concatenated extracted text" },
+        context: [
+          { id: "ctx_records_text", name: "Records text", description: "Concatenated extracted text from all uploaded records" },
         ],
       },
       {
@@ -212,7 +229,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
       {
         id: "s2",
-        type: "fetch",
+        type: "prompt",
         name: "Extract facts from each document",
         detail:
           "Read every document in {{Case}}. Extract structured atoms of fact tailored to each document type. Police report: date, location, weather, speed, party statements at scene, citations, diagram, witnesses. Medical records: diagnoses, visit dates, treatments, referrals, medications, restrictions, prognosis, prior conditions. Interrogatory responses: sworn version of events, witnesses identified, damages claimed, medical history disclosed. Discovery: phone records, vehicle maintenance, photos, surveillance, communications. Prior depo transcripts: locked-in testimony. Expert reports: opinions, methodology, data relied upon, qualifications. Every fact retains a citation: document + page/section.",
@@ -298,7 +315,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
       {
         id: "s5",
-        type: "fetch",
+        type: "prompt",
         name: "Apply Knowledge Base — standard questions",
         detail:
           "Load proactive standard questions for {{Deponent role}} from {{Reference library}} — questions experienced attorneys always ask regardless of what's in the docs. Deduplicate against the case-generated set using semantic matching (not just exact text). Personalize each KB question with names, dates, and case details from {{Case}}. Tag the survivors with the 'Standard' flag so the attorney knows they came from experience, not a specific document.",
@@ -440,6 +457,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Load transcript from case",
         detail: "Load the deposition transcript file and any related exhibits from {{Case}}",
+        context: [
+          { id: "ctx_transcript", name: "Transcript", description: "Raw transcript text + exhibit attachments" },
+        ],
       },
       {
         id: "s2",
@@ -530,6 +550,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Load case documents",
         detail:
           "Load every deposition-related document from {{Case}} — notices, transcripts, errata sheets, exhibits, cover pages.",
+        context: [
+          { id: "ctx_depo_docs", name: "Deposition documents", description: "All depo-related documents from the case file" },
+        ],
       },
       {
         id: "s2",
@@ -598,8 +621,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Fetch case facts",
         detail: "Load {{Case}} context",
-        returns: [
-          { id: "r1_a", name: "Case facts", type: "long_text", description: "Compiled case context" },
+        context: [
+          { id: "ctx_case_facts", name: "Case facts", description: "Compiled case context — facts, parties, timeline" },
         ],
       },
       {

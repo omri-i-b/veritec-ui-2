@@ -30,7 +30,7 @@ import {
   Play,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getPlaybook, type ContextEntry, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
@@ -456,6 +456,179 @@ type DrawerState =
   | null
 
 // ── Columns Editor (for "Records" output type) ────────────────────────
+
+// ── Context Editor (for Fetch step memory entries) ────────────────────
+
+function ContextEditor({
+  entries,
+  onChange,
+}: {
+  entries: ContextEntry[]
+  onChange: (e: ContextEntry[]) => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const saveEntry = (e: ContextEntry) => {
+    if (entries.find((x) => x.id === e.id)) {
+      onChange(entries.map((x) => (x.id === e.id ? e : x)))
+    } else {
+      onChange([...entries, e])
+    }
+    setAdding(false)
+    setEditingId(null)
+  }
+  const deleteEntry = (id: string) => {
+    onChange(entries.filter((e) => e.id !== id))
+    setEditingId(null)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+          Adds to memory
+        </label>
+        <span className="text-[10px] text-zinc-500">
+          Named context blobs later steps can reference
+        </span>
+      </div>
+      <div className="rounded-md border border-amber-200 bg-amber-50/40 p-1.5 space-y-1">
+        {entries.map((e) =>
+          editingId === e.id ? (
+            <ContextEntryForm
+              key={e.id}
+              existing={e}
+              onSave={saveEntry}
+              onDelete={() => deleteEntry(e.id)}
+              onCancel={() => setEditingId(null)}
+            />
+          ) : (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => {
+                setEditingId(e.id)
+                setAdding(false)
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-transparent bg-white hover:border-amber-300 transition-colors text-left"
+            >
+              <Database className="h-3.5 w-3.5 text-amber-700 shrink-0" weight="bold" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-zinc-900 truncate">{e.name}</div>
+                {e.description && (
+                  <div className="text-[11px] text-zinc-500 truncate">{e.description}</div>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800 shrink-0">
+                Memory
+              </span>
+            </button>
+          )
+        )}
+        {adding ? (
+          <ContextEntryForm
+            existing={null}
+            onSave={saveEntry}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setAdding(true)
+              setEditingId(null)
+            }}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-dashed border-amber-300 text-[11px] font-medium text-amber-700 hover:border-amber-500 hover:bg-amber-50 transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Add memory entry
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+        Memory is unstructured — it&apos;s the raw material for later prompts to read.
+        Use <span className="font-medium">Returns</span> on a Prompt step when you want typed, structured output.
+      </p>
+    </div>
+  )
+}
+
+function ContextEntryForm({
+  existing,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  existing: ContextEntry | null
+  onSave: (e: ContextEntry) => void
+  onDelete?: () => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(existing?.name ?? "")
+  const [description, setDescription] = useState(existing?.description ?? "")
+  const canSave = name.trim().length > 0
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({
+      id: existing?.id ?? `ctx_${Date.now()}`,
+      name: name.trim(),
+      description: description.trim() || undefined,
+    })
+  }
+  return (
+    <div className="rounded-md border-2 border-amber-300 bg-white p-2.5 space-y-2.5">
+      <div>
+        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Name
+        </label>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Case facts, Records text, Transcript"
+          className="w-full h-8 px-2 text-sm rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+        />
+      </div>
+      <div>
+        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+          Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What this context contains"
+          rows={2}
+          className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 resize-none leading-relaxed"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-red-50 text-red-600 transition-colors"
+            title="Delete"
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={onCancel} className="h-7 text-xs">
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-7 text-xs bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {existing ? "Save" : "Add memory"}
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 function ColumnsEditor({
   columns,
@@ -999,169 +1172,15 @@ function FieldForm({
   )
 }
 
-// ── Step Form (in drawer) ─────────────────────────────────────────────
-
-function StepForm({
-  existing,
-  stepType,
-  availableVars,
-  onSave,
-  onDelete,
-  onCancel,
-}: {
-  existing: Step | null
-  stepType: StepType
-  availableVars: string[]
-  onSave: (s: Step) => void
-  onDelete: () => void
-  onCancel: () => void
-}) {
-  const [name, setName] = useState(existing?.name ?? "")
-  const [detail, setDetail] = useState(existing?.detail ?? "")
-  const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
-  const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
-  const isEditing = existing !== null
-  const type = existing?.type ?? stepType
-  const cfg = STEP_TYPES[type]
-  const Icon = cfg.icon
-  const isFormat = type === "format"
-  const canSave =
-    name.trim().length > 0 &&
-    detail.trim().length > 0 &&
-    (!isFormat || !!templateId)
-
-  const insertVariable = (v: string) => {
-    setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
-  }
-
-  const handleSave = () => {
-    if (!canSave) return
-    onSave({
-      id: existing?.id ?? `new_${Date.now()}`,
-      type,
-      name: name.trim(),
-      detail: detail.trim(),
-      returns: returns.length > 0 ? returns : undefined,
-      templateId: isFormat ? templateId : undefined,
-    })
-  }
-
-  const RETURN_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records"]
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-5 space-y-5">
-        <div>
-          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Type</label>
-          <div
-            className={`flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 bg-white border-l-4 ${cfg.accent}`}
-          >
-            <div className={`flex items-center justify-center h-7 w-7 rounded-md ${cfg.iconBg}`}>
-              <Icon className={`h-4 w-4 ${cfg.iconColor}`} weight="bold" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-zinc-900">{cfg.label}</div>
-              <div className="text-[11px] text-zinc-500">{cfg.description}</div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Name</label>
-          <input
-            autoFocus
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={type === "fetch" ? "e.g. Fetch case records" : "e.g. Analyze case for weaknesses"}
-            className="w-full h-10 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
-          />
-        </div>
-
-        <div>
-          <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
-            {type === "fetch" ? "What to load" : "Prompt"}
-          </label>
-          <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
-            <textarea
-              value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-              placeholder={
-                type === "fetch"
-                  ? "e.g. Load all PDFs from {{Records}} and extract text"
-                  : "e.g. Analyze the records for {{Case}} and identify treatment gaps..."
-              }
-              rows={8}
-              className="w-full px-3 py-2 text-sm bg-white focus:outline-none resize-none leading-relaxed"
-            />
-            {availableVars.length > 0 && (
-              <div className="border-t border-gray-200 bg-gray-50 px-2 py-1.5 flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mr-1">Insert variable:</span>
-                {availableVars.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => insertVariable(v)}
-                    className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <p className="text-[11px] text-zinc-500 mt-1.5">
-            Use <span className="font-mono bg-gray-100 px-1 rounded">{`{{ }}`}</span> to reference inputs from above.
-          </p>
-        </div>
-
-        {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
-
-        <div>
-          <ColumnsEditor
-            columns={returns}
-            onChange={setReturns}
-            label="Returns"
-            helper="What this step produces. The last step's returns is the playbook's deliverable."
-            fieldTypes={RETURN_TYPES}
-            required={false}
-          />
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 px-5 py-3 flex items-center gap-2 shrink-0 bg-white">
-        {isEditing && (
-          <button
-            onClick={onDelete}
-            className="flex items-center justify-center h-9 w-9 rounded-md hover:bg-red-50 text-red-600 transition-colors"
-            title="Delete"
-          >
-            <Trash className="h-4 w-4" />
-          </button>
-        )}
-        <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={onCancel} className="h-9">
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="h-9 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isEditing ? "Save changes" : `Add ${cfg.label.toLowerCase()}`}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 // ── Inline Step Editor (renders in the canvas, not the rail) ──────────
+
+type VarSource = { label: string; vars: string[] }
 
 function StepEditor({
   existing,
   stepType,
   index,
-  availableVars,
+  varSources,
   onSave,
   onDelete,
   onCancel,
@@ -1169,7 +1188,7 @@ function StepEditor({
   existing: Step | null
   stepType: StepType
   index: number
-  availableVars: string[]
+  varSources: VarSource[]
   onSave: (s: Step) => void
   onDelete: () => void
   onCancel: () => void
@@ -1177,11 +1196,13 @@ function StepEditor({
   const [name, setName] = useState(existing?.name ?? "")
   const [detail, setDetail] = useState(existing?.detail ?? "")
   const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
+  const [contextEntries, setContextEntries] = useState<ContextEntry[]>(existing?.context ?? [])
   const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
   const type = existing?.type ?? stepType
   const cfg = STEP_TYPES[type]
   const Icon = cfg.icon
   const isFormat = type === "format"
+  const isFetch = type === "fetch"
   const isEditing = existing !== null
   const canSave =
     name.trim().length > 0 &&
@@ -1192,6 +1213,25 @@ function StepEditor({
     setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
   }
 
+  // Format steps auto-synthesize a single `document` return from the template.
+  // Other types use the user-edited returns array.
+  const computeReturns = (): Field[] | undefined => {
+    if (isFormat) {
+      const tpl = templateId ? getTemplate(templateId) : undefined
+      if (!tpl) return undefined
+      return [
+        {
+          id: existing?.returns?.[0]?.id ?? `ret_doc_${Date.now()}`,
+          name: tpl.name,
+          type: "document",
+          templateId: tpl.id,
+          description: `Filled ${tpl.format} based on this step's prompt`,
+        },
+      ]
+    }
+    return returns.length > 0 ? returns : undefined
+  }
+
   const handleSave = () => {
     if (!canSave) return
     onSave({
@@ -1199,12 +1239,24 @@ function StepEditor({
       type,
       name: name.trim(),
       detail: detail.trim(),
-      returns: returns.length > 0 ? returns : undefined,
+      // Fetch steps write to context (unstructured memory).
+      // Prompt/Format steps write typed returns.
+      returns: isFetch ? undefined : computeReturns(),
+      context: isFetch ? (contextEntries.length > 0 ? contextEntries : undefined) : undefined,
       templateId: isFormat ? templateId : undefined,
     })
   }
 
-  const RETURN_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records"]
+  // Type constraints per step type
+  const RETURN_TYPES: FieldType[] = isFetch
+    ? ["long_text", "records", "list"]
+    : ["text", "long_text", "number", "date", "list", "records"]
+
+  const formatReturn = isFormat
+    ? templateId
+      ? getTemplate(templateId)
+      : undefined
+    : undefined
 
   return (
     <div className={`w-full rounded-[10px] border border-blue-500 bg-white shadow-[0_0_0_3px_rgba(30,64,175,0.12)] overflow-hidden border-l-4 ${cfg.accent}`}>
@@ -1271,35 +1323,77 @@ function StepEditor({
               rows={6}
               className="w-full px-3 py-2 text-sm bg-white focus:outline-none resize-none leading-relaxed"
             />
-            {availableVars.length > 0 && (
-              <div className="border-t border-gray-200 bg-gray-50 px-2 py-1.5 flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mr-1">
-                  Insert:
-                </span>
-                {availableVars.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => insertVariable(v)}
-                    className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
-                  >
-                    {v}
-                  </button>
+            {varSources.length > 0 && (
+              <div className="border-t border-gray-200 bg-gray-50 px-2 py-1.5 space-y-1">
+                {varSources.map((group) => (
+                  <div key={group.label} className="flex items-start gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mr-1 mt-1 shrink-0">
+                      {group.label}:
+                    </span>
+                    {group.vars.map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => insertVariable(v)}
+                        className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}
           </div>
+          <p className="text-[11px] text-zinc-500 mt-1.5">
+            Variables you reference here become available to later steps via
+            this step&apos;s <span className="font-medium">Returns</span>.
+          </p>
         </div>
 
         {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
 
-        <ColumnsEditor
-          columns={returns}
-          onChange={setReturns}
-          label="Returns"
-          helper="What this step produces"
-          fieldTypes={RETURN_TYPES}
-          required={false}
-        />
+        {isFormat ? (
+          <div>
+            <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
+              Returns
+            </label>
+            {formatReturn ? (
+              <div className="rounded-md border border-teal-200 bg-teal-50/40 px-3 py-2 flex items-center gap-2">
+                <div className={`flex items-center justify-center h-7 w-7 rounded-md ${formatReturn.iconBg}`}>
+                  <formatReturn.icon className={`h-4 w-4 ${formatReturn.iconColor}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-zinc-900 truncate">
+                      {formatReturn.name}
+                    </span>
+                    <span className="inline-flex items-center rounded border border-gray-200 bg-white px-1.5 py-0 text-[10px] font-medium text-zinc-600">
+                      {formatReturn.format}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    A single filled document — implied by the template above.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-[11px] text-zinc-500">
+                Pick a template above; this step will return a single filled document.
+              </div>
+            )}
+          </div>
+        ) : isFetch ? (
+          <ContextEditor entries={contextEntries} onChange={setContextEntries} />
+        ) : (
+          <ColumnsEditor
+            columns={returns}
+            onChange={setReturns}
+            label="Returns"
+            helper="What this step produces. Later steps reference these by name."
+            fieldTypes={RETURN_TYPES}
+            required={false}
+          />
+        )}
       </div>
 
       {/* Footer */}
@@ -1338,9 +1432,33 @@ export function DefinitionPanel() {
   const [steps, setSteps] = useState<Step[]>(playbook.steps)
   const [selection, setSelection] = useState<DrawerState>(null)
 
-  const availableVars = inputs.map((i) => i.name)
   const lastStep = steps[steps.length - 1]
   const deliverable = lastStep?.returns ?? []
+
+  // Build available variable sources for a step at the given index.
+  // A step can reference:
+  //   - Inputs (run-time arguments)
+  //   - Memory (unstructured context loaded by prior fetch steps + KB inputs)
+  //   - Data  (typed returns from prior prompt/format steps)
+  const varSourcesFor = (stepIndex: number): VarSource[] => {
+    const inputVars = inputs.filter((i) => i.type !== "kb-ref").map((i) => i.name)
+    const kbVars = inputs.filter((i) => i.type === "kb-ref").map((i) => i.name)
+
+    const memoryVars: string[] = [...kbVars]
+    const dataVars: string[] = []
+
+    for (let i = 0; i < stepIndex; i++) {
+      const s = steps[i]
+      ;(s.context ?? []).forEach((c) => memoryVars.push(c.name))
+      ;(s.returns ?? []).forEach((r) => dataVars.push(r.name))
+    }
+
+    const sources: VarSource[] = []
+    if (inputVars.length > 0) sources.push({ label: "Inputs", vars: inputVars })
+    if (memoryVars.length > 0) sources.push({ label: "Memory", vars: memoryVars })
+    if (dataVars.length > 0) sources.push({ label: "Data", vars: dataVars })
+    return sources
+  }
 
   const saveField = (f: Field) => {
     setInputs((prev) => {
@@ -1386,25 +1504,8 @@ export function DefinitionPanel() {
         }}
       >
         <div
-          className={`mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch transition-[max-width] duration-200 ${
-            selection?.kind === "step" ? "max-w-[680px]" : "max-w-[480px]"
-          }`}
+          className="max-w-[480px] mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch"
         >
-          {/* What this produces — derived from last step's returns */}
-          {deliverable.length > 0 && (
-            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50/40 px-3 py-2 flex items-start gap-2">
-              <ArrowSquareOut className="h-3.5 w-3.5 text-blue-800 mt-0.5 shrink-0" weight="bold" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-800">
-                  This produces
-                </div>
-                <div className="text-xs text-zinc-700 mt-0.5 truncate">
-                  {deliverable.map((f) => f.name).join(" · ")}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Trigger / Inputs */}
           <FlowNode
             icon={SuitcaseSimple}
@@ -1449,15 +1550,17 @@ export function DefinitionPanel() {
             return (
               <Fragment key={step.id}>
                 {editingThis ? (
-                  <StepEditor
-                    existing={step}
-                    stepType={step.type}
-                    index={i}
-                    availableVars={availableVars}
-                    onSave={saveStep}
-                    onDelete={() => deleteStep(step)}
-                    onCancel={() => setSelection(null)}
-                  />
+                  <div className="-mx-[80px]">
+                    <StepEditor
+                      existing={step}
+                      stepType={step.type}
+                      index={i}
+                      varSources={varSourcesFor(i)}
+                      onSave={saveStep}
+                      onDelete={() => deleteStep(step)}
+                      onCancel={() => setSelection(null)}
+                    />
+                  </div>
                 ) : (
                   <FlowNode
                     icon={StepIcon}
@@ -1467,6 +1570,7 @@ export function DefinitionPanel() {
                     subtitle={step.detail || "No description"}
                     onClick={() => setSelection({ kind: "step", existing: step })}
                     returns={step.returns}
+                    context={step.context}
                     isLast={isLast}
                   />
                 )}
@@ -1478,15 +1582,17 @@ export function DefinitionPanel() {
           {/* New step being added — appears at end */}
           {selection?.kind === "step" && selection.existing === null && (
             <>
-              <StepEditor
-                existing={null}
-                stepType={selection.stepType ?? "prompt"}
-                index={steps.length}
-                availableVars={availableVars}
-                onSave={saveStep}
-                onDelete={() => setSelection(null)}
-                onCancel={() => setSelection(null)}
-              />
+              <div className="-mx-[80px]">
+                <StepEditor
+                  existing={null}
+                  stepType={selection.stepType ?? "prompt"}
+                  index={steps.length}
+                  varSources={varSourcesFor(steps.length)}
+                  onSave={saveStep}
+                  onDelete={() => setSelection(null)}
+                  onCancel={() => setSelection(null)}
+                />
+              </div>
               <FlowConnector />
             </>
           )}
@@ -1529,12 +1635,9 @@ export function DefinitionPanel() {
         stepCount={steps.length}
         deliverable={deliverable}
         selection={selection}
-        availableVars={availableVars}
         onBack={() => setSelection(null)}
         onSaveField={saveField}
         onDeleteField={deleteField}
-        onSaveStep={saveStep}
-        onDeleteStep={deleteStep}
       />
     </div>
   )
@@ -1553,6 +1656,7 @@ function FlowNode({
   children,
   onClick,
   returns,
+  context,
   isLast = false,
 }: {
   icon: typeof Plus
@@ -1564,6 +1668,7 @@ function FlowNode({
   children?: React.ReactNode
   onClick?: () => void
   returns?: Field[]
+  context?: ContextEntry[]
   isLast?: boolean
 }) {
   const Wrapper = onClick ? "button" : "div"
@@ -1588,6 +1693,28 @@ function FlowNode({
         </div>
       </div>
       {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
+      {context && context.length > 0 && (
+        <div className="border-t border-amber-100 bg-amber-50/40 px-3 py-2">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Database className="h-3 w-3 text-amber-700" weight="bold" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+              Adds to memory
+            </span>
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {context.map((c) => (
+              <span
+                key={c.id}
+                className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
+                title={c.description}
+              >
+                <Database className="h-2.5 w-2.5 text-amber-700" weight="bold" />
+                <span className="font-medium">{c.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {returns && returns.length > 0 && (
         <div
           className={`border-t px-3 py-2 ${
@@ -1743,24 +1870,18 @@ function RightSidebar({
   stepCount,
   deliverable,
   selection,
-  availableVars,
   onBack,
   onSaveField,
   onDeleteField,
-  onSaveStep,
-  onDeleteStep,
 }: {
   playbook: ReturnType<typeof useCurrentPlaybook>
   inputCount: number
   stepCount: number
   deliverable: Field[]
   selection: DrawerState
-  availableVars: string[]
   onBack: () => void
   onSaveField: (f: Field) => void
   onDeleteField: (f: Field) => void
-  onSaveStep: (s: Step) => void
-  onDeleteStep: (s: Step) => void
 }) {
   const deliverableCount = deliverable.length
   // EDIT MODE — sidebar swaps only for input editing. Step editing happens inline in the canvas.

@@ -67,13 +67,20 @@ const PLAYBOOKS: Record<
 
 type RunStatus = "success" | "running" | "failed" | "queued"
 
+type OutputTone = "neutral" | "warning" | "danger" | "success" | "document" | "records"
+
 interface Run {
   id: string
   playbookId: keyof typeof PLAYBOOKS
   status: RunStatus
   case: string
-  /** Output preview — structured differently per playbook */
-  output: { label: string; value: string; tone?: "neutral" | "warning" | "danger" | "success" }[]
+  /**
+   * Output preview — derived from the playbook's deliverable.
+   * Scalars render as label/value. `tone: "document"` renders a file link
+   * (the playbook's last step is a Format step). `tone: "records"` renders
+   * a row-count pill (the deliverable is a Records-typed field).
+   */
+  output: { label: string; value: string; tone?: OutputTone }[]
   started: string
   duration: string | null
   triggeredBy: { name: string; initials: string; color: string }
@@ -112,9 +119,8 @@ const RUNS: Run[] = [
     status: "success",
     case: "CVSA-1189",
     output: [
-      { label: "Pages", value: "3" },
+      { label: "Document", value: "Smith Demand Letter.docx", tone: "document" },
       { label: "Claim", value: "$2.4M", tone: "success" },
-      { label: "Tone", value: "Firm" },
     ],
     started: "8m ago",
     duration: "42.1s",
@@ -126,9 +132,9 @@ const RUNS: Run[] = [
     status: "success",
     case: "CVSA-1189",
     output: [
-      { label: "Questions", value: "127" },
-      { label: "Weaknesses", value: "8", tone: "danger" },
-      { label: "Deponent", value: "Plaintiff" },
+      { label: "Deponent", value: "Cruz Lopez (Plaintiff)" },
+      { label: "Questions", value: "127", tone: "records" },
+      { label: "Contradictions", value: "4", tone: "danger" },
     ],
     started: "6m ago",
     duration: "34.8s",
@@ -206,9 +212,9 @@ const RUNS: Run[] = [
     status: "success",
     case: "CVSA-0998",
     output: [
-      { label: "Questions", value: "48" },
-      { label: "Weaknesses", value: "2", tone: "warning" },
-      { label: "Deponent", value: "Medical Expert" },
+      { label: "Deponent", value: "Dr. Patel (Medical Expert)" },
+      { label: "Questions", value: "48", tone: "records" },
+      { label: "Contradictions", value: "0", tone: "success" },
     ],
     started: "1h ago",
     duration: "19.2s",
@@ -338,9 +344,8 @@ const RUNS: Run[] = [
     status: "success",
     case: "2025CI01899",
     output: [
-      { label: "Pages", value: "5" },
+      { label: "Document", value: "Park Demand Letter.docx", tone: "document" },
       { label: "Claim", value: "$3.8M", tone: "success" },
-      { label: "Tone", value: "Aggressive" },
     ],
     started: "5h ago",
     duration: "38.7s",
@@ -409,14 +414,42 @@ function PlaybookCell({ playbookId }: { playbookId: keyof typeof PLAYBOOKS }) {
 
 function OutputPreview({ output }: { output: Run["output"] }) {
   return (
-    <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center gap-2 min-w-0 flex-wrap">
       {output.map((field, i) => {
+        // Document deliverable — show as a file pill that "opens" the result
+        if (field.tone === "document") {
+          return (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-md border border-teal-200 bg-teal-50 px-2 py-0.5 text-[12px] font-medium text-teal-800 max-w-[260px]"
+              title={field.value}
+            >
+              <FilePdf className="h-3 w-3 shrink-0" weight="bold" />
+              <span className="truncate">{field.value}</span>
+              <ArrowSquareOut className="h-3 w-3 shrink-0 opacity-60" />
+            </span>
+          )
+        }
+        // Records deliverable — show as a row-count pill
+        if (field.tone === "records") {
+          return (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[12px] font-medium text-violet-800"
+              title={`${field.label}: ${field.value}`}
+            >
+              <Columns className="h-3 w-3 shrink-0" weight="bold" />
+              <span className="text-[10px] uppercase tracking-wide opacity-70">{field.label}</span>
+              <span className="tabular-nums">{field.value}</span>
+            </span>
+          )
+        }
         const toneClass = {
           neutral: "text-zinc-700",
           success: "text-green-700",
           warning: "text-amber-700",
           danger: "text-red-700",
-        }[field.tone ?? "neutral"]
+        }[(field.tone ?? "neutral") as "neutral" | "success" | "warning" | "danger"]
         return (
           <div key={i} className="flex items-baseline gap-1 min-w-0">
             <span className="text-[10px] text-zinc-400 uppercase tracking-wide shrink-0">{field.label}</span>
@@ -614,7 +647,9 @@ function RunDetailDrawer({ run, onClose }: { run: Run | null; onClose: () => voi
                       success: "text-green-700",
                       warning: "text-amber-700",
                       danger: "text-red-700",
-                    }[f.tone ?? "neutral"]
+                      document: "text-teal-800",
+                      records: "text-violet-800",
+                    }[(f.tone ?? "neutral") as OutputTone]
                     return (
                       <div key={i} className="bg-white p-3">
                         <div className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 mb-1">
