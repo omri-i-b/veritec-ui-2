@@ -1,4 +1,5 @@
 import type { ComponentType } from "react"
+import { TEMPLATES } from "@/lib/template-data"
 import {
   FileText,
   Notepad,
@@ -90,10 +91,36 @@ export interface PlaybookDef {
   outputs?: Field[]
 }
 
-/** The playbook's deliverable = the last step's returns. */
+/**
+ * Effective returns for a step:
+ *   - Format steps derive a single `document` return from their template.
+ *   - Other steps use their stored `returns`.
+ */
+export function getStepReturns(step: Step): Field[] {
+  if (step.returns && step.returns.length > 0) return step.returns
+  if (step.type === "format" && step.templateId) {
+    const tpl = TEMPLATES[step.templateId]
+    if (tpl) {
+      return [
+        {
+          id: `${step.id}_doc`,
+          name: tpl.name,
+          type: "document",
+          templateId: tpl.id,
+          description: `Filled ${tpl.format}`,
+        },
+      ]
+    }
+  }
+  return []
+}
+
+/** The playbook's deliverable = the last step's effective returns. */
 export function getPlaybookDeliverable(p: PlaybookDef): Field[] {
   const last = p.steps[p.steps.length - 1]
-  return last?.returns ?? p.outputs ?? []
+  if (!last) return p.outputs ?? []
+  const r = getStepReturns(last)
+  return r.length > 0 ? r : p.outputs ?? []
 }
 
 export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
@@ -127,28 +154,12 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
       {
         id: "s2",
-        type: "prompt",
-        name: "Analyze records",
-        detail:
-          "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary.",
-        expanded: true,
-        returns: [
-          { id: "r2_a", name: "Patient name", type: "text" },
-          { id: "r2_b", name: "Treatment start", type: "date" },
-          { id: "r2_c", name: "Treatment end", type: "date" },
-          { id: "r2_d", name: "Gaps found", type: "number", description: "Treatment gaps over 30 days" },
-          { id: "r2_e", name: "Providers", type: "list", description: "Treating providers with visit counts" },
-        ],
-      },
-      {
-        id: "s3",
         type: "format",
-        name: "Format as Medical Summary memo",
-        detail: "Apply extractions to the firm's Medical Records Summary template.",
+        name: "Write Medical Summary memo",
+        detail:
+          "Read {{Records text}} for {{Case}} (plaintiff: {{Plaintiff}}) and fill the firm's Medical Records Summary template. Build a chronological treatment history with provider visit counts. Identify treatment gaps exceeding 30 days. Flag pre-existing conditions. Use plain language for the narrative; preserve dates, dosages, and diagnostic codes verbatim.",
         templateId: "medical-records-summary",
-        returns: [
-          { id: "r3_a", name: "Medical summary", type: "long_text", description: "Filled summary memo (DOCX)" },
-        ],
+        expanded: true,
       },
     ],
   },

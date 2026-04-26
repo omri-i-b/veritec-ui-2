@@ -30,7 +30,7 @@ import {
   Play,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { getPlaybook, type ContextEntry, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getPlaybook, getStepReturns, type ContextEntry, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
@@ -1433,7 +1433,7 @@ export function DefinitionPanel() {
   const [selection, setSelection] = useState<DrawerState>(null)
 
   const lastStep = steps[steps.length - 1]
-  const deliverable = lastStep?.returns ?? []
+  const deliverable = lastStep ? getStepReturns(lastStep) : []
 
   // Build available variable sources for a step at the given index.
   // A step can reference:
@@ -1450,7 +1450,7 @@ export function DefinitionPanel() {
     for (let i = 0; i < stepIndex; i++) {
       const s = steps[i]
       ;(s.context ?? []).forEach((c) => memoryVars.push(c.name))
-      ;(s.returns ?? []).forEach((r) => dataVars.push(r.name))
+      getStepReturns(s).forEach((r) => dataVars.push(r.name))
     }
 
     const sources: VarSource[] = []
@@ -1569,7 +1569,7 @@ export function DefinitionPanel() {
                     title={step.name}
                     subtitle={step.detail || "No description"}
                     onClick={() => setSelection({ kind: "step", existing: step })}
-                    returns={step.returns}
+                    returns={getStepReturns(step)}
                     context={step.context}
                     isLast={isLast}
                   />
