@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
@@ -24,6 +24,7 @@ import {
   ArrowSquareOut,
   PencilSimple,
   Table,
+  CheckCircle,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -1234,30 +1235,118 @@ export function DefinitionPanel() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6 space-y-4 bg-gray-50">
-      <div className="max-w-[920px] mx-auto space-y-4">
-        <InputsSection
-          inputs={inputs}
-          onEdit={(f) => setDrawer({ kind: "input", existing: f })}
-          onAdd={() => setDrawer({ kind: "input", existing: null })}
-        />
-        <div className="flex items-center justify-center py-1">
-          <div className="h-5 w-px bg-gray-200" />
+    <div className="flex flex-1 min-h-0">
+      {/* Canvas */}
+      <div className="flex-1 min-w-0 overflow-auto bg-gray-50 relative">
+        <div className="max-w-[640px] mx-auto py-10 px-6 flex flex-col items-stretch">
+          {/* Inputs node */}
+          <FlowNode
+            cornerLeft="Inputs"
+            cornerRight={inputs.length === 1 ? "1 field" : `${inputs.length} fields`}
+            cornerLeftTone="input"
+            icon={SuitcaseSimple}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-800"
+            title={inputs.length === 0 ? "No inputs yet" : "Inputs collected from user"}
+            subtitle={inputs.length === 0 ? "Add what users will provide" : inputs.map((i) => i.name).join(" · ")}
+          >
+            <div className="space-y-1">
+              {inputs.map((f) => (
+                <CompactFieldRow key={f.id} field={f} onClick={() => setDrawer({ kind: "input", existing: f })} />
+              ))}
+              <button
+                onClick={() => setDrawer({ kind: "input", existing: null })}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add input
+              </button>
+            </div>
+          </FlowNode>
+
+          <FlowConnector />
+
+          {/* Step nodes */}
+          {steps.map((step, i) => {
+            const stepCfg = STEP_TYPES[step.type]
+            const StepIcon = stepCfg.icon
+            return (
+              <Fragment key={step.id}>
+                <FlowNode
+                  cornerLeft={stepCfg.label}
+                  cornerLeftTone={step.type === "fetch" ? "fetch" : "prompt"}
+                  cornerRight={`STEP ${i + 1}`}
+                  icon={StepIcon}
+                  iconBg={stepCfg.iconBg}
+                  iconColor={stepCfg.iconColor}
+                  title={step.name}
+                  subtitle={step.detail}
+                  onClick={() => setDrawer({ kind: "step", existing: step })}
+                />
+                <FlowConnector />
+              </Fragment>
+            )
+          })}
+
+          {/* Add step buttons */}
+          <div className="flex items-center justify-center gap-2 my-2">
+            <button
+              onClick={() => setDrawer({ kind: "step", existing: null, stepType: "fetch" })}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+            >
+              <Database className="h-3.5 w-3.5" weight="bold" />
+              Add Fetch
+            </button>
+            <button
+              onClick={() => setDrawer({ kind: "step", existing: null, stepType: "prompt" })}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              <Sparkle className="h-3.5 w-3.5" weight="bold" />
+              Add Prompt
+            </button>
+          </div>
+
+          <FlowConnector />
+
+          {/* Outputs node */}
+          <FlowNode
+            cornerLeft="Outputs"
+            cornerLeftTone="output"
+            cornerRight={outputs.length === 1 ? "1 field" : `${outputs.length} fields`}
+            icon={ListBullets}
+            iconBg="bg-green-50"
+            iconColor="text-green-700"
+            title={outputs.length === 0 ? "No outputs yet" : "Extractions returned"}
+            subtitle={
+              outputs.length === 0 ? "Define what gets pulled out" : outputs.map((o) => o.name).join(" · ")
+            }
+          >
+            <div className="space-y-1">
+              {outputs.map((f) => (
+                <CompactFieldRow key={f.id} field={f} onClick={() => setDrawer({ kind: "output", existing: f })} />
+              ))}
+              <button
+                onClick={() => setDrawer({ kind: "output", existing: null })}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add output
+              </button>
+            </div>
+          </FlowNode>
         </div>
-        <StepsSection
-          steps={steps}
-          onEdit={(s) => setDrawer({ kind: "step", existing: s })}
-          onAdd={(t) => setDrawer({ kind: "step", existing: null, stepType: t })}
-        />
-        <div className="flex items-center justify-center py-1">
-          <div className="h-5 w-px bg-gray-200" />
-        </div>
-        <OutputsSection
-          outputs={outputs}
-          onEdit={(f) => setDrawer({ kind: "output", existing: f })}
-          onAdd={() => setDrawer({ kind: "output", existing: null })}
-        />
+
+        <FloatingCanvasToolbar />
       </div>
+
+      {/* Right sidebar */}
+      <DetailsSidebar
+        playbookName={playbook.name}
+        playbookDescription={playbook.description}
+        inputCount={inputs.length}
+        stepCount={steps.length}
+        outputCount={outputs.length}
+      />
 
       <EditorDrawer
         state={drawer}
@@ -1269,6 +1358,293 @@ export function DefinitionPanel() {
         onDeleteStep={deleteStep}
       />
     </div>
+  )
+}
+
+// ── Flow node card (the visual building block) ────────────────────────
+
+const CORNER_LEFT_TONES: Record<string, string> = {
+  input: "text-blue-800",
+  output: "text-green-700",
+  fetch: "text-amber-700",
+  prompt: "text-blue-800",
+}
+
+function FlowNode({
+  cornerLeft,
+  cornerRight,
+  cornerLeftTone = "input",
+  icon: Icon,
+  iconBg,
+  iconColor,
+  title,
+  subtitle,
+  children,
+  onClick,
+}: {
+  cornerLeft: string
+  cornerRight: string
+  cornerLeftTone?: string
+  icon: typeof Plus
+  iconBg: string
+  iconColor: string
+  title: string
+  subtitle?: string
+  children?: React.ReactNode
+  onClick?: () => void
+}) {
+  const Wrapper = onClick ? "button" : "div"
+  const toneClass = CORNER_LEFT_TONES[cornerLeftTone] ?? "text-zinc-700"
+  return (
+    <Wrapper
+      onClick={onClick}
+      className={`group relative w-full text-left rounded-[12px] border border-gray-200 bg-white overflow-hidden transition-all ${
+        onClick ? "hover:border-blue-300 hover:shadow-sm cursor-pointer" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between px-4 pt-3">
+        <span className={`text-[10px] font-semibold uppercase tracking-[0.08em] ${toneClass}`}>
+          {cornerLeft}
+        </span>
+        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">
+          {cornerRight}
+        </span>
+      </div>
+      <div className="px-4 pt-2 pb-3">
+        <div className="flex items-start gap-3">
+          <div className={`flex items-center justify-center h-7 w-7 rounded-md ${iconBg} shrink-0`}>
+            <Icon className={`h-4 w-4 ${iconColor}`} weight="bold" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-zinc-900 truncate">{title}</div>
+            {subtitle && (
+              <div className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mt-0.5">{subtitle}</div>
+            )}
+          </div>
+        </div>
+        {children && <div className="mt-3 pt-3 border-t border-gray-100">{children}</div>}
+      </div>
+    </Wrapper>
+  )
+}
+
+function FlowConnector() {
+  return (
+    <div className="flex flex-col items-center py-1 -my-px relative">
+      <div className="h-6 w-px bg-gray-300" />
+      <div className="h-1.5 w-1.5 rounded-full bg-white border border-gray-300 -my-[3px]" />
+      <div className="h-6 w-px bg-gray-300" />
+    </div>
+  )
+}
+
+function CompactFieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
+  const cfg = FIELD_TYPES[field.type]
+  const Icon = cfg.icon
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-transparent hover:border-gray-200 hover:bg-gray-50/80 text-left transition-colors"
+    >
+      <Icon className={`h-3 w-3 ${cfg.color} shrink-0`} weight="bold" />
+      <span className="text-xs text-zinc-800 flex-1 truncate">{field.name}</span>
+      {field.required && (
+        <span className="text-[9px] font-semibold text-rose-600 uppercase tracking-wide">req</span>
+      )}
+      <span className="text-[10px] text-zinc-400 uppercase tracking-wide">{cfg.label}</span>
+    </button>
+  )
+}
+
+// ── Floating bottom toolbar ───────────────────────────────────────────
+
+function FloatingCanvasToolbar() {
+  return (
+    <div className="sticky bottom-4 mx-auto w-fit flex items-center gap-0.5 rounded-full border border-gray-200 bg-white shadow-lg px-1.5 py-1 mt-6 mb-2">
+      <button className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-gray-100">
+        100%
+        <CaretDown className="h-3 w-3" />
+      </button>
+      <div className="h-4 w-px bg-gray-200 mx-1" />
+      <ToolbarButton title="Add">
+        <Plus className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Test run" tone="primary">
+        <Sparkle className="h-3.5 w-3.5" weight="fill" />
+      </ToolbarButton>
+      <ToolbarButton title="Reset">
+        <ArrowsOut className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <div className="h-4 w-px bg-gray-200 mx-1" />
+      <ToolbarButton title="Duplicate">
+        <Plus className="h-3.5 w-3.5 rotate-45" />
+      </ToolbarButton>
+      <ToolbarButton title="View JSON">
+        <Stack className="h-3.5 w-3.5" />
+      </ToolbarButton>
+    </div>
+  )
+}
+
+function ToolbarButton({
+  title,
+  tone = "default",
+  children,
+}: {
+  title: string
+  tone?: "default" | "primary"
+  children: React.ReactNode
+}) {
+  const cls =
+    tone === "primary"
+      ? "bg-blue-800 text-white hover:bg-blue-900"
+      : "text-zinc-700 hover:bg-gray-100"
+  return (
+    <button
+      title={title}
+      className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${cls}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ── Right sidebar (Details) ───────────────────────────────────────────
+
+function DetailsSidebar({
+  playbookName,
+  playbookDescription,
+  inputCount,
+  stepCount,
+  outputCount,
+}: {
+  playbookName: string
+  playbookDescription: string
+  inputCount: number
+  stepCount: number
+  outputCount: number
+}) {
+  const [tab, setTab] = useState<"details" | "comments">("details")
+  return (
+    <div className="w-[320px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+      <div className="flex items-center border-b border-gray-200 px-3 gap-0.5 shrink-0">
+        {(["details", "comments"] as const).map((t) => {
+          const active = tab === t
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors relative capitalize ${
+                active ? "text-blue-800 font-semibold" : "text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              {t === "details" ? <PencilSimple className="h-3.5 w-3.5" /> : <ChatBubble />}
+              {t}
+              {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-800" />}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-5">
+        {tab === "details" ? (
+          <>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkle className="h-3.5 w-3.5 text-blue-800" weight="fill" />
+                <h3 className="text-sm font-semibold text-zinc-900">{playbookName}</h3>
+              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed">{playbookDescription}</p>
+            </div>
+
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                Stats
+              </h4>
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Inputs</span>
+                  <span className="text-zinc-900 font-medium tabular-nums">{inputCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Steps</span>
+                  <span className="text-zinc-900 font-medium tabular-nums">{stepCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Outputs</span>
+                  <span className="text-zinc-900 font-medium tabular-nums">{outputCount}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                Checklist
+              </h4>
+              <p className="text-[11px] text-zinc-500 mb-2">
+                Resolve before publishing
+              </p>
+              <div className="space-y-1.5">
+                <ChecklistRow label="Add inputs" done={inputCount > 0} />
+                <ChecklistRow label="Add at least one step" done={stepCount > 0} />
+                <ChecklistRow label="Add outputs" done={outputCount > 0} />
+                <ChecklistRow label="Run a test" done={false} />
+                <ChecklistRow label="Publish v1" done={false} />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+                Helpful resources
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                <ResourceCard icon={PencilSimple} label="Documentation" hint="How playbooks work" />
+                <ResourceCard icon={Stack} label="Templates" hint="Start from a template" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-zinc-500 italic">No comments yet.</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ChatBubble() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
+      <path d="M3 3h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8.5l-3 2v-2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+    </svg>
+  )
+}
+
+function ChecklistRow({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span
+        className={`flex items-center justify-center h-4 w-4 rounded border ${
+          done ? "bg-green-50 border-green-300 text-green-700" : "bg-white border-gray-300 text-transparent"
+        }`}
+      >
+        <CheckCircle className="h-3 w-3" weight="fill" />
+      </span>
+      <span className={done ? "text-zinc-500 line-through" : "text-zinc-800"}>{label}</span>
+    </div>
+  )
+}
+
+function ResourceCard({ icon: Icon, label, hint }: { icon: typeof PencilSimple; label: string; hint: string }) {
+  return (
+    <button className="flex flex-col items-start gap-1 px-2.5 py-2 rounded-md border border-gray-200 bg-white hover:border-blue-300 transition-colors text-left">
+      <Icon className="h-4 w-4 text-blue-800" />
+      <span className="text-xs font-semibold text-zinc-900">{label}</span>
+      <span className="text-[10px] text-zinc-500">{hint}</span>
+    </button>
   )
 }
 
