@@ -25,6 +25,9 @@ import {
   PencilSimple,
   Table,
   CheckCircle,
+  ArrowLeft,
+  MagnifyingGlass,
+  Play,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -1196,7 +1199,7 @@ export function DefinitionPanel() {
   const [inputs, setInputs] = useState<Field[]>(playbook.inputs)
   const [outputs, setOutputs] = useState<Field[]>(playbook.outputs)
   const [steps, setSteps] = useState<Step[]>(playbook.steps)
-  const [drawer, setDrawer] = useState<DrawerState>(null)
+  const [selection, setSelection] = useState<DrawerState>(null)
 
   const availableVars = inputs.map((i) => i.name)
 
@@ -1209,13 +1212,13 @@ export function DefinitionPanel() {
       next[idx] = f
       return next
     })
-    setDrawer(null)
+    setSelection(null)
   }
 
   const deleteField = (kind: "input" | "output", f: Field) => {
     const setter = kind === "input" ? setInputs : setOutputs
     setter((prev) => prev.filter((x) => x.id !== f.id))
-    setDrawer(null)
+    setSelection(null)
   }
 
   const saveStep = (s: Step) => {
@@ -1226,43 +1229,65 @@ export function DefinitionPanel() {
       next[idx] = s
       return next
     })
-    setDrawer(null)
+    setSelection(null)
   }
 
   const deleteStep = (s: Step) => {
     setSteps((prev) => prev.filter((x) => x.id !== s.id))
-    setDrawer(null)
+    setSelection(null)
   }
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* Canvas */}
-      <div className="flex-1 min-w-0 overflow-auto bg-gray-50 relative">
-        <div className="max-w-[640px] mx-auto py-10 px-6 flex flex-col items-stretch">
-          {/* Inputs node */}
-          <FlowNode
-            cornerLeft="Inputs"
-            cornerRight={inputs.length === 1 ? "1 field" : `${inputs.length} fields`}
-            cornerLeftTone="input"
-            icon={SuitcaseSimple}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-800"
-            title={inputs.length === 0 ? "No inputs yet" : "Inputs collected from user"}
-            subtitle={inputs.length === 0 ? "Add what users will provide" : inputs.map((i) => i.name).join(" · ")}
+      {/* Canvas — dot grid bg */}
+      <div
+        className="flex-1 min-w-0 overflow-auto relative bg-white"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(15, 23, 42, 0.08) 1px, transparent 1px)",
+          backgroundSize: "16px 16px",
+        }}
+      >
+        <div className="max-w-[480px] mx-auto py-12 px-6 flex flex-col items-stretch">
+          {/* Trigger / Inputs */}
+          <NodeCluster
+            label="Trigger"
+            selected={
+              selection?.kind === "input" ? "any" : null
+            }
           >
-            <div className="space-y-1">
-              {inputs.map((f) => (
-                <CompactFieldRow key={f.id} field={f} onClick={() => setDrawer({ kind: "input", existing: f })} />
-              ))}
-              <button
-                onClick={() => setDrawer({ kind: "input", existing: null })}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add input
-              </button>
-            </div>
-          </FlowNode>
+            <FlowNode
+              icon={SuitcaseSimple}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-800"
+              title="Inputs collected"
+              subtitle={
+                inputs.length === 0
+                  ? "Add the fields the user provides"
+                  : `${inputs.length} field${inputs.length !== 1 ? "s" : ""}`
+              }
+              cornerPill={{ label: "Trigger", tone: "input" }}
+              isSelected={selection?.kind === "input" && selection.existing === null}
+            >
+              <div className="space-y-0.5">
+                {inputs.map((f) => (
+                  <CompactFieldRow
+                    key={f.id}
+                    field={f}
+                    selected={selection?.kind === "input" && selection.existing?.id === f.id}
+                    onClick={() => setSelection({ kind: "input", existing: f })}
+                  />
+                ))}
+                <button
+                  onClick={() => setSelection({ kind: "input", existing: null })}
+                  className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add input
+                </button>
+              </div>
+            </FlowNode>
+          </NodeCluster>
 
           <FlowConnector />
 
@@ -1270,36 +1295,42 @@ export function DefinitionPanel() {
           {steps.map((step, i) => {
             const stepCfg = STEP_TYPES[step.type]
             const StepIcon = stepCfg.icon
+            const isActiveStep =
+              selection?.kind === "step" && selection.existing?.id === step.id
             return (
               <Fragment key={step.id}>
-                <FlowNode
-                  cornerLeft={stepCfg.label}
-                  cornerLeftTone={step.type === "fetch" ? "fetch" : "prompt"}
-                  cornerRight={`STEP ${i + 1}`}
-                  icon={StepIcon}
-                  iconBg={stepCfg.iconBg}
-                  iconColor={stepCfg.iconColor}
-                  title={step.name}
-                  subtitle={step.detail}
-                  onClick={() => setDrawer({ kind: "step", existing: step })}
-                />
+                <NodeCluster label="Action" selected={isActiveStep ? "any" : null}>
+                  <FlowNode
+                    icon={StepIcon}
+                    iconBg={stepCfg.iconBg}
+                    iconColor={stepCfg.iconColor}
+                    title={step.name}
+                    subtitle={step.detail || "No description"}
+                    cornerPill={{
+                      label: step.type === "fetch" ? "Data" : "AI",
+                      tone: step.type,
+                    }}
+                    isSelected={isActiveStep}
+                    onClick={() => setSelection({ kind: "step", existing: step })}
+                  />
+                </NodeCluster>
                 <FlowConnector />
               </Fragment>
             )
           })}
 
           {/* Add step buttons */}
-          <div className="flex items-center justify-center gap-2 my-2">
+          <div className="flex items-center justify-center gap-2 my-1 mb-3">
             <button
-              onClick={() => setDrawer({ kind: "step", existing: null, stepType: "fetch" })}
-              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+              onClick={() => setSelection({ kind: "step", existing: null, stepType: "fetch" })}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
             >
               <Database className="h-3.5 w-3.5" weight="bold" />
               Add Fetch
             </button>
             <button
-              onClick={() => setDrawer({ kind: "step", existing: null, stepType: "prompt" })}
-              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              onClick={() => setSelection({ kind: "step", existing: null, stepType: "prompt" })}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition-colors"
             >
               <Sparkle className="h-3.5 w-3.5" weight="bold" />
               Add Prompt
@@ -1308,50 +1339,57 @@ export function DefinitionPanel() {
 
           <FlowConnector />
 
-          {/* Outputs node */}
-          <FlowNode
-            cornerLeft="Outputs"
-            cornerLeftTone="output"
-            cornerRight={outputs.length === 1 ? "1 field" : `${outputs.length} fields`}
-            icon={ListBullets}
-            iconBg="bg-green-50"
-            iconColor="text-green-700"
-            title={outputs.length === 0 ? "No outputs yet" : "Extractions returned"}
-            subtitle={
-              outputs.length === 0 ? "Define what gets pulled out" : outputs.map((o) => o.name).join(" · ")
-            }
+          {/* Output */}
+          <NodeCluster
+            label="Output"
+            selected={selection?.kind === "output" ? "any" : null}
           >
-            <div className="space-y-1">
-              {outputs.map((f) => (
-                <CompactFieldRow key={f.id} field={f} onClick={() => setDrawer({ kind: "output", existing: f })} />
-              ))}
-              <button
-                onClick={() => setDrawer({ kind: "output", existing: null })}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add output
-              </button>
-            </div>
-          </FlowNode>
+            <FlowNode
+              icon={ListBullets}
+              iconBg="bg-green-50"
+              iconColor="text-green-700"
+              title="Extractions returned"
+              subtitle={
+                outputs.length === 0
+                  ? "Add what gets pulled out"
+                  : `${outputs.length} field${outputs.length !== 1 ? "s" : ""}`
+              }
+              cornerPill={{ label: "Output", tone: "output" }}
+              isSelected={selection?.kind === "output" && selection.existing === null}
+            >
+              <div className="space-y-0.5">
+                {outputs.map((f) => (
+                  <CompactFieldRow
+                    key={f.id}
+                    field={f}
+                    selected={selection?.kind === "output" && selection.existing?.id === f.id}
+                    onClick={() => setSelection({ kind: "output", existing: f })}
+                  />
+                ))}
+                <button
+                  onClick={() => setSelection({ kind: "output", existing: null })}
+                  className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add output
+                </button>
+              </div>
+            </FlowNode>
+          </NodeCluster>
         </div>
 
         <FloatingCanvasToolbar />
       </div>
 
-      {/* Right sidebar */}
-      <DetailsSidebar
-        playbookName={playbook.name}
-        playbookDescription={playbook.description}
+      {/* Right sidebar (swaps between Overview and Editor) */}
+      <RightSidebar
+        playbook={playbook}
         inputCount={inputs.length}
         stepCount={steps.length}
         outputCount={outputs.length}
-      />
-
-      <EditorDrawer
-        state={drawer}
+        selection={selection}
         availableVars={availableVars}
-        onClose={() => setDrawer(null)}
+        onBack={() => setSelection(null)}
         onSaveField={saveField}
         onDeleteField={deleteField}
         onSaveStep={saveStep}
@@ -1361,84 +1399,116 @@ export function DefinitionPanel() {
   )
 }
 
+// ── Node cluster (label above + node card) ────────────────────────────
+
+function NodeCluster({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+  selected?: "any" | null
+}) {
+  return (
+    <div className="flex flex-col items-stretch">
+      <div className="self-start mb-1.5 ml-2 inline-flex items-center gap-1 rounded-md bg-white border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
+        <span className="h-1 w-1 rounded-full bg-zinc-400" />
+        {label}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 // ── Flow node card (the visual building block) ────────────────────────
 
-const CORNER_LEFT_TONES: Record<string, string> = {
-  input: "text-blue-800",
-  output: "text-green-700",
-  fetch: "text-amber-700",
-  prompt: "text-blue-800",
+const PILL_TONES: Record<string, string> = {
+  input: "bg-blue-50 text-blue-700 border-blue-200",
+  output: "bg-green-50 text-green-700 border-green-200",
+  fetch: "bg-amber-50 text-amber-700 border-amber-200",
+  prompt: "bg-violet-50 text-violet-700 border-violet-200",
 }
 
 function FlowNode({
-  cornerLeft,
-  cornerRight,
-  cornerLeftTone = "input",
   icon: Icon,
   iconBg,
   iconColor,
   title,
   subtitle,
+  cornerPill,
+  isSelected = false,
   children,
   onClick,
 }: {
-  cornerLeft: string
-  cornerRight: string
-  cornerLeftTone?: string
   icon: typeof Plus
   iconBg: string
   iconColor: string
   title: string
   subtitle?: string
+  cornerPill?: { label: string; tone: string }
+  isSelected?: boolean
   children?: React.ReactNode
   onClick?: () => void
 }) {
   const Wrapper = onClick ? "button" : "div"
-  const toneClass = CORNER_LEFT_TONES[cornerLeftTone] ?? "text-zinc-700"
+  const pillTone = cornerPill ? PILL_TONES[cornerPill.tone] ?? PILL_TONES.input : ""
   return (
     <Wrapper
       onClick={onClick}
-      className={`group relative w-full text-left rounded-[12px] border border-gray-200 bg-white overflow-hidden transition-all ${
-        onClick ? "hover:border-blue-300 hover:shadow-sm cursor-pointer" : ""
+      className={`relative w-full text-left rounded-[10px] border bg-white overflow-hidden transition-all ${
+        isSelected
+          ? "border-blue-500 shadow-[0_0_0_3px_rgba(30,64,175,0.12)]"
+          : "border-gray-200 " + (onClick ? "hover:border-blue-300 hover:shadow-sm cursor-pointer" : "")
       }`}
     >
-      <div className="flex items-center justify-between px-4 pt-3">
-        <span className={`text-[10px] font-semibold uppercase tracking-[0.08em] ${toneClass}`}>
-          {cornerLeft}
-        </span>
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-400">
-          {cornerRight}
-        </span>
-      </div>
-      <div className="px-4 pt-2 pb-3">
-        <div className="flex items-start gap-3">
-          <div className={`flex items-center justify-center h-7 w-7 rounded-md ${iconBg} shrink-0`}>
-            <Icon className={`h-4 w-4 ${iconColor}`} weight="bold" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-zinc-900 truncate">{title}</div>
-            {subtitle && (
-              <div className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mt-0.5">{subtitle}</div>
+      <div className="px-3 py-2.5 flex items-start gap-2.5">
+        <div className={`flex items-center justify-center h-6 w-6 rounded-md ${iconBg} shrink-0 mt-0.5`}>
+          <Icon className={`h-3.5 w-3.5 ${iconColor}`} weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-sm font-semibold text-zinc-900 truncate flex-1">{title}</div>
+            {cornerPill && (
+              <span
+                className={`inline-flex items-center rounded border px-1.5 py-0 text-[10px] font-medium shrink-0 ${pillTone}`}
+              >
+                {cornerPill.label}
+              </span>
             )}
           </div>
+          {subtitle && (
+            <div className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed mt-0.5">{subtitle}</div>
+          )}
         </div>
-        {children && <div className="mt-3 pt-3 border-t border-gray-100">{children}</div>}
       </div>
+      {/* Bottom anchor dot */}
+      {children && (
+        <div className="border-t border-gray-100 px-3 py-2">{children}</div>
+      )}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-white border border-gray-300" />
     </Wrapper>
   )
 }
 
 function FlowConnector() {
   return (
-    <div className="flex flex-col items-center py-1 -my-px relative">
+    <div className="flex flex-col items-center py-1 -my-1 relative">
       <div className="h-6 w-px bg-gray-300" />
-      <div className="h-1.5 w-1.5 rounded-full bg-white border border-gray-300 -my-[3px]" />
-      <div className="h-6 w-px bg-gray-300" />
+      <CaretDown className="h-3 w-3 text-gray-400 -my-1" weight="bold" />
+      <div className="h-2 w-2 rounded-full bg-white border border-gray-300" />
     </div>
   )
 }
 
-function CompactFieldRow({ field, onClick }: { field: Field; onClick: () => void }) {
+function CompactFieldRow({
+  field,
+  onClick,
+  selected = false,
+}: {
+  field: Field
+  onClick: () => void
+  selected?: boolean
+}) {
   const cfg = FIELD_TYPES[field.type]
   const Icon = cfg.icon
   return (
@@ -1448,7 +1518,11 @@ function CompactFieldRow({ field, onClick }: { field: Field; onClick: () => void
         e.stopPropagation()
         onClick()
       }}
-      className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-transparent hover:border-gray-200 hover:bg-gray-50/80 text-left transition-colors"
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-colors ${
+        selected
+          ? "border-blue-300 bg-blue-50/40"
+          : "border-transparent hover:border-gray-200 hover:bg-gray-50/80"
+      }`}
     >
       <Icon className={`h-3 w-3 ${cfg.color} shrink-0`} weight="bold" />
       <span className="text-xs text-zinc-800 flex-1 truncate">{field.name}</span>
@@ -1466,27 +1540,39 @@ function FloatingCanvasToolbar() {
   return (
     <div className="sticky bottom-4 mx-auto w-fit flex items-center gap-0.5 rounded-full border border-gray-200 bg-white shadow-lg px-1.5 py-1 mt-6 mb-2">
       <button className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-gray-100">
+        <MagnifyingGlass className="h-3 w-3" />
         100%
-        <CaretDown className="h-3 w-3" />
+        <CaretDown className="h-3 w-3 -ml-0.5" />
       </button>
-      <div className="h-4 w-px bg-gray-200 mx-1" />
-      <ToolbarButton title="Add">
-        <Plus className="h-3.5 w-3.5" />
+      <ToolbarButton title="Pan">
+        <Hand />
       </ToolbarButton>
       <ToolbarButton title="Test run" tone="primary">
-        <Sparkle className="h-3.5 w-3.5" weight="fill" />
+        <Play weight="fill" className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="View as JSON">
+        <FileTextIcon />
       </ToolbarButton>
       <ToolbarButton title="Reset">
-        <ArrowsOut className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <div className="h-4 w-px bg-gray-200 mx-1" />
-      <ToolbarButton title="Duplicate">
-        <Plus className="h-3.5 w-3.5 rotate-45" />
-      </ToolbarButton>
-      <ToolbarButton title="View JSON">
         <Stack className="h-3.5 w-3.5" />
       </ToolbarButton>
     </div>
+  )
+}
+
+function FileTextIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
+      <path d="M3.5 2h6L13 5.5v8a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM9 3v2.5h2.5L9 3zm-3.5 5h5v1h-5V8zm0 2h5v1h-5v-1z" />
+    </svg>
+  )
+}
+
+function Hand() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
+      <path d="M5.5 1.5a1 1 0 0 1 1 1V7H7V1.5a1 1 0 0 1 2 0V7h.5V2a1 1 0 0 1 2 0v5h.5V3.5a1 1 0 0 1 2 0V10c0 2-1.5 4.5-4.5 4.5S5 12.5 4 11l-2-3a1 1 0 0 1 1.4-1.4L4.5 8V2.5a1 1 0 0 1 1-1z" />
+    </svg>
   )
 }
 
@@ -1513,113 +1599,172 @@ function ToolbarButton({
   )
 }
 
-// ── Right sidebar (Details) ───────────────────────────────────────────
+// ── Right sidebar (swaps between Overview and inline editor) ──────────
 
-function DetailsSidebar({
-  playbookName,
-  playbookDescription,
+function RightSidebar({
+  playbook,
   inputCount,
   stepCount,
   outputCount,
+  selection,
+  availableVars,
+  onBack,
+  onSaveField,
+  onDeleteField,
+  onSaveStep,
+  onDeleteStep,
 }: {
-  playbookName: string
-  playbookDescription: string
+  playbook: ReturnType<typeof useCurrentPlaybook>
   inputCount: number
   stepCount: number
   outputCount: number
+  selection: DrawerState
+  availableVars: string[]
+  onBack: () => void
+  onSaveField: (kind: "input" | "output", f: Field) => void
+  onDeleteField: (kind: "input" | "output", f: Field) => void
+  onSaveStep: (s: Step) => void
+  onDeleteStep: (s: Step) => void
 }) {
-  const [tab, setTab] = useState<"details" | "comments">("details")
+  // EDIT MODE — sidebar shows the inline edit form
+  if (selection) {
+    return (
+      <div className="w-[360px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+        <SidebarEditHeader selection={selection} onBack={onBack} />
+        <div className="flex-1 min-h-0 overflow-auto">
+          {selection.kind === "input" && (
+            <FieldForm
+              kind="input"
+              existing={selection.existing}
+              onSave={(f) => onSaveField("input", f)}
+              onDelete={() => selection.existing && onDeleteField("input", selection.existing)}
+              onCancel={onBack}
+            />
+          )}
+          {selection.kind === "output" && (
+            <FieldForm
+              kind="output"
+              existing={selection.existing}
+              onSave={(f) => onSaveField("output", f)}
+              onDelete={() => selection.existing && onDeleteField("output", selection.existing)}
+              onCancel={onBack}
+            />
+          )}
+          {selection.kind === "step" && (
+            <StepForm
+              existing={selection.existing}
+              stepType={selection.existing?.type ?? selection.stepType ?? "prompt"}
+              availableVars={availableVars}
+              onSave={onSaveStep}
+              onDelete={() => selection.existing && onDeleteStep(selection.existing)}
+              onCancel={onBack}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // OVERVIEW MODE — playbook details
   return (
     <div className="w-[320px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
-      <div className="flex items-center border-b border-gray-200 px-3 gap-0.5 shrink-0">
-        {(["details", "comments"] as const).map((t) => {
-          const active = tab === t
-          return (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors relative capitalize ${
-                active ? "text-blue-800 font-semibold" : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              {t === "details" ? <PencilSimple className="h-3.5 w-3.5" /> : <ChatBubble />}
-              {t}
-              {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-800" />}
-            </button>
-          )
-        })}
+      <div className="flex-1 overflow-auto p-4 space-y-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className={`flex items-center justify-center h-7 w-7 rounded-md ${playbook.iconBg}`}>
+              <playbook.icon className={`h-4 w-4 ${playbook.iconColor}`} weight="bold" />
+            </span>
+            <h3 className="text-sm font-semibold text-zinc-900">{playbook.name}</h3>
+          </div>
+          <p className="text-xs text-zinc-600 leading-relaxed">{playbook.description}</p>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+            Stats
+          </h4>
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Inputs</span>
+              <span className="text-zinc-900 font-medium tabular-nums">{inputCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Steps</span>
+              <span className="text-zinc-900 font-medium tabular-nums">{stepCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500">Outputs</span>
+              <span className="text-zinc-900 font-medium tabular-nums">{outputCount}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+            Checklist
+          </h4>
+          <div className="space-y-1.5">
+            <ChecklistRow label="Add inputs" done={inputCount > 0} />
+            <ChecklistRow label="Add at least one step" done={stepCount > 0} />
+            <ChecklistRow label="Add outputs" done={outputCount > 0} />
+            <ChecklistRow label="Run a test" done={false} />
+            <ChecklistRow label="Publish v1" done={false} />
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-5">
-        {tab === "details" ? (
-          <>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkle className="h-3.5 w-3.5 text-blue-800" weight="fill" />
-                <h3 className="text-sm font-semibold text-zinc-900">{playbookName}</h3>
-              </div>
-              <p className="text-xs text-zinc-600 leading-relaxed">{playbookDescription}</p>
-            </div>
-
-            <div>
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
-                Stats
-              </h4>
-              <div className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Inputs</span>
-                  <span className="text-zinc-900 font-medium tabular-nums">{inputCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Steps</span>
-                  <span className="text-zinc-900 font-medium tabular-nums">{stepCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Outputs</span>
-                  <span className="text-zinc-900 font-medium tabular-nums">{outputCount}</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
-                Checklist
-              </h4>
-              <p className="text-[11px] text-zinc-500 mb-2">
-                Resolve before publishing
-              </p>
-              <div className="space-y-1.5">
-                <ChecklistRow label="Add inputs" done={inputCount > 0} />
-                <ChecklistRow label="Add at least one step" done={stepCount > 0} />
-                <ChecklistRow label="Add outputs" done={outputCount > 0} />
-                <ChecklistRow label="Run a test" done={false} />
-                <ChecklistRow label="Publish v1" done={false} />
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
-                Helpful resources
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                <ResourceCard icon={PencilSimple} label="Documentation" hint="How playbooks work" />
-                <ResourceCard icon={Stack} label="Templates" hint="Start from a template" />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-zinc-500 italic">No comments yet.</div>
-        )}
+      {/* Helpful resources at bottom */}
+      <div className="p-4 border-t border-gray-100">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+          Helpful resources
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          <ResourceCard icon={PencilSimple} label="Documentation" hint="How playbooks work" />
+          <ResourceCard icon={Stack} label="Templates" hint="Start from a template" />
+        </div>
       </div>
     </div>
   )
 }
 
-function ChatBubble() {
+function SidebarEditHeader({
+  selection,
+  onBack,
+}: {
+  selection: NonNullable<DrawerState>
+  onBack: () => void
+}) {
+  const title = (() => {
+    if (selection.kind === "input") return selection.existing ? "Edit input" : "New input"
+    if (selection.kind === "output") return selection.existing ? "Edit output" : "New output"
+    return selection.existing ? "Edit step" : "New step"
+  })()
+  const subtitle = (() => {
+    if (selection.kind === "input") return "A field the user will fill in"
+    if (selection.kind === "output") return "A field this playbook will produce"
+    return "A step in your AI logic"
+  })()
   return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
-      <path d="M3 3h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8.5l-3 2v-2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-    </svg>
+    <div className="flex items-center gap-2 px-3 h-12 border-b border-gray-200 shrink-0 bg-white">
+      <button
+        onClick={onBack}
+        className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors"
+        title="Back to overview"
+      >
+        <ArrowLeft className="h-4 w-4" weight="bold" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-zinc-900 leading-tight">{title}</div>
+        <div className="text-[11px] text-zinc-500 leading-tight truncate">{subtitle}</div>
+      </div>
+      <button
+        onClick={onBack}
+        className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500"
+        title="Close"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
   )
 }
 
