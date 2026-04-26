@@ -1504,7 +1504,7 @@ export function DefinitionPanel() {
         }}
       >
         <div
-          className="max-w-[480px] mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch"
+          className="max-w-[640px] mx-auto pt-12 pb-12 px-6 flex flex-col items-stretch"
         >
           {/* Trigger / Inputs */}
           <FlowNode
@@ -1550,7 +1550,7 @@ export function DefinitionPanel() {
             return (
               <Fragment key={step.id}>
                 {editingThis ? (
-                  <div className="-mx-[80px]">
+                  <div className="-mx-[160px]">
                     <StepEditor
                       existing={step}
                       stepType={step.type}
@@ -1624,8 +1624,6 @@ export function DefinitionPanel() {
             </div>
           )}
         </div>
-
-        <FloatingCanvasToolbar />
       </div>
 
       {/* Right sidebar (swaps between Overview and Editor) */}
@@ -1793,71 +1791,6 @@ function CompactFieldRow({
         <span className="text-[9px] font-semibold text-rose-600 uppercase tracking-wide">req</span>
       )}
       <span className="text-[10px] text-zinc-400 uppercase tracking-wide">{cfg.label}</span>
-    </button>
-  )
-}
-
-// ── Floating bottom toolbar ───────────────────────────────────────────
-
-function FloatingCanvasToolbar() {
-  return (
-    <div className="sticky bottom-4 mx-auto w-fit flex items-center gap-0.5 rounded-full border border-gray-200 bg-white shadow-lg px-1.5 py-1 mt-6 mb-2">
-      <button className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-gray-100">
-        <MagnifyingGlass className="h-3 w-3" />
-        100%
-        <CaretDown className="h-3 w-3 -ml-0.5" />
-      </button>
-      <ToolbarButton title="Pan">
-        <Hand />
-      </ToolbarButton>
-      <ToolbarButton title="Test run" tone="primary">
-        <Play weight="fill" className="h-3.5 w-3.5" />
-      </ToolbarButton>
-      <ToolbarButton title="View as JSON">
-        <FileTextIcon />
-      </ToolbarButton>
-      <ToolbarButton title="Reset">
-        <Stack className="h-3.5 w-3.5" />
-      </ToolbarButton>
-    </div>
-  )
-}
-
-function FileTextIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
-      <path d="M3.5 2h6L13 5.5v8a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM9 3v2.5h2.5L9 3zm-3.5 5h5v1h-5V8zm0 2h5v1h-5v-1z" />
-    </svg>
-  )
-}
-
-function Hand() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current">
-      <path d="M5.5 1.5a1 1 0 0 1 1 1V7H7V1.5a1 1 0 0 1 2 0V7h.5V2a1 1 0 0 1 2 0v5h.5V3.5a1 1 0 0 1 2 0V10c0 2-1.5 4.5-4.5 4.5S5 12.5 4 11l-2-3a1 1 0 0 1 1.4-1.4L4.5 8V2.5a1 1 0 0 1 1-1z" />
-    </svg>
-  )
-}
-
-function ToolbarButton({
-  title,
-  tone = "default",
-  children,
-}: {
-  title: string
-  tone?: "default" | "primary"
-  children: React.ReactNode
-}) {
-  const cls =
-    tone === "primary"
-      ? "bg-blue-800 text-white hover:bg-blue-900"
-      : "text-zinc-700 hover:bg-gray-100"
-  return (
-    <button
-      title={title}
-      className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${cls}`}
-    >
-      {children}
     </button>
   )
 }
