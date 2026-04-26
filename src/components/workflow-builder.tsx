@@ -93,6 +93,14 @@ const STEP_TYPES: Record<
     iconBg: "bg-blue-50",
     accent: "border-l-blue-500",
   },
+  format: {
+    icon: Stack,
+    label: "Format",
+    description: "Apply prior step outputs to a document template",
+    iconColor: "text-teal-700",
+    iconBg: "bg-teal-50",
+    accent: "border-l-teal-500",
+  },
 }
 
 // ── Hook to get current playbook ──────────────────────────────────────
@@ -364,38 +372,6 @@ function StepsSection({
   )
 }
 
-function OutputsSection({
-  outputs,
-  onEdit,
-  onAdd,
-}: {
-  outputs: Field[]
-  onEdit: (field: Field) => void
-  onAdd: () => void
-}) {
-  return (
-    <section className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-zinc-900">Outputs</h3>
-          <span className="text-[11px] text-zinc-500">These become columns in the Runs grid</span>
-        </div>
-      </div>
-      <div className="p-2 space-y-1.5">
-        {outputs.map((f) => (
-          <FieldRow key={f.id} field={f} onClick={() => onEdit(f)} />
-        ))}
-        <button
-          onClick={onAdd}
-          className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border border-dashed border-gray-300 text-xs font-medium text-zinc-500 hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-800 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add output
-        </button>
-      </div>
-    </section>
-  )
-}
 
 // ── Format Section (applied template) ──────────────────────────────────
 
@@ -476,7 +452,6 @@ function FormatSection({ templateId }: { templateId?: string }) {
 
 type DrawerState =
   | { kind: "input"; existing: Field | null }
-  | { kind: "output"; existing: Field | null }
   | { kind: "step"; existing: Step | null; stepType?: StepType }
   | null
 
@@ -485,9 +460,17 @@ type DrawerState =
 function ColumnsEditor({
   columns,
   onChange,
+  label = "Columns",
+  helper = "One typed field per column. Like a spreadsheet.",
+  fieldTypes,
+  required = true,
 }: {
   columns: Field[]
   onChange: (c: Field[]) => void
+  label?: string
+  helper?: string
+  fieldTypes?: FieldType[]
+  required?: boolean
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -511,9 +494,9 @@ function ColumnsEditor({
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-          Columns <span className="text-rose-600">*</span>
+          {label} {required && <span className="text-rose-600">*</span>}
         </label>
-        <span className="text-[10px] text-zinc-500">One typed field per column. Like a spreadsheet.</span>
+        <span className="text-[10px] text-zinc-500">{helper}</span>
       </div>
       <div className="rounded-md border border-gray-200 bg-gray-50 p-1.5 space-y-1">
         {columns.map((col) => {
@@ -528,6 +511,7 @@ function ColumnsEditor({
                 onSave={saveColumn}
                 onDelete={() => deleteColumn(col.id)}
                 onCancel={() => setEditingId(null)}
+                fieldTypes={fieldTypes}
               />
             )
           }
@@ -563,6 +547,7 @@ function ColumnsEditor({
             existing={null}
             onSave={saveColumn}
             onCancel={() => setAdding(false)}
+            fieldTypes={fieldTypes}
           />
         ) : (
           <button
@@ -586,12 +571,15 @@ function ColumnForm({
   onSave,
   onDelete,
   onCancel,
+  fieldTypes,
 }: {
   existing: Field | null
   onSave: (f: Field) => void
   onDelete?: () => void
   onCancel: () => void
+  fieldTypes?: FieldType[]
 }) {
+  const TYPES = fieldTypes ?? COLUMN_TYPES
   const [name, setName] = useState(existing?.name ?? "")
   const [type, setType] = useState<FieldType>(existing?.type ?? "text")
   const [description, setDescription] = useState(existing?.description ?? "")
@@ -628,7 +616,7 @@ function ColumnForm({
       <div>
         <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">Type</label>
         <div className="grid grid-cols-5 gap-1">
-          {COLUMN_TYPES.map((t) => {
+          {TYPES.map((t) => {
             const cfg = FIELD_TYPES[t]
             const ColIcon = cfg.icon
             const active = type === t
@@ -668,12 +656,12 @@ function ColumnForm({
         <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
           Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
         </label>
-        <input
-          type="text"
+        <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What this column represents"
-          className="w-full h-8 px-2 text-sm rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+          rows={2}
+          className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none leading-relaxed"
         />
       </div>
       <div className="flex items-center gap-1.5">
@@ -877,7 +865,7 @@ function FieldForm({
   onDelete,
   onCancel,
 }: {
-  kind: "input" | "output"
+  kind: "input"
   existing: Field | null
   onSave: (f: Field) => void
   onDelete: () => void
@@ -961,12 +949,12 @@ function FieldForm({
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
             Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
           </label>
-          <input
-            type="text"
+          <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Help text shown to the user"
-            className="w-full h-10 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none leading-relaxed"
           />
         </div>
 
@@ -1030,11 +1018,17 @@ function StepForm({
 }) {
   const [name, setName] = useState(existing?.name ?? "")
   const [detail, setDetail] = useState(existing?.detail ?? "")
+  const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
+  const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
   const isEditing = existing !== null
   const type = existing?.type ?? stepType
   const cfg = STEP_TYPES[type]
   const Icon = cfg.icon
-  const canSave = name.trim().length > 0 && detail.trim().length > 0
+  const isFormat = type === "format"
+  const canSave =
+    name.trim().length > 0 &&
+    detail.trim().length > 0 &&
+    (!isFormat || !!templateId)
 
   const insertVariable = (v: string) => {
     setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
@@ -1047,8 +1041,12 @@ function StepForm({
       type,
       name: name.trim(),
       detail: detail.trim(),
+      returns: returns.length > 0 ? returns : undefined,
+      templateId: isFormat ? templateId : undefined,
     })
   }
+
+  const RETURN_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records"]
 
   return (
     <div className="flex flex-col h-full">
@@ -1115,6 +1113,19 @@ function StepForm({
             Use <span className="font-mono bg-gray-100 px-1 rounded">{`{{ }}`}</span> to reference inputs from above.
           </p>
         </div>
+
+        {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
+
+        <div>
+          <ColumnsEditor
+            columns={returns}
+            onChange={setReturns}
+            label="Returns"
+            helper="What this step produces. The last step's returns is the playbook's deliverable."
+            fieldTypes={RETURN_TYPES}
+            required={false}
+          />
+        </div>
       </div>
 
       <div className="border-t border-gray-200 px-5 py-3 flex items-center gap-2 shrink-0 bg-white">
@@ -1144,112 +1155,20 @@ function StepForm({
   )
 }
 
-// ── Drawer shell ──────────────────────────────────────────────────────
-
-function EditorDrawer({
-  state,
-  availableVars,
-  onClose,
-  onSaveField,
-  onDeleteField,
-  onSaveStep,
-  onDeleteStep,
-}: {
-  state: DrawerState
-  availableVars: string[]
-  onClose: () => void
-  onSaveField: (kind: "input" | "output", field: Field) => void
-  onDeleteField: (kind: "input" | "output", field: Field) => void
-  onSaveStep: (step: Step) => void
-  onDeleteStep: (step: Step) => void
-}) {
-  if (!state) return null
-
-  const title = (() => {
-    if (state.kind === "input") return state.existing ? "Edit input" : "New input"
-    if (state.kind === "output") return state.existing ? "Edit output" : "New output"
-    return state.existing ? "Edit step" : "New step"
-  })()
-
-  const subtitle = (() => {
-    if (state.kind === "input") return "A field the user will fill in when running this playbook"
-    if (state.kind === "output") return "A field this playbook will produce — becomes a column in the Runs grid"
-    return "A step in your AI logic"
-  })()
-
-  return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-zinc-900/15 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-[520px] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
-            <p className="text-[11px] text-zinc-500 truncate">{subtitle}</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500"
-              title="Expand"
-            >
-              <ArrowsOut className="h-4 w-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500"
-              title="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {state.kind === "input" && (
-          <FieldForm
-            kind="input"
-            existing={state.existing}
-            onSave={(f) => onSaveField("input", f)}
-            onDelete={() => state.existing && onDeleteField("input", state.existing)}
-            onCancel={onClose}
-          />
-        )}
-        {state.kind === "output" && (
-          <FieldForm
-            kind="output"
-            existing={state.existing}
-            onSave={(f) => onSaveField("output", f)}
-            onDelete={() => state.existing && onDeleteField("output", state.existing)}
-            onCancel={onClose}
-          />
-        )}
-        {state.kind === "step" && (
-          <StepForm
-            existing={state.existing}
-            stepType={state.existing?.type ?? state.stepType ?? "prompt"}
-            availableVars={availableVars}
-            onSave={onSaveStep}
-            onDelete={() => state.existing && onDeleteStep(state.existing)}
-            onCancel={onClose}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Main: Inline Definition Panel ─────────────────────────────────────
 
 export function DefinitionPanel() {
   const playbook = useCurrentPlaybook()
   const [inputs, setInputs] = useState<Field[]>(playbook.inputs)
-  const [outputs, setOutputs] = useState<Field[]>(playbook.outputs)
   const [steps, setSteps] = useState<Step[]>(playbook.steps)
   const [selection, setSelection] = useState<DrawerState>(null)
 
   const availableVars = inputs.map((i) => i.name)
+  const lastStep = steps[steps.length - 1]
+  const deliverable = lastStep?.returns ?? []
 
-  const saveField = (kind: "input" | "output", f: Field) => {
-    const setter = kind === "input" ? setInputs : setOutputs
-    setter((prev) => {
+  const saveField = (f: Field) => {
+    setInputs((prev) => {
       const idx = prev.findIndex((x) => x.id === f.id)
       if (idx === -1) return [...prev, f]
       const next = [...prev]
@@ -1259,9 +1178,8 @@ export function DefinitionPanel() {
     setSelection(null)
   }
 
-  const deleteField = (kind: "input" | "output", f: Field) => {
-    const setter = kind === "input" ? setInputs : setOutputs
-    setter((prev) => prev.filter((x) => x.id !== f.id))
+  const deleteField = (f: Field) => {
+    setInputs((prev) => prev.filter((x) => x.id !== f.id))
     setSelection(null)
   }
 
@@ -1293,6 +1211,21 @@ export function DefinitionPanel() {
         }}
       >
         <div className="max-w-[480px] mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch">
+          {/* What this produces — derived from last step's returns */}
+          {deliverable.length > 0 && (
+            <div className="mb-3 rounded-md border border-blue-200 bg-blue-50/40 px-3 py-2 flex items-start gap-2">
+              <ArrowSquareOut className="h-3.5 w-3.5 text-blue-800 mt-0.5 shrink-0" weight="bold" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-800">
+                  This produces
+                </div>
+                <div className="text-xs text-zinc-700 mt-0.5 truncate">
+                  {deliverable.map((f) => f.name).join(" · ")}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Trigger / Inputs */}
           <FlowNode
             icon={SuitcaseSimple}
@@ -1306,23 +1239,23 @@ export function DefinitionPanel() {
             }
             isSelected={selection?.kind === "input" && selection.existing === null}
           >
-              <div className="space-y-0.5">
-                {inputs.map((f) => (
-                  <CompactFieldRow
-                    key={f.id}
-                    field={f}
-                    selected={selection?.kind === "input" && selection.existing?.id === f.id}
-                    onClick={() => setSelection({ kind: "input", existing: f })}
-                  />
-                ))}
-                <button
-                  onClick={() => setSelection({ kind: "input", existing: null })}
-                  className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add input
-                </button>
-              </div>
+            <div className="space-y-0.5">
+              {inputs.map((f) => (
+                <CompactFieldRow
+                  key={f.id}
+                  field={f}
+                  selected={selection?.kind === "input" && selection.existing?.id === f.id}
+                  onClick={() => setSelection({ kind: "input", existing: f })}
+                />
+              ))}
+              <button
+                onClick={() => setSelection({ kind: "input", existing: null })}
+                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add input
+              </button>
+            </div>
           </FlowNode>
 
           <FlowConnector />
@@ -1333,6 +1266,7 @@ export function DefinitionPanel() {
             const StepIcon = stepCfg.icon
             const isActiveStep =
               selection?.kind === "step" && selection.existing?.id === step.id
+            const isLast = i === steps.length - 1
             return (
               <Fragment key={step.id}>
                 <FlowNode
@@ -1343,6 +1277,8 @@ export function DefinitionPanel() {
                   subtitle={step.detail || "No description"}
                   isSelected={isActiveStep}
                   onClick={() => setSelection({ kind: "step", existing: step })}
+                  returns={step.returns}
+                  isLast={isLast}
                 />
                 <FlowConnector />
               </Fragment>
@@ -1350,7 +1286,7 @@ export function DefinitionPanel() {
           })}
 
           {/* Add step buttons */}
-          <div className="flex items-center justify-center gap-2 my-1 mb-3">
+          <div className="flex items-center justify-center gap-2 my-1 mb-3 flex-wrap">
             <button
               onClick={() => setSelection({ kind: "step", existing: null, stepType: "fetch" })}
               className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 transition-colors"
@@ -1365,41 +1301,14 @@ export function DefinitionPanel() {
               <Sparkle className="h-3.5 w-3.5" weight="bold" />
               Add Prompt
             </button>
+            <button
+              onClick={() => setSelection({ kind: "step", existing: null, stepType: "format" })}
+              className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-700 transition-colors"
+            >
+              <Stack className="h-3.5 w-3.5" weight="bold" />
+              Add Format
+            </button>
           </div>
-
-          <FlowConnector />
-
-          {/* Output */}
-          <FlowNode
-            icon={ListBullets}
-            iconBg="bg-green-50"
-            iconColor="text-green-700"
-            title="Extractions returned"
-            subtitle={
-              outputs.length === 0
-                ? "Add what gets pulled out"
-                : `${outputs.length} field${outputs.length !== 1 ? "s" : ""}`
-            }
-            isSelected={selection?.kind === "output" && selection.existing === null}
-          >
-              <div className="space-y-0.5">
-                {outputs.map((f) => (
-                  <CompactFieldRow
-                    key={f.id}
-                    field={f}
-                    selected={selection?.kind === "output" && selection.existing?.id === f.id}
-                    onClick={() => setSelection({ kind: "output", existing: f })}
-                  />
-                ))}
-                <button
-                  onClick={() => setSelection({ kind: "output", existing: null })}
-                  className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add output
-                </button>
-              </div>
-          </FlowNode>
         </div>
 
         <FloatingCanvasToolbar />
@@ -1410,7 +1319,7 @@ export function DefinitionPanel() {
         playbook={playbook}
         inputCount={inputs.length}
         stepCount={steps.length}
-        outputCount={outputs.length}
+        deliverable={deliverable}
         selection={selection}
         availableVars={availableVars}
         onBack={() => setSelection(null)}
@@ -1435,6 +1344,8 @@ function FlowNode({
   isSelected = false,
   children,
   onClick,
+  returns,
+  isLast = false,
 }: {
   icon: typeof Plus
   iconBg: string
@@ -1444,6 +1355,8 @@ function FlowNode({
   isSelected?: boolean
   children?: React.ReactNode
   onClick?: () => void
+  returns?: Field[]
+  isLast?: boolean
 }) {
   const Wrapper = onClick ? "button" : "div"
   return (
@@ -1467,6 +1380,42 @@ function FlowNode({
         </div>
       </div>
       {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
+      {returns && returns.length > 0 && (
+        <div
+          className={`border-t px-3 py-2 ${
+            isLast ? "border-blue-100 bg-blue-50/40" : "border-gray-100 bg-gray-50/60"
+          }`}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            <ArrowSquareOut
+              className={`h-3 w-3 ${isLast ? "text-blue-800" : "text-zinc-500"}`}
+              weight="bold"
+            />
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-wide ${
+                isLast ? "text-blue-800" : "text-zinc-500"
+              }`}
+            >
+              {isLast ? "Deliverable" : "Returns"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {returns.map((r) => {
+              const rcfg = FIELD_TYPES[r.type]
+              const RIcon = rcfg.icon
+              return (
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
+                >
+                  <RIcon className={`h-2.5 w-2.5 ${rcfg.color}`} weight="bold" />
+                  <span className="font-medium">{r.name}</span>
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-white border border-gray-300" />
     </Wrapper>
   )
@@ -1587,7 +1536,7 @@ function RightSidebar({
   playbook,
   inputCount,
   stepCount,
-  outputCount,
+  deliverable,
   selection,
   availableVars,
   onBack,
@@ -1599,15 +1548,16 @@ function RightSidebar({
   playbook: ReturnType<typeof useCurrentPlaybook>
   inputCount: number
   stepCount: number
-  outputCount: number
+  deliverable: Field[]
   selection: DrawerState
   availableVars: string[]
   onBack: () => void
-  onSaveField: (kind: "input" | "output", f: Field) => void
-  onDeleteField: (kind: "input" | "output", f: Field) => void
+  onSaveField: (f: Field) => void
+  onDeleteField: (f: Field) => void
   onSaveStep: (s: Step) => void
   onDeleteStep: (s: Step) => void
 }) {
+  const deliverableCount = deliverable.length
   // EDIT MODE — sidebar shows the inline edit form
   if (selection) {
     return (
@@ -1619,18 +1569,8 @@ function RightSidebar({
               key={`input-${selection.existing?.id ?? "new"}`}
               kind="input"
               existing={selection.existing}
-              onSave={(f) => onSaveField("input", f)}
-              onDelete={() => selection.existing && onDeleteField("input", selection.existing)}
-              onCancel={onBack}
-            />
-          )}
-          {selection.kind === "output" && (
-            <FieldForm
-              key={`output-${selection.existing?.id ?? "new"}`}
-              kind="output"
-              existing={selection.existing}
-              onSave={(f) => onSaveField("output", f)}
-              onDelete={() => selection.existing && onDeleteField("output", selection.existing)}
+              onSave={onSaveField}
+              onDelete={() => selection.existing && onDeleteField(selection.existing)}
               onCancel={onBack}
             />
           )}
@@ -1678,8 +1618,10 @@ function RightSidebar({
               <span className="text-zinc-900 font-medium tabular-nums">{stepCount}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500">Outputs</span>
-              <span className="text-zinc-900 font-medium tabular-nums">{outputCount}</span>
+              <span className="text-zinc-500">Deliverable</span>
+              <span className="text-zinc-900 font-medium tabular-nums">
+                {deliverableCount} field{deliverableCount !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
         </div>
@@ -1691,7 +1633,7 @@ function RightSidebar({
           <div className="space-y-1.5">
             <ChecklistRow label="Add inputs" done={inputCount > 0} />
             <ChecklistRow label="Add at least one step" done={stepCount > 0} />
-            <ChecklistRow label="Add outputs" done={outputCount > 0} />
+            <ChecklistRow label="Last step declares its returns" done={deliverableCount > 0} />
             <ChecklistRow label="Run a test" done={false} />
             <ChecklistRow label="Publish v1" done={false} />
           </div>
@@ -1721,12 +1663,10 @@ function SidebarEditHeader({
 }) {
   const title = (() => {
     if (selection.kind === "input") return selection.existing ? "Edit input" : "New input"
-    if (selection.kind === "output") return selection.existing ? "Edit output" : "New output"
     return selection.existing ? "Edit step" : "New step"
   })()
   const subtitle = (() => {
     if (selection.kind === "input") return "A field the user will fill in"
-    if (selection.kind === "output") return "A field this playbook will produce"
     return "A step in your AI logic"
   })()
   return (

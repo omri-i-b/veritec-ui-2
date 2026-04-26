@@ -41,7 +41,7 @@ export interface Field {
   itemSchema?: Field[]
 }
 
-export type StepType = "fetch" | "prompt"
+export type StepType = "fetch" | "prompt" | "format"
 
 export interface Step {
   id: string
@@ -49,6 +49,10 @@ export interface Step {
   name: string
   detail: string
   expanded?: boolean
+  /** What this step produces. Last step's returns is the playbook's deliverable. */
+  returns?: Field[]
+  /** For format steps — the template this step fills */
+  templateId?: string
 }
 
 export interface PlaybookDef {
@@ -65,7 +69,14 @@ export interface PlaybookDef {
   lastRun: string
   inputs: Field[]
   steps: Step[]
-  outputs: Field[]
+  /** @deprecated — derive from last step's returns instead. Kept for compat during migration. */
+  outputs?: Field[]
+}
+
+/** The playbook's deliverable = the last step's returns. */
+export function getPlaybookDeliverable(p: PlaybookDef): Field[] {
+  const last = p.steps[p.steps.length - 1]
+  return last?.returns ?? p.outputs ?? []
 }
 
 export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
@@ -88,28 +99,39 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "in_3", name: "Plaintiff", type: "text", description: "Plaintiff name (auto-filled from Case if empty)", sample: "Jane Doe" },
     ],
     steps: [
-      { id: "s1", type: "fetch", name: "Fetch records", detail: "Load all PDFs from {{Records}} and extract text" },
+      {
+        id: "s1",
+        type: "fetch",
+        name: "Fetch records",
+        detail: "Load all PDFs from {{Records}} and extract text",
+        returns: [
+          { id: "r1_a", name: "Records text", type: "long_text", description: "Concatenated extracted text" },
+        ],
+      },
       {
         id: "s2",
         type: "prompt",
-        name: "Analyze with LLM",
+        name: "Analyze records",
         detail:
-          "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary. Return: summary (text), gaps_found (number), confidence (0-100).",
+          "Analyze the medical records for {{Case}} (plaintiff: {{Plaintiff}}). Identify treatment gaps exceeding 30 days, flag pre-existing conditions, and produce a chronological summary.",
         expanded: true,
+        returns: [
+          { id: "r2_a", name: "Patient name", type: "text" },
+          { id: "r2_b", name: "Treatment start", type: "date" },
+          { id: "r2_c", name: "Treatment end", type: "date" },
+          { id: "r2_d", name: "Gaps found", type: "number", description: "Treatment gaps over 30 days" },
+          { id: "r2_e", name: "Providers", type: "list", description: "Treating providers with visit counts" },
+        ],
       },
-    ],
-    outputs: [
-      { id: "out_1", name: "Patient name", type: "text", description: "Plaintiff / patient name from records" },
-      { id: "out_2", name: "Treatment start", type: "date", description: "First treatment date" },
-      { id: "out_3", name: "Treatment end", type: "date", description: "Most recent treatment date" },
-      { id: "out_4", name: "Gaps found", type: "number", description: "Number of treatment gaps over 30 days" },
-      { id: "out_5", name: "Providers", type: "list", description: "Treating providers with specialty and visit counts" },
       {
-        id: "out_6",
-        name: "Medical summary",
-        type: "document",
-        description: "Formatted summary memo — extractions above fill the template placeholders",
+        id: "s3",
+        type: "format",
+        name: "Format as Medical Summary memo",
+        detail: "Apply extractions to the firm's Medical Records Summary template.",
         templateId: "medical-records-summary",
+        returns: [
+          { id: "r3_a", name: "Medical summary", type: "long_text", description: "Filled summary memo (DOCX)" },
+        ],
       },
     ],
   },
@@ -179,6 +201,14 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Classify the deponent",
         detail:
           "Use {{Deponent role}} and {{Deponent identity}} as the master filter. Activate the appropriate logic blocks for this role. Example: 'Defendant in auto MVA' → search for contradictions vs police report, search for partial admissions in interrogatories, generate liability questions about their conduct, load standard KB questions for that role. Disable categories that don't apply (no medical-diagnosis questions for a defendant — that's for the treating physician).",
+        returns: [
+          {
+            id: "r1_a",
+            name: "Deponent type",
+            type: "text",
+            description: "Classified role — used to filter the rest of the pipeline",
+          },
+        ],
       },
       {
         id: "s2",
@@ -186,6 +216,20 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Extract facts from each document",
         detail:
           "Read every document in {{Case}}. Extract structured atoms of fact tailored to each document type. Police report: date, location, weather, speed, party statements at scene, citations, diagram, witnesses. Medical records: diagnoses, visit dates, treatments, referrals, medications, restrictions, prognosis, prior conditions. Interrogatory responses: sworn version of events, witnesses identified, damages claimed, medical history disclosed. Discovery: phone records, vehicle maintenance, photos, surveillance, communications. Prior depo transcripts: locked-in testimony. Expert reports: opinions, methodology, data relied upon, qualifications. Every fact retains a citation: document + page/section.",
+        returns: [
+          {
+            id: "r2_a",
+            name: "Facts",
+            type: "records",
+            description: "Atomic facts pulled from each document, with citations",
+            itemSchema: [
+              { id: "f_topic", name: "Topic", type: "text" },
+              { id: "f_value", name: "Value", type: "long_text" },
+              { id: "f_doc", name: "Document", type: "text" },
+              { id: "f_cite", name: "Citation", type: "text" },
+            ],
+          },
+        ],
       },
       {
         id: "s3",
@@ -194,13 +238,63 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         detail:
           "Compare extracted facts looking for: A) Direct contradictions — same fact with different values across documents (50 mph in police report vs 30 mph in interrogatories). B) Logical inconsistencies — facts that don't fit together (light was green vs cited for failure to obey signal). C) Gaps — info that should be present but isn't (4-month gap between accident and first medical visit). Apply matching rules: by topic, by person, by timeline, by numerical value. Group facts about the same subject even if worded differently.",
         expanded: true,
+        returns: [
+          {
+            id: "r3_a",
+            name: "Findings",
+            type: "records",
+            description: "Each contradiction / inconsistency / gap with its source pair",
+            itemSchema: [
+              { id: "fi_topic", name: "Topic", type: "text" },
+              {
+                id: "fi_kind",
+                name: "Kind",
+                type: "enum",
+                options: ["Contradiction", "Inconsistency", "Gap"],
+              },
+              { id: "fi_a", name: "Source A", type: "text" },
+              { id: "fi_b", name: "Source B", type: "text" },
+            ],
+          },
+          {
+            id: "r3_b",
+            name: "Contradictions found",
+            type: "number",
+            description: "Count of direct contradictions",
+          },
+          {
+            id: "r3_c",
+            name: "Gaps identified",
+            type: "number",
+            description: "Count of timeline / info gaps",
+          },
+        ],
       },
       {
         id: "s4",
         type: "prompt",
         name: "Generate questions by category",
         detail:
-          "For each contradiction, inconsistency, or gap, craft a question with one of four strategic purposes: Pin down a fact (lock in an admission under oath), Expose a contradiction / impeach (confront with two conflicting versions), Fill a gap (force explanation of missing info), Establish a legal element (satisfy a duty or causation requirement). Rule: every question MUST have explicit reasoning. If you can't explain why you're asking, don't include it. Tag each question with a flag: Discrepancy / Contradiction / Liability / Medical / Evidence / Damages.",
+          "For each finding from step 3, craft a question with one of four strategic purposes: Pin down a fact (lock in an admission under oath), Expose a contradiction / impeach (confront with two conflicting versions), Fill a gap (force explanation of missing info), Establish a legal element (satisfy a duty or causation requirement). Rule: every question MUST have explicit reasoning. If you can't explain why you're asking, don't include it. Tag each question with a flag: Discrepancy / Contradiction / Liability / Medical / Evidence / Damages.",
+        returns: [
+          {
+            id: "r4_a",
+            name: "Questions (initial)",
+            type: "records",
+            description: "Case-derived questions, before KB merge",
+            itemSchema: [
+              { id: "q_text", name: "Question", type: "long_text" },
+              {
+                id: "q_flag",
+                name: "Flag",
+                type: "enum",
+                options: ["Contradiction", "Discrepancy", "Liability", "Medical", "Evidence", "Damages"],
+              },
+              { id: "q_reason", name: "Reasoning", type: "long_text" },
+              { id: "q_source", name: "Source", type: "text" },
+            ],
+          },
+        ],
       },
       {
         id: "s5",
@@ -208,79 +302,93 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Apply Knowledge Base — standard questions",
         detail:
           "Load proactive standard questions for {{Deponent role}} from {{Reference library}} — questions experienced attorneys always ask regardless of what's in the docs. Deduplicate against the case-generated set using semantic matching (not just exact text). Personalize each KB question with names, dates, and case details from {{Case}}. Tag the survivors with the 'Standard' flag so the attorney knows they came from experience, not a specific document.",
+        returns: [
+          {
+            id: "r5_a",
+            name: "Questions (with KB)",
+            type: "records",
+            description: "Case questions merged with personalized KB standards",
+            itemSchema: [
+              { id: "q_text", name: "Question", type: "long_text" },
+              {
+                id: "q_flag",
+                name: "Flag",
+                type: "enum",
+                options: [
+                  "Contradiction",
+                  "Discrepancy",
+                  "Liability",
+                  "Medical",
+                  "Evidence",
+                  "Damages",
+                  "Standard",
+                ],
+              },
+              { id: "q_reason", name: "Reasoning", type: "long_text" },
+              { id: "q_source", name: "Source", type: "text" },
+            ],
+          },
+        ],
       },
       {
         id: "s6",
         type: "prompt",
         name: "Sequence into examination lines",
         detail:
-          "Order the merged question set into a logical exam flow: foundational/credibility first, then case-specific facts grouped by topic (cleanly contained sections), then impeachment confrontations where the attorney lays the trap, then damages and legal-element wrap-up. Within each topic, lead from general to specific. Output the final ordered list — this is what the attorney brings into the room.",
-      },
-    ],
-    outputs: [
-      { id: "out_1", name: "Deponent name", type: "text", description: "Name of the person being deposed" },
-      {
-        id: "out_2",
-        name: "Deponent type",
-        type: "text",
-        description: "Classified role — Defendant / Plaintiff / Eyewitness / etc.",
-      },
-      {
-        id: "out_3",
-        name: "Total questions",
-        type: "number",
-        description: "Final count after dedup and sequencing",
-      },
-      {
-        id: "out_4",
-        name: "Contradictions found",
-        type: "number",
-        description: "Direct contradictions detected across documents",
-      },
-      {
-        id: "out_5",
-        name: "Gaps identified",
-        type: "number",
-        description: "Missing information or unexplained time periods",
-      },
-      {
-        id: "out_6",
-        name: "Questions",
-        type: "records",
-        description: "Ordered examination list — one row per question. The core deliverable.",
-        itemSchema: [
+          "Order the merged question set into a logical exam flow: foundational/credibility first, then case-specific facts grouped by topic (cleanly contained sections), then impeachment confrontations where the attorney lays the trap, then damages and legal-element wrap-up. Within each topic, lead from general to specific. The final ordered list is what the attorney brings into the room.",
+        returns: [
           {
-            id: "col_q",
-            name: "Question",
-            type: "long_text",
-            description: "Verbatim text the attorney will ask",
-          },
-          {
-            id: "col_flag",
-            name: "Flag",
-            type: "enum",
-            description: "Category — what makes this question matter",
-            options: [
-              "Contradiction",
-              "Discrepancy",
-              "Liability",
-              "Medical",
-              "Evidence",
-              "Damages",
-              "Standard",
-            ],
-          },
-          {
-            id: "col_reason",
-            name: "Reasoning",
-            type: "long_text",
-            description: "Why ask this — strategic purpose. Required.",
-          },
-          {
-            id: "col_source",
-            name: "Source",
+            id: "r6_a",
+            name: "Deponent name",
             type: "text",
-            description: "Document and page that prompted the question — or 'Knowledge Base' for standards",
+            description: "Pass-through from input",
+          },
+          {
+            id: "r6_b",
+            name: "Deponent type",
+            type: "text",
+            description: "Classified role",
+          },
+          {
+            id: "r6_c",
+            name: "Total questions",
+            type: "number",
+            description: "Final count after dedup and sequencing",
+          },
+          {
+            id: "r6_d",
+            name: "Contradictions found",
+            type: "number",
+          },
+          {
+            id: "r6_e",
+            name: "Gaps identified",
+            type: "number",
+          },
+          {
+            id: "r6_f",
+            name: "Questions",
+            type: "records",
+            description: "Ordered examination list — the deliverable",
+            itemSchema: [
+              { id: "q_text", name: "Question", type: "long_text" },
+              {
+                id: "q_flag",
+                name: "Flag",
+                type: "enum",
+                options: [
+                  "Contradiction",
+                  "Discrepancy",
+                  "Liability",
+                  "Medical",
+                  "Evidence",
+                  "Damages",
+                  "Standard",
+                ],
+              },
+              { id: "q_reason", name: "Reasoning", type: "long_text" },
+              { id: "q_source", name: "Source", type: "text" },
+            ],
           },
         ],
       },
@@ -354,25 +462,24 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Auto-index by category",
         detail:
           "Assign related documents from {{Case}} to the standard deposition index categories: Notice of Deposition, Transcript, Errata Page, Exhibits. Return structured index organized by deponent.",
-      },
-    ],
-    outputs: [
-      { id: "out_1", name: "Deponent", type: "text", description: "Name of person deposed" },
-      { id: "out_2", name: "Deposition date", type: "date", description: "Date the deposition took place" },
-      { id: "out_3", name: "Total questions", type: "number", description: "Total Q&A pairs extracted" },
-      { id: "out_4", name: "Exhibits referenced", type: "number", description: "Number of unique exhibits referenced" },
-      {
-        id: "out_5",
-        name: "Q&A rows",
-        type: "list",
-        description: "Each row: deponent, question, answer, page:line, linked exhibit",
-      },
-      {
-        id: "out_6",
-        name: "Q&A summary",
-        type: "document",
-        description: "Interactive Q&A summary table",
-        templateId: "qa-summary-table",
+        returns: [
+          { id: "r4_a", name: "Deponent", type: "text" },
+          { id: "r4_b", name: "Deposition date", type: "date" },
+          { id: "r4_c", name: "Total questions", type: "number" },
+          { id: "r4_d", name: "Exhibits referenced", type: "number" },
+          {
+            id: "r4_e",
+            name: "Q&A rows",
+            type: "records",
+            description: "Each row: deponent, question, answer, page:line, exhibit",
+            itemSchema: [
+              { id: "qa_q", name: "Question", type: "long_text" },
+              { id: "qa_a", name: "Answer", type: "long_text" },
+              { id: "qa_pl", name: "Page:Line", type: "text" },
+              { id: "qa_ex", name: "Exhibit", type: "text" },
+            ],
+          },
+        ],
       },
     ],
   },
@@ -438,29 +545,32 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Group by deponent",
         detail:
           "Associate each document with the right deponent (Cruz Lopez, John Doe, Dr. Marín, etc.) based on filename, cover page, and content. Respect {{Scope}} — include only matching deponents. Return nested tree: deponent → category → docs.",
-      },
-    ],
-    outputs: [
-      {
-        id: "out_1",
-        name: "Index tree",
-        type: "list",
-        description: "Nested structure — deponent → category → linked documents with filenames",
-      },
-      { id: "out_2", name: "Total documents", type: "number", description: "Total deposition documents indexed" },
-      { id: "out_3", name: "Deponents covered", type: "number", description: "Number of distinct deponents indexed" },
-      {
-        id: "out_4",
-        name: "Uncategorized",
-        type: "number",
-        description: "Documents that didn't fit cleanly — paralegal should review",
-      },
-      {
-        id: "out_5",
-        name: "Deposition index",
-        type: "document",
-        description: "Bookmark tree per deponent",
-        templateId: "deposition-index",
+        returns: [
+          {
+            id: "r3_a",
+            name: "Index tree",
+            type: "records",
+            description: "Each row: deponent → category → document filename",
+            itemSchema: [
+              { id: "ix_dep", name: "Deponent", type: "text" },
+              {
+                id: "ix_cat",
+                name: "Category",
+                type: "enum",
+                options: ["Notice of Deposition", "Transcript", "Errata Page", "Exhibits"],
+              },
+              { id: "ix_doc", name: "Document", type: "text" },
+            ],
+          },
+          { id: "r3_b", name: "Total documents", type: "number" },
+          { id: "r3_c", name: "Deponents covered", type: "number" },
+          {
+            id: "r3_d",
+            name: "Uncategorized",
+            type: "number",
+            description: "Documents that didn't fit cleanly — paralegal should review",
+          },
+        ],
       },
     ],
   },
@@ -483,19 +593,36 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       { id: "in_3", name: "Templates", type: "kb-ref", required: true, description: "Firm letter templates", sample: "Demand Letter Templates" },
     ],
     steps: [
-      { id: "s1", type: "fetch", name: "Fetch case facts", detail: "Load {{Case}} context" },
-      { id: "s2", type: "prompt", name: "Draft letter", detail: "Draft demand letter for {{Case}} seeking {{Damages estimate}}. Return the draft, page count, and detected tone." },
-    ],
-    outputs: [
-      { id: "out_1", name: "Demand amount", type: "number", description: "Total damages demand" },
-      { id: "out_2", name: "Injuries", type: "list", description: "Injuries itemized with severity" },
-      { id: "out_3", name: "Tone", type: "text", description: "Detected tone — Firm / Assertive / Aggressive" },
       {
-        id: "out_4",
-        name: "Demand letter",
-        type: "document",
-        description: "Firm's demand letter — extractions fill the template",
+        id: "s1",
+        type: "fetch",
+        name: "Fetch case facts",
+        detail: "Load {{Case}} context",
+        returns: [
+          { id: "r1_a", name: "Case facts", type: "long_text", description: "Compiled case context" },
+        ],
+      },
+      {
+        id: "s2",
+        type: "prompt",
+        name: "Extract damages and injuries",
+        detail:
+          "From the case facts, extract total damages, itemized injuries with severity, and detect the appropriate tone (Firm / Assertive / Aggressive) based on case strength.",
+        returns: [
+          { id: "r2_a", name: "Demand amount", type: "number" },
+          { id: "r2_b", name: "Injuries", type: "list", description: "Itemized with severity" },
+          { id: "r2_c", name: "Tone", type: "text" },
+        ],
+      },
+      {
+        id: "s3",
+        type: "format",
+        name: "Format as Demand Letter",
+        detail: "Apply extractions to the firm's Demand Letter template.",
         templateId: "demand-letter",
+        returns: [
+          { id: "r3_a", name: "Demand letter", type: "long_text", description: "Filled letter (DOCX)" },
+        ],
       },
     ],
   },
