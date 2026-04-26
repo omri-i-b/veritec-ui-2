@@ -798,6 +798,76 @@ function TemplatePicker({ value, onChange }: { value: string; onChange: (id: str
   )
 }
 
+// ── Type select (compact dropdown for picking a FieldType) ────────────
+
+function TypeSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: FieldType
+  onChange: (t: FieldType) => void
+  options: FieldType[]
+}) {
+  const [open, setOpen] = useState(false)
+  const cfg = FIELD_TYPES[value]
+  const Icon = cfg.icon
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md border bg-white text-left transition-colors ${
+          open ? "border-blue-800 ring-2 ring-blue-100" : "border-gray-200 hover:border-gray-300"
+        }`}
+      >
+        <div className="flex items-center justify-center h-6 w-6 rounded bg-gray-50 shrink-0">
+          <Icon className={`h-3.5 w-3.5 ${cfg.color}`} weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-zinc-900">{cfg.label}</div>
+          <div className="text-[11px] text-zinc-500 truncate">{cfg.description}</div>
+        </div>
+        <CaretDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden max-h-[320px] overflow-y-auto">
+            {options.map((t) => {
+              const optCfg = FIELD_TYPES[t]
+              const OptIcon = optCfg.icon
+              const isActive = value === t
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    onChange(t)
+                    setOpen(false)
+                  }}
+                  className={`w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-gray-50 ${
+                    isActive ? "bg-blue-50/40" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-center h-6 w-6 rounded bg-gray-50 shrink-0">
+                    <OptIcon className={`h-3.5 w-3.5 ${optCfg.color}`} weight="bold" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-zinc-900">{optCfg.label}</div>
+                    <div className="text-[11px] text-zinc-500 truncate">{optCfg.description}</div>
+                  </div>
+                  {isActive && <CheckCircle className="h-3.5 w-3.5 text-blue-800 shrink-0" weight="fill" />}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Field Form (shared for input & output in drawer) ──────────────────
 
 function FieldForm({
@@ -865,33 +935,7 @@ function FieldForm({
 
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">Type</label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {TYPE_ORDER.map((t) => {
-              const cfg = FIELD_TYPES[t]
-              const Icon = cfg.icon
-              const active = type === t
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setType(t)}
-                  className={`flex items-center gap-2 px-2.5 py-2 rounded-md border text-xs font-medium transition-all text-left ${
-                    active
-                      ? "border-blue-800 bg-blue-50/40 text-blue-800 ring-2 ring-blue-100"
-                      : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className={`flex items-center justify-center h-7 w-7 rounded-md bg-white border border-gray-200 shrink-0`}>
-                    <Icon className={`h-3.5 w-3.5 ${active ? "text-blue-800" : cfg.color}`} weight="bold" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold">{cfg.label}</div>
-                    <div className="text-[10px] text-zinc-500 font-normal truncate">{cfg.description}</div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+          <TypeSelect value={type} onChange={setType} options={TYPE_ORDER} />
         </div>
 
         {needsOptions && (
@@ -1248,27 +1292,20 @@ export function DefinitionPanel() {
           backgroundSize: "16px 16px",
         }}
       >
-        <div className="max-w-[480px] mx-auto py-12 px-6 flex flex-col items-stretch">
+        <div className="max-w-[480px] mx-auto pt-12 pb-24 px-6 flex flex-col items-stretch">
           {/* Trigger / Inputs */}
-          <NodeCluster
-            label="Trigger"
-            selected={
-              selection?.kind === "input" ? "any" : null
+          <FlowNode
+            icon={SuitcaseSimple}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-800"
+            title="Inputs collected"
+            subtitle={
+              inputs.length === 0
+                ? "Add the fields the user provides"
+                : `${inputs.length} field${inputs.length !== 1 ? "s" : ""}`
             }
+            isSelected={selection?.kind === "input" && selection.existing === null}
           >
-            <FlowNode
-              icon={SuitcaseSimple}
-              iconBg="bg-blue-50"
-              iconColor="text-blue-800"
-              title="Inputs collected"
-              subtitle={
-                inputs.length === 0
-                  ? "Add the fields the user provides"
-                  : `${inputs.length} field${inputs.length !== 1 ? "s" : ""}`
-              }
-              cornerPill={{ label: "Trigger", tone: "input" }}
-              isSelected={selection?.kind === "input" && selection.existing === null}
-            >
               <div className="space-y-0.5">
                 {inputs.map((f) => (
                   <CompactFieldRow
@@ -1286,8 +1323,7 @@ export function DefinitionPanel() {
                   Add input
                 </button>
               </div>
-            </FlowNode>
-          </NodeCluster>
+          </FlowNode>
 
           <FlowConnector />
 
@@ -1299,21 +1335,15 @@ export function DefinitionPanel() {
               selection?.kind === "step" && selection.existing?.id === step.id
             return (
               <Fragment key={step.id}>
-                <NodeCluster label="Action" selected={isActiveStep ? "any" : null}>
-                  <FlowNode
-                    icon={StepIcon}
-                    iconBg={stepCfg.iconBg}
-                    iconColor={stepCfg.iconColor}
-                    title={step.name}
-                    subtitle={step.detail || "No description"}
-                    cornerPill={{
-                      label: step.type === "fetch" ? "Data" : "AI",
-                      tone: step.type,
-                    }}
-                    isSelected={isActiveStep}
-                    onClick={() => setSelection({ kind: "step", existing: step })}
-                  />
-                </NodeCluster>
+                <FlowNode
+                  icon={StepIcon}
+                  iconBg={stepCfg.iconBg}
+                  iconColor={stepCfg.iconColor}
+                  title={step.name}
+                  subtitle={step.detail || "No description"}
+                  isSelected={isActiveStep}
+                  onClick={() => setSelection({ kind: "step", existing: step })}
+                />
                 <FlowConnector />
               </Fragment>
             )
@@ -1340,23 +1370,18 @@ export function DefinitionPanel() {
           <FlowConnector />
 
           {/* Output */}
-          <NodeCluster
-            label="Output"
-            selected={selection?.kind === "output" ? "any" : null}
+          <FlowNode
+            icon={ListBullets}
+            iconBg="bg-green-50"
+            iconColor="text-green-700"
+            title="Extractions returned"
+            subtitle={
+              outputs.length === 0
+                ? "Add what gets pulled out"
+                : `${outputs.length} field${outputs.length !== 1 ? "s" : ""}`
+            }
+            isSelected={selection?.kind === "output" && selection.existing === null}
           >
-            <FlowNode
-              icon={ListBullets}
-              iconBg="bg-green-50"
-              iconColor="text-green-700"
-              title="Extractions returned"
-              subtitle={
-                outputs.length === 0
-                  ? "Add what gets pulled out"
-                  : `${outputs.length} field${outputs.length !== 1 ? "s" : ""}`
-              }
-              cornerPill={{ label: "Output", tone: "output" }}
-              isSelected={selection?.kind === "output" && selection.existing === null}
-            >
               <div className="space-y-0.5">
                 {outputs.map((f) => (
                   <CompactFieldRow
@@ -1374,8 +1399,7 @@ export function DefinitionPanel() {
                   Add output
                 </button>
               </div>
-            </FlowNode>
-          </NodeCluster>
+          </FlowNode>
         </div>
 
         <FloatingCanvasToolbar />
@@ -1399,35 +1423,8 @@ export function DefinitionPanel() {
   )
 }
 
-// ── Node cluster (label above + node card) ────────────────────────────
-
-function NodeCluster({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-  selected?: "any" | null
-}) {
-  return (
-    <div className="flex flex-col items-stretch">
-      <div className="self-start mb-1.5 ml-2 inline-flex items-center gap-1 rounded-md bg-white border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-        <span className="h-1 w-1 rounded-full bg-zinc-400" />
-        {label}
-      </div>
-      {children}
-    </div>
-  )
-}
 
 // ── Flow node card (the visual building block) ────────────────────────
-
-const PILL_TONES: Record<string, string> = {
-  input: "bg-blue-50 text-blue-700 border-blue-200",
-  output: "bg-green-50 text-green-700 border-green-200",
-  fetch: "bg-amber-50 text-amber-700 border-amber-200",
-  prompt: "bg-violet-50 text-violet-700 border-violet-200",
-}
 
 function FlowNode({
   icon: Icon,
@@ -1435,7 +1432,6 @@ function FlowNode({
   iconColor,
   title,
   subtitle,
-  cornerPill,
   isSelected = false,
   children,
   onClick,
@@ -1445,13 +1441,11 @@ function FlowNode({
   iconColor: string
   title: string
   subtitle?: string
-  cornerPill?: { label: string; tone: string }
   isSelected?: boolean
   children?: React.ReactNode
   onClick?: () => void
 }) {
   const Wrapper = onClick ? "button" : "div"
-  const pillTone = cornerPill ? PILL_TONES[cornerPill.tone] ?? PILL_TONES.input : ""
   return (
     <Wrapper
       onClick={onClick}
@@ -1466,25 +1460,13 @@ function FlowNode({
           <Icon className={`h-3.5 w-3.5 ${iconColor}`} weight="bold" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="text-sm font-semibold text-zinc-900 truncate flex-1">{title}</div>
-            {cornerPill && (
-              <span
-                className={`inline-flex items-center rounded border px-1.5 py-0 text-[10px] font-medium shrink-0 ${pillTone}`}
-              >
-                {cornerPill.label}
-              </span>
-            )}
-          </div>
+          <div className="text-sm font-semibold text-zinc-900 truncate">{title}</div>
           {subtitle && (
             <div className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed mt-0.5">{subtitle}</div>
           )}
         </div>
       </div>
-      {/* Bottom anchor dot */}
-      {children && (
-        <div className="border-t border-gray-100 px-3 py-2">{children}</div>
-      )}
+      {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-white border border-gray-300" />
     </Wrapper>
   )
@@ -1667,7 +1649,7 @@ function RightSidebar({
 
   // OVERVIEW MODE — playbook details
   return (
-    <div className="w-[320px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+    <div className="w-[360px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto p-4 space-y-5">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
