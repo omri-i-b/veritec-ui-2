@@ -1837,18 +1837,6 @@ function RightSidebar({
           </div>
         </div>
 
-        <div>
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
-            Checklist
-          </h4>
-          <div className="space-y-1.5">
-            <ChecklistRow label="Add inputs" done={inputCount > 0} />
-            <ChecklistRow label="Add at least one step" done={stepCount > 0} />
-            <ChecklistRow label="Last step declares its returns" done={deliverableCount > 0} />
-            <ChecklistRow label="Run a test" done={false} />
-            <ChecklistRow label="Publish v1" done={false} />
-          </div>
-        </div>
       </div>
 
       {/* Helpful resources at bottom */}
@@ -1904,20 +1892,6 @@ function SidebarEditHeader({
   )
 }
 
-function ChecklistRow({ label, done }: { label: string; done: boolean }) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span
-        className={`flex items-center justify-center h-4 w-4 rounded border ${
-          done ? "bg-green-50 border-green-300 text-green-700" : "bg-white border-gray-300 text-transparent"
-        }`}
-      >
-        <CheckCircle className="h-3 w-3" weight="fill" />
-      </span>
-      <span className={done ? "text-zinc-500 line-through" : "text-zinc-800"}>{label}</span>
-    </div>
-  )
-}
 
 function ResourceCard({ icon: Icon, label, hint }: { icon: typeof PencilSimple; label: string; hint: string }) {
   return (
