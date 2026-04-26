@@ -2,26 +2,20 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import {
-  FlowArrow,
-  Plus,
-  Compass,
-  Sparkle,
-  Clock,
-} from "@phosphor-icons/react"
+import { BookOpen, Plus, Compass, Books, Clock } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { UnifiedRuns } from "@/components/unified-runs"
 import { PlaybooksLibrary } from "@/components/playbooks-library"
 
-type View = "runs" | "playbooks"
+type View = "runs" | "library"
 
 // ── Top header ─────────────────────────────────────────────────────────
 
-function WorkflowsHeader({ view }: { view: View }) {
+function PlaybooksHeader({ view }: { view: View }) {
   return (
     <div className="flex h-12 items-center border-b border-gray-200 bg-gray-50 px-4 gap-2 shrink-0">
-      <FlowArrow className="h-4 w-4 text-zinc-500" />
-      <h1 className="text-sm font-semibold text-zinc-900">Workflows</h1>
+      <BookOpen className="h-4 w-4 text-zinc-500" />
+      <h1 className="text-sm font-semibold text-zinc-900">Playbooks</h1>
       <span className="text-xs text-zinc-400 ml-1">
         {view === "runs"
           ? "Every playbook run across your firm"
@@ -40,7 +34,7 @@ function WorkflowsHeader({ view }: { view: View }) {
             Discover
           </Button>
           <Link
-            href="/workflows/new/edit"
+            href="/playbooks/new/edit"
             className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-800 text-white hover:bg-blue-900 h-8 px-3 text-sm font-medium transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -57,7 +51,7 @@ function WorkflowsHeader({ view }: { view: View }) {
 function ViewTabs({ active, onChange }: { active: View; onChange: (v: View) => void }) {
   const tabs: { id: View; label: string; icon: typeof Clock; count?: string }[] = [
     { id: "runs", label: "Runs", icon: Clock, count: "12.4k" },
-    { id: "playbooks", label: "Playbooks", icon: Sparkle, count: "9" },
+    { id: "library", label: "Library", icon: Books, count: "9" },
   ]
   return (
     <div className="flex items-center border-b border-gray-200 bg-white px-4 gap-0.5 shrink-0">
@@ -96,7 +90,7 @@ export function WorkflowsPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <WorkflowsHeader view={view} />
+      <PlaybooksHeader view={view} />
       <ViewTabs active={view} onChange={setView} />
       {view === "runs" ? <UnifiedRuns /> : <PlaybooksLibrary embedded />}
     </div>

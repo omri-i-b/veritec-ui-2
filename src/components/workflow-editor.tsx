@@ -13,7 +13,7 @@ function EditorHeader({ playbookId }: { playbookId: string }) {
   return (
     <div className="flex h-12 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 shrink-0">
       <Link
-        href={`/workflows/${pb.id}`}
+        href={`/playbooks/${pb.id}`}
         className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors"
         title="Back to runs"
       >

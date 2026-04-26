@@ -1,5 +1,5 @@
-import { WorkflowsPage } from "@/components/workflows-page"
+import { ProcessInbox } from "@/components/process-inbox"
 
 export default function Page() {
-  return <WorkflowsPage />
+  return <ProcessInbox />
 }

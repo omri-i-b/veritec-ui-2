@@ -239,7 +239,7 @@ function ProcessRowView({ row }: { row: ProcessRow }) {
   return (
     <TableRow className="group/row hover:bg-gray-50 border-b border-gray-100">
       <TableCell className="py-2">
-        <Link href={`/processes/${row.id}`} className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100">
+        <Link href={`/workflows/${row.id}`} className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100">
           <CaretRight className="h-3.5 w-3.5 text-zinc-300 group-hover/row:text-zinc-500 transition-colors" />
         </Link>
       </TableCell>
@@ -249,7 +249,7 @@ function ProcessRowView({ row }: { row: ProcessRow }) {
         </span>
       </TableCell>
       <TableCell className="py-2">
-        <Link href={`/processes/${row.id}`} className="inline-flex items-center gap-1.5">
+        <Link href={`/workflows/${row.id}`} className="inline-flex items-center gap-1.5">
           <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 rounded px-1.5 py-0.5 text-xs font-medium">
             <SuitcaseSimple className="h-3 w-3" weight="bold" />
             {row.entityId}

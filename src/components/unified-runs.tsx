@@ -552,7 +552,7 @@ function RunDetailDrawer({ run, onClose }: { run: Run | null; onClose: () => voi
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-1.5">Playbook</div>
           <Link
-            href={`/workflows/${run.playbookId}/edit`}
+            href={`/playbooks/${run.playbookId}/edit`}
             className="group flex items-center gap-2 rounded-md bg-white border border-gray-200 px-2.5 py-2 hover:border-blue-300 transition-colors"
           >
             <div className={`flex items-center justify-center h-7 w-7 rounded-md ${playbook.bg}`}>

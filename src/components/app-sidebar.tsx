@@ -19,6 +19,7 @@ import {
   DiamondsFour,
   Books,
   Stack,
+  BookOpen,
 } from "@phosphor-icons/react"
 import {
   Sidebar,
@@ -56,6 +57,7 @@ const mainNavItems = [
   },
   { title: "Agents", icon: Sparkle, href: "/agents" },
   { title: "Intake", icon: ClipboardText, href: "/intake" },
+  { title: "Playbooks", icon: BookOpen, href: "/playbooks" },
   { title: "Workflows", icon: FlowArrow, href: "/workflows" },
   { title: "Knowledge Base", icon: Books, href: "/knowledge" },
   { title: "Templates", icon: Stack, href: "/templates" },

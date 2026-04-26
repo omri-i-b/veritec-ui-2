@@ -351,7 +351,7 @@ function PlaybookCard({ playbook }: { playbook: Playbook }) {
   const Icon = playbook.icon
   return (
     <Link
-      href={`/workflows/${playbook.id}/edit`}
+      href={`/playbooks/${playbook.id}/edit`}
       className="group relative flex flex-col rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-[0_2px_8px_rgba(30,64,175,0.08)] transition-all"
     >
       {/* Top row: icon + badges */}

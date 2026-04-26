@@ -135,7 +135,7 @@ export default function PlaybooksFlowExplainer() {
                 </p>
               </div>
               <div className="rounded-[10px] border border-gray-200 bg-gray-50 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/workflows</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/playbooks</div>
                 <div className="grid grid-cols-2 gap-2">
                   <MiniPlaybookCard
                     icon={FileText}
@@ -185,7 +185,7 @@ export default function PlaybooksFlowExplainer() {
                 </p>
               </div>
               <div className="rounded-[10px] border border-gray-200 bg-gray-50 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/workflows/medical-records-summary</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/playbooks/medical-records-summary</div>
                 <div className="rounded-[10px] border border-gray-200 bg-white p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-blue-50">
@@ -229,7 +229,7 @@ export default function PlaybooksFlowExplainer() {
                 </p>
               </div>
               <div className="rounded-[10px] border border-gray-200 bg-gray-50 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/workflows/medical-records-summary · Runs tab</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">/playbooks/medical-records-summary · Runs tab</div>
                 <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
                   <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-200 text-[9px] font-medium uppercase tracking-wide text-zinc-500">
                     <span className="w-14">Status</span>
@@ -297,7 +297,7 @@ export default function PlaybooksFlowExplainer() {
       {/* Links */}
       <div className="max-w-[1200px] mx-auto px-6 mt-8 flex items-center gap-3">
         <Link
-          href="/workflows"
+          href="/playbooks"
           className="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-800 text-white px-4 py-2 text-sm font-medium hover:bg-blue-900 transition-colors"
         >
           <FlowArrow className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function PlaybooksFlowExplainer() {
           <ArrowSquareOut className="h-3.5 w-3.5" />
         </Link>
         <Link
-          href="/workflows/medical-records-summary"
+          href="/playbooks/medical-records-summary"
           className="inline-flex items-center gap-1.5 rounded-[10px] border border-gray-200 bg-white text-zinc-900 px-4 py-2 text-sm font-medium hover:border-gray-300 transition-colors"
         >
           <Clock className="h-4 w-4" />

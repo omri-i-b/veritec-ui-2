@@ -91,7 +91,7 @@ export function ProcessDefinition() {
       {/* Header */}
       <div className="flex h-12 items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 shrink-0">
         <Link
-          href="/processes"
+          href="/workflows"
           className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" weight="bold" />
