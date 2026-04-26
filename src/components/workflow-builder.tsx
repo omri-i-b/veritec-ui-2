@@ -877,7 +877,7 @@ function TemplatePicker({ value, onChange }: { value: string; onChange: (id: str
   return (
     <div>
       <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
-        Applied to template <span className="text-rose-600">*</span>
+        Template
       </label>
       <button
         type="button"
@@ -956,9 +956,6 @@ function TemplatePicker({ value, onChange }: { value: string; onChange: (id: str
           </div>
         </div>
       )}
-      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
-        The extractions above fill this template&apos;s placeholders. Output matches the template format exactly.
-      </p>
     </div>
   )
 }
@@ -1256,12 +1253,6 @@ function StepEditor({
     ? ["long_text", "records", "list"]
     : ["text", "long_text", "number", "date", "list", "records"]
 
-  const formatReturn = isFormat
-    ? templateId
-      ? getTemplate(templateId)
-      : undefined
-    : undefined
-
   return (
     <div className={`w-full rounded-[10px] border border-blue-500 bg-white shadow-[0_0_0_3px_rgba(30,64,175,0.12)] overflow-hidden border-l-4 ${cfg.accent}`}>
       {/* Header strip */}
@@ -1356,37 +1347,7 @@ function StepEditor({
 
         {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
 
-        {isFormat ? (
-          <div>
-            <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
-              Returns
-            </label>
-            {formatReturn ? (
-              <div className="rounded-md border border-teal-200 bg-teal-50/40 px-3 py-2 flex items-center gap-2">
-                <div className={`flex items-center justify-center h-7 w-7 rounded-md ${formatReturn.iconBg}`}>
-                  <formatReturn.icon className={`h-4 w-4 ${formatReturn.iconColor}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-zinc-900 truncate">
-                      {formatReturn.name}
-                    </span>
-                    <span className="inline-flex items-center rounded border border-gray-200 bg-white px-1.5 py-0 text-[10px] font-medium text-zinc-600">
-                      {formatReturn.format}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-zinc-500">
-                    A single filled document — implied by the template above.
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-[11px] text-zinc-500">
-                Pick a template above; this step will return a single filled document.
-              </div>
-            )}
-          </div>
-        ) : isFetch ? (
+        {isFormat ? null : isFetch ? (
           <ContextEditor entries={contextEntries} onChange={setContextEntries} />
         ) : (
           <ColumnsEditor
