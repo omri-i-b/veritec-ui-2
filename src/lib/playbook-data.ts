@@ -42,7 +42,7 @@ export interface Field {
   itemSchema?: Field[]
 }
 
-export type StepType = "fetch" | "prompt" | "format"
+export type StepType = "fetch" | "prompt" | "format" | "voice"
 
 /**
  * Unstructured context a step writes into the run's "memory".
@@ -71,6 +71,19 @@ export interface Step {
   context?: ContextEntry[]
   /** For format steps — the template this step fills */
   templateId?: string
+  /** For voice steps — call configuration */
+  voice?: {
+    /** Who to dial — name of input field carrying the phone number */
+    phoneInput?: string
+    /** Persona / voice characterization */
+    persona?: string
+    /** Goal list — bullets that gate "qualified" outcome */
+    goals?: string[]
+    /** Max call duration in seconds (soft cap) */
+    maxDurationSec?: number
+    /** Language preference (ISO) */
+    language?: "en" | "es" | "auto"
+  }
 }
 
 export interface PlaybookDef {
@@ -670,6 +683,125 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         templateId: "demand-letter",
         returns: [
           { id: "r3_a", name: "Demand letter", type: "long_text", description: "Filled letter (DOCX)" },
+        ],
+      },
+    ],
+  },
+
+  // ── Voice agents ────────────────────────────────────────────────────
+  // A voice agent is a playbook with one Voice step. The step's prompt
+  // is the agent's instructions + goals (Retell-style); its returns are
+  // the structured fields the conversation should extract.
+
+  "intake-callback-voice": {
+    id: "intake-callback-voice",
+    name: "Intake Callback (Voice)",
+    description:
+      "Calls a web-form lead within 90 seconds. Qualifies the matter, captures the basics, and books a consult — or hands off to a human if the conversation goes off-script.",
+    category: "Intake",
+    status: "Published",
+    version: "v2",
+    icon: PhoneCall,
+    iconColor: "text-blue-800",
+    iconBg: "bg-blue-50",
+    totalRuns: 1284,
+    lastRun: "11m ago",
+    inputs: [
+      { id: "in_1", name: "Lead phone", type: "text", required: true, description: "Phone number from the web form", sample: "+1 (415) 555-0142" },
+      { id: "in_2", name: "Lead name", type: "text", required: true, description: "Name from the web form", sample: "Camille Estrada" },
+      { id: "in_3", name: "Form summary", type: "long_text", required: true, description: "What the lead wrote in the contact form", sample: "Rear-ended on the 101 Friday night, back is hurting" },
+      { id: "in_4", name: "Reference library", type: "kb-ref", required: false, description: "Standard intake objections + answers (optional)", sample: "Intake KB v3 (47 entries)" },
+    ],
+    steps: [
+      {
+        id: "s1",
+        type: "voice",
+        name: "Qualify and book consult",
+        detail:
+          "You are an intake specialist for Veritec Law calling {{Lead name}} back about their inquiry. Be warm, never pushy. Don't give legal advice. If they ask about money, mention contingency and defer specifics to the attorney consult.\n\nReason for call (from form): {{Form summary}}.\n\nGOALS — work through these naturally; don't read them as a script:\n  1. Confirm identity and that this is a good time to talk.\n  2. Get a clean version of what happened and the date.\n  3. Confirm injury was reported / treatment started.\n  4. Confirm they have not signed with the other side's insurer or another firm.\n  5. Book a free consultation (default tomorrow 3:30pm with James Rivera).\n  6. If anything is off-script (criminal, settled, out-of-state), escalate to a human.",
+        voice: {
+          phoneInput: "Lead phone",
+          persona: "Warm, plainspoken intake specialist. American English, female voice.",
+          goals: [
+            "Confirm identity",
+            "Get incident date + summary",
+            "Confirm injury / treatment started",
+            "Confirm not yet represented",
+            "Book consult (default 3:30pm next business day)",
+            "Escalate to human if off-script",
+          ],
+          maxDurationSec: 600,
+          language: "auto",
+        },
+        returns: [
+          { id: "r1_a", name: "Caller name", type: "text" },
+          { id: "r1_b", name: "Matter type", type: "enum", options: ["MVA", "Premises", "Dog bite", "Workplace", "Product", "Other"] },
+          { id: "r1_c", name: "Incident date", type: "date" },
+          { id: "r1_d", name: "Injury reported", type: "text", description: "What hurts / how badly" },
+          { id: "r1_e", name: "Treatment started", type: "text" },
+          { id: "r1_f", name: "Already represented", type: "enum", options: ["No", "Yes — by another firm", "Yes — by other side's insurer"] },
+          { id: "r1_g", name: "Consult booked", type: "text", description: "Date/time + attorney name, or 'No'" },
+          { id: "r1_h", name: "Outcome", type: "enum", options: ["Qualified", "Not qualified", "Escalated", "Voicemail", "Failed"] },
+          { id: "r1_i", name: "Outcome reason", type: "long_text", description: "1–2 sentences for the operator review" },
+        ],
+      },
+    ],
+  },
+
+  "med-treatment-verification-voice": {
+    id: "med-treatment-verification-voice",
+    name: "Medical Treatment Verification (Voice)",
+    description:
+      "Weekly cadence call to active clients confirming they're attending PT, the next appointment is on the calendar, and there are no new symptoms or providers to track. Flags treatment gaps before they hurt the case.",
+    category: "Pre-litigation",
+    status: "Published",
+    version: "v1",
+    icon: PhoneCall,
+    iconColor: "text-emerald-700",
+    iconBg: "bg-emerald-50",
+    totalRuns: 612,
+    lastRun: "2h ago",
+    inputs: [
+      { id: "in_1", name: "Case", type: "case-ref", required: true, description: "The case this check-in is for", sample: "CVSA-1189" },
+      { id: "in_2", name: "Client phone", type: "text", required: true, description: "Client's primary phone", sample: "+1 (510) 555-0421" },
+      { id: "in_3", name: "Client name", type: "text", required: true, sample: "Maria Lopez" },
+    ],
+    steps: [
+      {
+        id: "s0",
+        type: "fetch",
+        name: "Load prior treatment record",
+        detail: "Pull the most recent provider list, last appointment, and current symptoms from {{Case}} so the agent can reference them.",
+        context: [
+          { id: "ctx_prior", name: "Prior treatment record", description: "Provider chain + last 4 weeks of appointment history" },
+        ],
+      },
+      {
+        id: "s1",
+        type: "voice",
+        name: "Weekly treatment check-in",
+        detail:
+          "You are calling {{Client name}} on behalf of Veritec Law for a routine weekly check-in. This is NOT legal advice — only a wellness and treatment-cadence check.\n\nContext from the file: {{Prior treatment record}}.\n\nGOALS:\n  1. Confirm you're speaking with {{Client name}} (not a family member).\n  2. Confirm last week's appointments (per the prior record).\n  3. Confirm next appointment is on the calendar.\n  4. Ask about new symptoms or new providers — flag if anything changed.\n  5. If client missed appointments and has no next one booked, escalate to the case manager.\n\nIf the client wants to discuss anything legal, politely defer to the attorney and offer to schedule a callback.",
+        voice: {
+          phoneInput: "Client phone",
+          persona: "Caring, unhurried check-in caller. American English. Switches to Spanish if the client opens in Spanish.",
+          goals: [
+            "Confirm reaching the client (not a family member)",
+            "Confirm last week's appointments",
+            "Confirm next appointment is booked",
+            "Ask about new symptoms / new providers",
+            "Escalate if appointments missed and nothing booked",
+          ],
+          maxDurationSec: 300,
+          language: "auto",
+        },
+        returns: [
+          { id: "r1_a", name: "Client reached", type: "enum", options: ["Yes", "Family member", "Voicemail", "No answer"] },
+          { id: "r1_b", name: "Last appointments status", type: "text", description: "e.g. 'Both attended', '1 attended, 1 rescheduled'" },
+          { id: "r1_c", name: "Next appointment", type: "text", description: "Date/time + provider, or 'None booked'" },
+          { id: "r1_d", name: "New symptoms", type: "long_text", description: "Free text — anything to flag for the case manager" },
+          { id: "r1_e", name: "New providers", type: "list", description: "Any provider not in the prior record" },
+          { id: "r1_f", name: "Outcome", type: "enum", options: ["Continuing per plan", "Gap flagged", "Escalated", "Voicemail", "No answer"] },
         ],
       },
     ],

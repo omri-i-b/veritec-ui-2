@@ -28,6 +28,7 @@ import {
   ArrowLeft,
   MagnifyingGlass,
   Play,
+  PhoneCall,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, getStepReturns, type ContextEntry, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -100,6 +101,14 @@ const STEP_TYPES: Record<
     iconColor: "text-teal-700",
     iconBg: "bg-teal-50",
     accent: "border-l-teal-500",
+  },
+  voice: {
+    icon: PhoneCall,
+    label: "Voice",
+    description: "Place a phone call. Agent runs goals + extracts structured fields.",
+    iconColor: "text-violet-700",
+    iconBg: "bg-violet-50",
+    accent: "border-l-violet-500",
   },
 }
 
@@ -1177,6 +1186,59 @@ function FieldForm({
 
 type VarSource = { label: string; vars: string[] }
 
+function VoiceCallConfig({ voice }: { voice: NonNullable<Step["voice"]> }) {
+  return (
+    <div className="rounded-md border border-violet-200 bg-violet-50/40 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 mb-2">
+        <PhoneCall className="h-3.5 w-3.5 text-violet-700" weight="bold" />
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-violet-800">
+          Call configuration
+        </span>
+      </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+        {voice.phoneInput && (
+          <ConfigRow label="Dials" value={`{{${voice.phoneInput}}}`} mono />
+        )}
+        {voice.language && (
+          <ConfigRow
+            label="Language"
+            value={
+              voice.language === "en"
+                ? "English"
+                : voice.language === "es"
+                  ? "Spanish"
+                  : "Auto-detect"
+            }
+          />
+        )}
+        {voice.maxDurationSec && (
+          <ConfigRow
+            label="Max duration"
+            value={`${Math.floor(voice.maxDurationSec / 60)} min`}
+          />
+        )}
+        {voice.persona && (
+          <div className="col-span-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-0.5">
+              Persona
+            </div>
+            <div className="text-zinc-800 leading-snug">{voice.persona}</div>
+          </div>
+        )}
+      </dl>
+    </div>
+  )
+}
+
+function ConfigRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className={`text-zinc-800 ${mono ? "font-mono text-[12px]" : ""}`}>{value}</div>
+    </div>
+  )
+}
+
 function StepEditor({
   existing,
   stepType,
@@ -1204,6 +1266,7 @@ function StepEditor({
   const Icon = cfg.icon
   const isFormat = type === "format"
   const isFetch = type === "fetch"
+  const isVoice = type === "voice"
   const isEditing = existing !== null
   const canSave =
     name.trim().length > 0 &&
@@ -1241,10 +1304,12 @@ function StepEditor({
       name: name.trim(),
       detail: detail.trim(),
       // Fetch steps write to context (unstructured memory).
-      // Prompt/Format steps write typed returns.
+      // Prompt/Format/Voice steps write typed returns.
       returns: isFetch ? undefined : computeReturns(),
       context: isFetch ? (contextEntries.length > 0 ? contextEntries : undefined) : undefined,
       templateId: isFormat ? templateId : undefined,
+      // Preserve voice config (full edit UI for these settings is a follow-up)
+      voice: isVoice ? existing?.voice : undefined,
     })
   }
 
@@ -1294,15 +1359,25 @@ function StepEditor({
                 ? "e.g. Fetch case records"
                 : type === "format"
                   ? "e.g. Fill demand letter"
-                  : "e.g. Analyze case for weaknesses"
+                  : type === "voice"
+                    ? "e.g. Qualify and book consult"
+                    : "e.g. Analyze case for weaknesses"
             }
             className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
+        {isVoice && existing?.voice && <VoiceCallConfig voice={existing.voice} />}
+
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
-            {type === "fetch" ? "What to load" : type === "format" ? "How to fill the template" : "Prompt"}
+            {type === "fetch"
+              ? "What to load"
+              : type === "format"
+                ? "How to fill the template"
+                : type === "voice"
+                  ? "Persona, instructions & goals"
+                  : "Prompt"}
           </label>
           <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
             <textarea
@@ -1313,7 +1388,9 @@ function StepEditor({
                   ? "e.g. Load all PDFs from {{Records}} and extract text"
                   : type === "format"
                     ? "e.g. Fill the demand letter using {{Facts}} and {{Damages}}"
-                    : "e.g. Analyze the records for {{Case}} and identify treatment gaps..."
+                    : type === "voice"
+                      ? "You are an intake specialist for...\n\nGOALS:\n  1. Confirm identity\n  2. Get incident date\n  3. Confirm injury\n  4. Book consult"
+                      : "e.g. Analyze the records for {{Case}} and identify treatment gaps..."
               }
               rows={6}
               className="w-full px-3 py-2 text-sm bg-white focus:outline-none resize-none leading-relaxed"
@@ -1585,6 +1662,13 @@ export function DefinitionPanel() {
               >
                 <Stack className="h-3.5 w-3.5" weight="bold" />
                 Add Format
+              </button>
+              <button
+                onClick={() => setSelection({ kind: "step", existing: null, stepType: "voice" })}
+                className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+              >
+                <PhoneCall className="h-3.5 w-3.5" weight="bold" />
+                Add Voice
               </button>
             </div>
           )}

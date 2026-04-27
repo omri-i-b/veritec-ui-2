@@ -11,6 +11,8 @@ export function generateStaticParams() {
     { id: "damage-calculator" },
     { id: "similar-case-finder" },
     { id: "discovery-response" },
+    { id: "intake-callback-voice" },
+    { id: "med-treatment-verification-voice" },
   ]
 }
 
