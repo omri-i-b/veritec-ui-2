@@ -467,32 +467,31 @@ type DrawerState =
 
 // ── Columns Editor (for "Records" output type) ────────────────────────
 
-// ── Context Editor (for Fetch step memory entries) ────────────────────
+// ── Context Editor (single memory entry per Fetch step) ───────────────
 
 function ContextEditor({
-  entries,
+  entry,
   onChange,
 }: {
-  entries: ContextEntry[]
-  onChange: (e: ContextEntry[]) => void
+  entry: ContextEntry | null
+  onChange: (e: ContextEntry | null) => void
 }) {
-  const [adding, setAdding] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [name, setName] = useState(entry?.name ?? "")
+  const [description, setDescription] = useState(entry?.description ?? "")
 
-  const saveEntry = (e: ContextEntry) => {
-    if (entries.find((x) => x.id === e.id)) {
-      onChange(entries.map((x) => (x.id === e.id ? e : x)))
-    } else {
-      onChange([...entries, e])
+  // Keep parent state in sync as user types — no "save" affordance needed,
+  // since the parent StepEditor's "Save changes" is the only commit point.
+  const sync = (nextName: string, nextDesc: string) => {
+    if (nextName.trim().length === 0) {
+      onChange(null)
+      return
     }
-    setAdding(false)
-    setEditingId(null)
+    onChange({
+      id: entry?.id ?? `ctx_${Date.now()}`,
+      name: nextName.trim(),
+      description: nextDesc.trim() || undefined,
+    })
   }
-  const deleteEntry = (id: string) => {
-    onChange(entries.filter((e) => e.id !== id))
-    setEditingId(null)
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
@@ -500,144 +499,38 @@ function ContextEditor({
           Adds to memory
         </label>
         <span className="text-[10px] text-zinc-500">
-          Named context blobs later steps can reference
+          One named blob later steps reference via <code className="font-mono">{`{{name}}`}</code>
         </span>
       </div>
-      <div className="rounded-md border border-amber-200 bg-amber-50/40 p-1.5 space-y-1">
-        {entries.map((e) =>
-          editingId === e.id ? (
-            <ContextEntryForm
-              key={e.id}
-              existing={e}
-              onSave={saveEntry}
-              onDelete={() => deleteEntry(e.id)}
-              onCancel={() => setEditingId(null)}
-            />
-          ) : (
-            <button
-              key={e.id}
-              type="button"
-              onClick={() => {
-                setEditingId(e.id)
-                setAdding(false)
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-transparent bg-white hover:border-amber-300 transition-colors text-left"
-            >
-              <Database className="h-3.5 w-3.5 text-amber-700 shrink-0" weight="bold" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-zinc-900 truncate">{e.name}</div>
-                {e.description && (
-                  <div className="text-[11px] text-zinc-500 truncate">{e.description}</div>
-                )}
-              </div>
-              <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0 text-[10px] font-medium text-amber-800 shrink-0">
-                Memory
-              </span>
-            </button>
-          )
-        )}
-        {adding ? (
-          <ContextEntryForm
-            existing={null}
-            onSave={saveEntry}
-            onCancel={() => setAdding(false)}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setAdding(true)
-              setEditingId(null)
+      <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2.5 space-y-2">
+        <div className="flex items-center gap-2">
+          <Database className="h-3.5 w-3.5 text-amber-700 shrink-0" weight="bold" />
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              sync(e.target.value, description)
             }}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-dashed border-amber-300 text-[11px] font-medium text-amber-700 hover:border-amber-500 hover:bg-amber-50 transition-colors"
-          >
-            <Plus className="h-3 w-3" />
-            Add memory entry
-          </button>
-        )}
-      </div>
-      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
-        Memory is unstructured — it&apos;s the raw material for later prompts to read.
-        Use <span className="font-medium">Returns</span> on a Prompt step when you want typed, structured output.
-      </p>
-    </div>
-  )
-}
-
-function ContextEntryForm({
-  existing,
-  onSave,
-  onDelete,
-  onCancel,
-}: {
-  existing: ContextEntry | null
-  onSave: (e: ContextEntry) => void
-  onDelete?: () => void
-  onCancel: () => void
-}) {
-  const [name, setName] = useState(existing?.name ?? "")
-  const [description, setDescription] = useState(existing?.description ?? "")
-  const canSave = name.trim().length > 0
-  const handleSave = () => {
-    if (!canSave) return
-    onSave({
-      id: existing?.id ?? `ctx_${Date.now()}`,
-      name: name.trim(),
-      description: description.trim() || undefined,
-    })
-  }
-  return (
-    <div className="rounded-md border-2 border-amber-300 bg-white p-2.5 space-y-2.5">
-      <div>
-        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
-          Name
-        </label>
-        <input
-          autoFocus
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Case facts, Records text, Transcript"
-          className="w-full h-8 px-2 text-sm rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
-        />
-      </div>
-      <div>
-        <label className="text-[10px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
-          Description <span className="text-zinc-400 normal-case tracking-normal">· optional</span>
-        </label>
+            placeholder="e.g. Case facts, Records text, Transcript"
+            className="flex-1 h-8 px-2 text-sm font-medium rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
+          />
+        </div>
         <textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="What this context contains"
+          onChange={(e) => {
+            setDescription(e.target.value)
+            sync(name, e.target.value)
+          }}
+          placeholder="Optional — what this context contains"
           rows={2}
           className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 resize-none leading-relaxed"
         />
       </div>
-      <div className="flex items-center gap-1">
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-red-50 text-red-600 transition-colors"
-            title="Delete"
-          >
-            <Trash className="h-3.5 w-3.5" />
-          </button>
-        )}
-        <div className="flex-1" />
-        <button
-          onClick={onCancel}
-          className="h-7 px-2 text-xs font-medium text-zinc-600 hover:bg-gray-100 rounded transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={!canSave}
-          className="h-7 px-2 text-xs font-medium text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-        >
-          {existing ? "Done" : "Add"}
-        </button>
-      </div>
+      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+        Memory is unstructured — raw material for later prompts to read.
+        Use <span className="font-medium">Returns</span> on a Prompt step when you want typed, structured output.
+      </p>
     </div>
   )
 }
@@ -1187,7 +1080,16 @@ function FieldForm({
 
 type VarSource = { label: string; vars: string[] }
 
-function VoiceCallConfig({ voice }: { voice: NonNullable<Step["voice"]> }) {
+function VoiceCallConfig({
+  voice,
+  onChange,
+  phoneInputNames,
+}: {
+  voice: NonNullable<Step["voice"]>
+  onChange: (v: NonNullable<Step["voice"]>) => void
+  phoneInputNames: string[]
+}) {
+  const update = (patch: Partial<NonNullable<Step["voice"]>>) => onChange({ ...voice, ...patch })
   return (
     <div className="rounded-md border border-violet-200 bg-violet-50/40 px-3 py-2.5">
       <div className="flex items-center gap-1.5 mb-2">
@@ -1196,46 +1098,66 @@ function VoiceCallConfig({ voice }: { voice: NonNullable<Step["voice"]> }) {
           Call configuration
         </span>
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-        {voice.phoneInput && (
-          <ConfigRow label="Dials" value={`{{${voice.phoneInput}}}`} mono />
-        )}
-        {voice.language && (
-          <ConfigRow
-            label="Language"
-            value={
-              voice.language === "en"
-                ? "English"
-                : voice.language === "es"
-                  ? "Spanish"
-                  : "Auto-detect"
-            }
-          />
-        )}
-        {voice.maxDurationSec && (
-          <ConfigRow
-            label="Max duration"
-            value={`${Math.floor(voice.maxDurationSec / 60)} min`}
-          />
-        )}
-        {voice.persona && (
-          <div className="col-span-2">
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-0.5">
-              Persona
+      <div className="grid grid-cols-3 gap-3">
+        {/* Dials */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 block mb-1">
+            Dials
+          </label>
+          {phoneInputNames.length > 0 ? (
+            <select
+              value={voice.phoneInput ?? ""}
+              onChange={(e) => update({ phoneInput: e.target.value || undefined })}
+              className="w-full h-8 px-2 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-100"
+            >
+              <option value="">— pick a phone input —</option>
+              {phoneInputNames.map((n) => (
+                <option key={n} value={n}>
+                  {`{{${n}}}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="h-8 flex items-center px-2 text-[11px] rounded border border-dashed border-gray-300 bg-white text-zinc-500">
+              Add a Phone-typed input first
             </div>
-            <div className="text-zinc-800 leading-snug">{voice.persona}</div>
+          )}
+        </div>
+        {/* Language */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 block mb-1">
+            Language
+          </label>
+          <select
+            value={voice.language ?? "auto"}
+            onChange={(e) => update({ language: e.target.value as "en" | "es" | "auto" })}
+            className="w-full h-8 px-2 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-100"
+          >
+            <option value="auto">Auto-detect</option>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+          </select>
+        </div>
+        {/* Max duration */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 block mb-1">
+            Max duration
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={Math.round((voice.maxDurationSec ?? 600) / 60)}
+              onChange={(e) =>
+                update({ maxDurationSec: Math.max(1, Number(e.target.value || 1)) * 60 })
+              }
+              className="w-16 h-8 px-2 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-100"
+            />
+            <span className="text-[11px] text-zinc-500">min</span>
           </div>
-        )}
-      </dl>
-    </div>
-  )
-}
-
-function ConfigRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{label}</div>
-      <div className={`text-zinc-800 ${mono ? "font-mono text-[12px]" : ""}`}>{value}</div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1245,6 +1167,7 @@ function StepEditor({
   stepType,
   index,
   varSources,
+  phoneInputNames,
   onSave,
   onDelete,
   onCancel,
@@ -1253,6 +1176,7 @@ function StepEditor({
   stepType: StepType
   index: number
   varSources: VarSource[]
+  phoneInputNames: string[]
   onSave: (s: Step) => void
   onDelete: () => void
   onCancel: () => void
@@ -1260,7 +1184,15 @@ function StepEditor({
   const [name, setName] = useState(existing?.name ?? "")
   const [detail, setDetail] = useState(existing?.detail ?? "")
   const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
-  const [contextEntries, setContextEntries] = useState<ContextEntry[]>(existing?.context ?? [])
+  const [contextEntry, setContextEntry] = useState<ContextEntry | null>(existing?.context ?? null)
+  const [voiceConfig, setVoiceConfig] = useState<NonNullable<Step["voice"]>>(
+    existing?.voice ?? {
+      phoneInput: undefined,
+      goals: [],
+      maxDurationSec: 600,
+      language: "auto",
+    }
+  )
   const [templateId, setTemplateId] = useState(existing?.templateId ?? "")
   const type = existing?.type ?? stepType
   const cfg = STEP_TYPES[type]
@@ -1307,10 +1239,9 @@ function StepEditor({
       // Fetch steps write to context (unstructured memory).
       // Prompt/Format/Voice steps write typed returns.
       returns: isFetch ? undefined : computeReturns(),
-      context: isFetch ? (contextEntries.length > 0 ? contextEntries : undefined) : undefined,
+      context: isFetch && contextEntry ? contextEntry : undefined,
       templateId: isFormat ? templateId : undefined,
-      // Preserve voice config (full edit UI for these settings is a follow-up)
-      voice: isVoice ? existing?.voice : undefined,
+      voice: isVoice ? voiceConfig : undefined,
     })
   }
 
@@ -1368,7 +1299,13 @@ function StepEditor({
           />
         </div>
 
-        {isVoice && existing?.voice && <VoiceCallConfig voice={existing.voice} />}
+        {isVoice && (
+          <VoiceCallConfig
+            voice={voiceConfig}
+            onChange={setVoiceConfig}
+            phoneInputNames={phoneInputNames}
+          />
+        )}
 
         <div>
           <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1.5">
@@ -1377,7 +1314,7 @@ function StepEditor({
               : type === "format"
                 ? "How to fill the template"
                 : type === "voice"
-                  ? "Persona, instructions & goals"
+                  ? "Instructions & goals"
                   : "Prompt"}
           </label>
           <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
@@ -1426,7 +1363,7 @@ function StepEditor({
         {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
 
         {isFormat ? null : isFetch ? (
-          <ContextEditor entries={contextEntries} onChange={setContextEntries} />
+          <ContextEditor entry={contextEntry} onChange={setContextEntry} />
         ) : (
           <ColumnsEditor
             columns={returns}
@@ -1477,6 +1414,7 @@ export function DefinitionPanel() {
 
   const lastStep = steps[steps.length - 1]
   const deliverable = lastStep ? getStepReturns(lastStep) : []
+  const phoneInputNames = inputs.filter((i) => i.type === "phone").map((i) => i.name)
 
   // Build available variable sources for a step at the given index.
   // A step can reference:
@@ -1492,7 +1430,7 @@ export function DefinitionPanel() {
 
     for (let i = 0; i < stepIndex; i++) {
       const s = steps[i]
-      ;(s.context ?? []).forEach((c) => memoryVars.push(c.name))
+      if (s.context) memoryVars.push(s.context.name)
       getStepReturns(s).forEach((r) => dataVars.push(r.name))
     }
 
@@ -1547,9 +1485,10 @@ export function DefinitionPanel() {
         }}
       >
         <div
-          className="max-w-[640px] mx-auto pt-12 pb-12 px-6 flex flex-col items-stretch"
+          className="mx-auto pt-12 pb-12 px-6 flex flex-col items-stretch w-full"
         >
           {/* Trigger / Inputs */}
+          <div className="w-full max-w-[640px] mx-auto">
           <FlowNode
             icon={SuitcaseSimple}
             iconBg="bg-blue-50"
@@ -1580,6 +1519,7 @@ export function DefinitionPanel() {
               </button>
             </div>
           </FlowNode>
+          </div>
 
           <FlowConnector />
 
@@ -1593,29 +1533,32 @@ export function DefinitionPanel() {
             return (
               <Fragment key={step.id}>
                 {editingThis ? (
-                  <div className="-mx-[160px]">
+                  <div className="w-full max-w-[960px] mx-auto">
                     <StepEditor
                       existing={step}
                       stepType={step.type}
                       index={i}
                       varSources={varSourcesFor(i)}
+                      phoneInputNames={phoneInputNames}
                       onSave={saveStep}
                       onDelete={() => deleteStep(step)}
                       onCancel={() => setSelection(null)}
                     />
                   </div>
                 ) : (
-                  <FlowNode
-                    icon={StepIcon}
-                    iconBg={stepCfg.iconBg}
-                    iconColor={stepCfg.iconColor}
-                    title={step.name}
-                    subtitle={step.detail || "No description"}
-                    onClick={() => setSelection({ kind: "step", existing: step })}
-                    returns={getStepReturns(step)}
-                    context={step.context}
-                    isLast={isLast}
-                  />
+                  <div className="w-full max-w-[640px] mx-auto">
+                    <FlowNode
+                      icon={StepIcon}
+                      iconBg={stepCfg.iconBg}
+                      iconColor={stepCfg.iconColor}
+                      title={step.name}
+                      subtitle={step.detail || "No description"}
+                      onClick={() => setSelection({ kind: "step", existing: step })}
+                      returns={getStepReturns(step)}
+                      context={step.context}
+                      isLast={isLast}
+                    />
+                  </div>
                 )}
                 <FlowConnector />
               </Fragment>
@@ -1625,12 +1568,13 @@ export function DefinitionPanel() {
           {/* New step being added — appears at end */}
           {selection?.kind === "step" && selection.existing === null && (
             <>
-              <div className="-mx-[80px]">
+              <div className="w-full max-w-[960px] mx-auto">
                 <StepEditor
                   existing={null}
                   stepType={selection.stepType ?? "prompt"}
                   index={steps.length}
                   varSources={varSourcesFor(steps.length)}
+                  phoneInputNames={phoneInputNames}
                   onSave={saveStep}
                   onDelete={() => setSelection(null)}
                   onCancel={() => setSelection(null)}
@@ -1674,8 +1618,8 @@ export function DefinitionPanel() {
             </div>
           )}
 
-          {/* Terminator — closes the flow visually. Result lands in the Runs table. */}
-          {steps.length > 0 && selection?.kind !== "step" && (
+          {/* Terminator — closes the flow visually. Always rendered when there are steps. */}
+          {steps.length > 0 && (
             <>
               <FlowConnector />
               <FlowTerminator playbookId={playbook.id} />
@@ -1724,7 +1668,7 @@ function FlowNode({
   children?: React.ReactNode
   onClick?: () => void
   returns?: Field[]
-  context?: ContextEntry[]
+  context?: ContextEntry | null
   isLast?: boolean
 }) {
   const Wrapper = onClick ? "button" : "div"
@@ -1749,7 +1693,7 @@ function FlowNode({
         </div>
       </div>
       {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
-      {context && context.length > 0 && (
+      {context && (
         <div className="border-t border-amber-100 bg-amber-50/40 px-3 py-2">
           <div className="flex items-center gap-1.5 mb-1">
             <Database className="h-3 w-3 text-amber-700" weight="bold" />
@@ -1757,37 +1701,21 @@ function FlowNode({
               Adds to memory
             </span>
           </div>
-          <div className="flex items-center gap-1 flex-wrap">
-            {context.map((c) => (
-              <span
-                key={c.id}
-                className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
-                title={c.description}
-              >
-                <Database className="h-2.5 w-2.5 text-amber-700" weight="bold" />
-                <span className="font-medium">{c.name}</span>
-              </span>
-            ))}
-          </div>
+          <span
+            className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
+            title={context.description}
+          >
+            <Database className="h-2.5 w-2.5 text-amber-700" weight="bold" />
+            <span className="font-medium">{context.name}</span>
+          </span>
         </div>
       )}
       {returns && returns.length > 0 && (
-        <div
-          className={`border-t px-3 py-2 ${
-            isLast ? "border-blue-100 bg-blue-50/40" : "border-gray-100 bg-gray-50/60"
-          }`}
-        >
+        <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-2">
           <div className="flex items-center gap-1.5 mb-1">
-            <ArrowSquareOut
-              className={`h-3 w-3 ${isLast ? "text-blue-800" : "text-zinc-500"}`}
-              weight="bold"
-            />
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-wide ${
-                isLast ? "text-blue-800" : "text-zinc-500"
-              }`}
-            >
-              {isLast ? "Deliverable" : "Returns"}
+            <ArrowSquareOut className="h-3 w-3 text-zinc-500" weight="bold" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+              Returns
             </span>
           </div>
           <div className="flex items-center gap-1 flex-wrap">

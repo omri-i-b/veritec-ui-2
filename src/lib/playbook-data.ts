@@ -46,10 +46,9 @@ export interface Field {
 export type StepType = "fetch" | "prompt" | "format" | "voice"
 
 /**
- * Unstructured context a step writes into the run's "memory".
- * Fetch steps declare context (no typed schema — it's just blobs the AI reads).
- * Prompt steps may also declare context if they emit free-text the next step
- * should reference (rare; prefer typed `returns`).
+ * The single named blob a Fetch step writes into the run's "memory" —
+ * unstructured material later steps reference via {{name}}. One Fetch =
+ * one memory entry; if you need two, use two Fetch steps.
  */
 export interface ContextEntry {
   id: string
@@ -68,8 +67,8 @@ export interface Step {
    * Used by prompt + format steps. The last step's returns is the deliverable.
    */
   returns?: Field[]
-  /** Unstructured material this step adds to memory (Fetch steps mostly). */
-  context?: ContextEntry[]
+  /** Unstructured material this step adds to memory (Fetch steps only). */
+  context?: ContextEntry
   /** For format steps — the template this step fills */
   templateId?: string
   /** For voice steps — call configuration */
@@ -162,9 +161,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Fetch records",
         detail: "Load all PDFs from {{Records}} and extract text",
-        context: [
-          { id: "ctx_records_text", name: "Records text", description: "Concatenated extracted text from all uploaded records" },
-        ],
+        context: { id: "ctx_records_text", name: "Records text", description: "Concatenated extracted text from all uploaded records" },
       },
       {
         id: "s2",
@@ -243,13 +240,11 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Load case documents",
         detail:
           "Pull every document attached to {{Case}} into memory: police report, medical records, interrogatory responses, discovery production, prior deposition transcripts, expert reports.",
-        context: [
-          {
+        context: {
             id: "ctx_case_docs",
             name: "Case documents",
             description: "All documents attached to the case, normalized for downstream extraction",
           },
-        ],
       },
       {
         id: "s1",
@@ -496,9 +491,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Load transcript from case",
         detail: "Load the deposition transcript file and any related exhibits from {{Case}}",
-        context: [
-          { id: "ctx_transcript", name: "Transcript", description: "Raw transcript text + exhibit attachments" },
-        ],
+        context: { id: "ctx_transcript", name: "Transcript", description: "Raw transcript text + exhibit attachments" },
       },
       {
         id: "s2",
@@ -589,9 +582,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         name: "Load case documents",
         detail:
           "Load every deposition-related document from {{Case}} — notices, transcripts, errata sheets, exhibits, cover pages.",
-        context: [
-          { id: "ctx_depo_docs", name: "Deposition documents", description: "All depo-related documents from the case file" },
-        ],
+        context: { id: "ctx_depo_docs", name: "Deposition documents", description: "All depo-related documents from the case file" },
       },
       {
         id: "s2",
@@ -660,9 +651,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Fetch case facts",
         detail: "Load {{Case}} context",
-        context: [
-          { id: "ctx_case_facts", name: "Case facts", description: "Compiled case context — facts, parties, timeline" },
-        ],
+        context: { id: "ctx_case_facts", name: "Case facts", description: "Compiled case context — facts, parties, timeline" },
       },
       {
         id: "s2",
@@ -719,18 +708,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "voice",
         name: "Qualify and book consult",
         detail:
-          "You are an intake specialist for Veritec Law calling {{Lead name}} back about their inquiry. Be warm, never pushy. Don't give legal advice. If they ask about money, mention contingency and defer specifics to the attorney consult.\n\nReason for call (from form): {{Form summary}}.\n\nGOALS — work through these naturally; don't read them as a script:\n  1. Confirm identity and that this is a good time to talk.\n  2. Get a clean version of what happened and the date.\n  3. Confirm injury was reported / treatment started.\n  4. Confirm they have not signed with the other side's insurer or another firm.\n  5. Book a free consultation (default tomorrow 3:30pm with James Rivera).\n  6. If anything is off-script (criminal, settled, out-of-state), escalate to a human.",
+          "You are a warm, plainspoken intake specialist for Veritec Law calling {{Lead name}} back about their inquiry. Be warm, never pushy. Don't give legal advice. If they ask about money, mention contingency and defer specifics to the attorney consult.\n\nReason for call (from form): {{Form summary}}.\n\nGOALS — work through these naturally; don't read them as a script:\n  1. Confirm identity and that this is a good time to talk.\n  2. Get a clean version of what happened and the date.\n  3. Confirm injury was reported / treatment started.\n  4. Confirm they have not signed with the other side's insurer or another firm.\n  5. Book a free consultation (default tomorrow 3:30pm with James Rivera).\n  6. If anything is off-script (criminal, settled, out-of-state), escalate to a human.",
         voice: {
           phoneInput: "Lead phone",
-          persona: "Warm, plainspoken intake specialist. American English, female voice.",
-          goals: [
-            "Confirm identity",
-            "Get incident date + summary",
-            "Confirm injury / treatment started",
-            "Confirm not yet represented",
-            "Book consult (default 3:30pm next business day)",
-            "Escalate to human if off-script",
-          ],
           maxDurationSec: 600,
           language: "auto",
         },
@@ -773,26 +753,16 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
         type: "fetch",
         name: "Load prior treatment record",
         detail: "Pull the most recent provider list, last appointment, and current symptoms from {{Case}} so the agent can reference them.",
-        context: [
-          { id: "ctx_prior", name: "Prior treatment record", description: "Provider chain + last 4 weeks of appointment history" },
-        ],
+        context: { id: "ctx_prior", name: "Prior treatment record", description: "Provider chain + last 4 weeks of appointment history" },
       },
       {
         id: "s1",
         type: "voice",
         name: "Weekly treatment check-in",
         detail:
-          "You are calling {{Client name}} on behalf of Veritec Law for a routine weekly check-in. This is NOT legal advice — only a wellness and treatment-cadence check.\n\nContext from the file: {{Prior treatment record}}.\n\nGOALS:\n  1. Confirm you're speaking with {{Client name}} (not a family member).\n  2. Confirm last week's appointments (per the prior record).\n  3. Confirm next appointment is on the calendar.\n  4. Ask about new symptoms or new providers — flag if anything changed.\n  5. If client missed appointments and has no next one booked, escalate to the case manager.\n\nIf the client wants to discuss anything legal, politely defer to the attorney and offer to schedule a callback.",
+          "You are a caring, unhurried check-in caller from Veritec Law. Switch to Spanish if the client opens in Spanish. This is NOT legal advice — only a wellness and treatment-cadence check.\n\nYou are calling {{Client name}} for a routine weekly check-in. Context from the file: {{Prior treatment record}}.\n\nGOALS:\n  1. Confirm you're speaking with {{Client name}} (not a family member).\n  2. Confirm last week's appointments (per the prior record).\n  3. Confirm next appointment is on the calendar.\n  4. Ask about new symptoms or new providers — flag if anything changed.\n  5. If client missed appointments and has no next one booked, escalate to the case manager.\n\nIf the client wants to discuss anything legal, politely defer to the attorney and offer to schedule a callback.",
         voice: {
           phoneInput: "Client phone",
-          persona: "Caring, unhurried check-in caller. American English. Switches to Spanish if the client opens in Spanish.",
-          goals: [
-            "Confirm reaching the client (not a family member)",
-            "Confirm last week's appointments",
-            "Confirm next appointment is booked",
-            "Ask about new symptoms / new providers",
-            "Escalate if appointments missed and nothing booked",
-          ],
           maxDurationSec: 300,
           language: "auto",
         },
