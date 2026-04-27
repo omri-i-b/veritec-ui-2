@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useState } from "react"
+import { Fragment, useRef, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
@@ -31,7 +31,7 @@ import {
   PhoneCall,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { getPlaybook, getStepReturns, type ContextEntry, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getPlaybook, getStepMemoryName, getStepReturns, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
@@ -105,7 +105,7 @@ const STEP_TYPES: Record<
   },
   voice: {
     icon: PhoneCall,
-    label: "Voice",
+    label: "Outbound Voice",
     description: "Place a phone call. Agent runs goals + extracts structured fields.",
     iconColor: "text-violet-700",
     iconBg: "bg-violet-50",
@@ -467,70 +467,17 @@ type DrawerState =
 
 // ── Columns Editor (for "Records" output type) ────────────────────────
 
-// ── Context Editor (single memory entry per Fetch step) ───────────────
+// ── Fetch memory hint (the step name IS the memory variable) ──────────
 
-function ContextEditor({
-  entry,
-  onChange,
-}: {
-  entry: ContextEntry | null
-  onChange: (e: ContextEntry | null) => void
-}) {
-  const [name, setName] = useState(entry?.name ?? "")
-  const [description, setDescription] = useState(entry?.description ?? "")
-
-  // Keep parent state in sync as user types — no "save" affordance needed,
-  // since the parent StepEditor's "Save changes" is the only commit point.
-  const sync = (nextName: string, nextDesc: string) => {
-    if (nextName.trim().length === 0) {
-      onChange(null)
-      return
-    }
-    onChange({
-      id: entry?.id ?? `ctx_${Date.now()}`,
-      name: nextName.trim(),
-      description: nextDesc.trim() || undefined,
-    })
-  }
+function FetchMemoryHint({ stepName }: { stepName: string }) {
+  const display = stepName.trim() || "name your step"
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-          Adds to memory
-        </label>
-        <span className="text-[10px] text-zinc-500">
-          One named blob later steps reference via <code className="font-mono">{`{{name}}`}</code>
-        </span>
+    <div className="rounded-md border border-amber-200 bg-amber-50/40 px-3 py-2 flex items-center gap-2">
+      <Database className="h-3.5 w-3.5 text-amber-700 shrink-0" weight="bold" />
+      <div className="text-xs text-zinc-700 leading-snug min-w-0">
+        Adds <code className="font-mono bg-white border border-amber-200 px-1.5 py-0.5 rounded text-[11px] text-amber-800 mx-0.5">{`{{${display}}}`}</code>
+        to memory. Later steps reference it by the step&rsquo;s name.
       </div>
-      <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2.5 space-y-2">
-        <div className="flex items-center gap-2">
-          <Database className="h-3.5 w-3.5 text-amber-700 shrink-0" weight="bold" />
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              sync(e.target.value, description)
-            }}
-            placeholder="e.g. Case facts, Records text, Transcript"
-            className="flex-1 h-8 px-2 text-sm font-medium rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100"
-          />
-        </div>
-        <textarea
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value)
-            sync(name, e.target.value)
-          }}
-          placeholder="Optional — what this context contains"
-          rows={2}
-          className="w-full px-2 py-1.5 text-xs rounded border border-gray-200 bg-white focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 resize-none leading-relaxed"
-        />
-      </div>
-      <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
-        Memory is unstructured — raw material for later prompts to read.
-        Use <span className="font-medium">Returns</span> on a Prompt step when you want typed, structured output.
-      </p>
     </div>
   )
 }
@@ -1184,7 +1131,6 @@ function StepEditor({
   const [name, setName] = useState(existing?.name ?? "")
   const [detail, setDetail] = useState(existing?.detail ?? "")
   const [returns, setReturns] = useState<Field[]>(existing?.returns ?? [])
-  const [contextEntry, setContextEntry] = useState<ContextEntry | null>(existing?.context ?? null)
   const [voiceConfig, setVoiceConfig] = useState<NonNullable<Step["voice"]>>(
     existing?.voice ?? {
       phoneInput: undefined,
@@ -1206,8 +1152,26 @@ function StepEditor({
     detail.trim().length > 0 &&
     (!isFormat || !!templateId)
 
+  const detailRef = useRef<HTMLTextAreaElement | null>(null)
   const insertVariable = (v: string) => {
-    setDetail((prev) => (prev ? `${prev} {{${v}}}` : `{{${v}}}`))
+    const token = `{{${v}}}`
+    const ta = detailRef.current
+    // Insert at cursor if textarea is focused; otherwise append with a space.
+    if (ta && document.activeElement === ta) {
+      const start = ta.selectionStart ?? ta.value.length
+      const end = ta.selectionEnd ?? ta.value.length
+      const next = ta.value.slice(0, start) + token + ta.value.slice(end)
+      setDetail(next)
+      // Restore cursor just after the inserted token
+      requestAnimationFrame(() => {
+        if (!ta) return
+        const pos = start + token.length
+        ta.focus()
+        ta.setSelectionRange(pos, pos)
+      })
+      return
+    }
+    setDetail((prev) => (prev ? `${prev} ${token}` : token))
   }
 
   // Format steps auto-synthesize a single `document` return from the template.
@@ -1236,10 +1200,9 @@ function StepEditor({
       type,
       name: name.trim(),
       detail: detail.trim(),
-      // Fetch steps write to context (unstructured memory).
+      // Fetch steps write to memory implicitly (memory name = step name).
       // Prompt/Format/Voice steps write typed returns.
       returns: isFetch ? undefined : computeReturns(),
-      context: isFetch && contextEntry ? contextEntry : undefined,
       templateId: isFormat ? templateId : undefined,
       voice: isVoice ? voiceConfig : undefined,
     })
@@ -1319,6 +1282,7 @@ function StepEditor({
           </label>
           <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
             <textarea
+              ref={detailRef}
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
               placeholder={
@@ -1343,7 +1307,12 @@ function StepEditor({
                     {group.vars.map((v) => (
                       <button
                         key={v}
-                        onClick={() => insertVariable(v)}
+                        type="button"
+                        onMouseDown={(e) => {
+                          // Prevent the textarea from losing focus before insertVariable runs
+                          e.preventDefault()
+                          insertVariable(v)
+                        }}
                         className="inline-flex items-center gap-1 rounded bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[11px] font-medium hover:bg-blue-100 transition-colors"
                       >
                         {v}
@@ -1363,7 +1332,7 @@ function StepEditor({
         {isFormat && <TemplatePicker value={templateId} onChange={setTemplateId} />}
 
         {isFormat ? null : isFetch ? (
-          <ContextEditor entry={contextEntry} onChange={setContextEntry} />
+          <FetchMemoryHint stepName={name} />
         ) : (
           <ColumnsEditor
             columns={returns}
@@ -1430,7 +1399,8 @@ export function DefinitionPanel() {
 
     for (let i = 0; i < stepIndex; i++) {
       const s = steps[i]
-      if (s.context) memoryVars.push(s.context.name)
+      const mem = getStepMemoryName(s)
+      if (mem) memoryVars.push(mem)
       getStepReturns(s).forEach((r) => dataVars.push(r.name))
     }
 
@@ -1555,7 +1525,7 @@ export function DefinitionPanel() {
                       subtitle={step.detail || "No description"}
                       onClick={() => setSelection({ kind: "step", existing: step })}
                       returns={getStepReturns(step)}
-                      context={step.context}
+                      memoryName={getStepMemoryName(step)}
                       isLast={isLast}
                     />
                   </div>
@@ -1613,7 +1583,7 @@ export function DefinitionPanel() {
                 className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 bg-white/80 backdrop-blur px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:border-violet-400 hover:bg-violet-50 hover:text-violet-700 transition-colors"
               >
                 <PhoneCall className="h-3.5 w-3.5" weight="bold" />
-                Add Voice
+                Add Outbound Voice
               </button>
             </div>
           )}
@@ -1656,7 +1626,7 @@ function FlowNode({
   children,
   onClick,
   returns,
-  context,
+  memoryName,
   isLast = false,
 }: {
   icon: typeof Plus
@@ -1668,7 +1638,7 @@ function FlowNode({
   children?: React.ReactNode
   onClick?: () => void
   returns?: Field[]
-  context?: ContextEntry | null
+  memoryName?: string | null
   isLast?: boolean
 }) {
   const Wrapper = onClick ? "button" : "div"
@@ -1693,7 +1663,7 @@ function FlowNode({
         </div>
       </div>
       {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
-      {context && (
+      {memoryName && (
         <div className="border-t border-amber-100 bg-amber-50/40 px-3 py-2">
           <div className="flex items-center gap-1.5 mb-1">
             <Database className="h-3 w-3 text-amber-700" weight="bold" />
@@ -1701,12 +1671,9 @@ function FlowNode({
               Adds to memory
             </span>
           </div>
-          <span
-            className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700"
-            title={context.description}
-          >
+          <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-700">
             <Database className="h-2.5 w-2.5 text-amber-700" weight="bold" />
-            <span className="font-medium">{context.name}</span>
+            <span className="font-medium font-mono">{`{{${memoryName}}}`}</span>
           </span>
         </div>
       )}

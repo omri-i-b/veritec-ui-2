@@ -45,17 +45,6 @@ export interface Field {
 
 export type StepType = "fetch" | "prompt" | "format" | "voice"
 
-/**
- * The single named blob a Fetch step writes into the run's "memory" —
- * unstructured material later steps reference via {{name}}. One Fetch =
- * one memory entry; if you need two, use two Fetch steps.
- */
-export interface ContextEntry {
-  id: string
-  name: string
-  description?: string
-}
-
 export interface Step {
   id: string
   type: StepType
@@ -67,8 +56,6 @@ export interface Step {
    * Used by prompt + format steps. The last step's returns is the deliverable.
    */
   returns?: Field[]
-  /** Unstructured material this step adds to memory (Fetch steps only). */
-  context?: ContextEntry
   /** For format steps — the template this step fills */
   templateId?: string
   /** For voice steps — call configuration */
@@ -102,6 +89,16 @@ export interface PlaybookDef {
   steps: Step[]
   /** @deprecated — derive from last step's returns instead. Kept for compat during migration. */
   outputs?: Field[]
+}
+
+/**
+ * The memory variable name a Fetch step writes — derived from the step name.
+ * Returns null for non-fetch steps.
+ */
+export function getStepMemoryName(step: Step): string | null {
+  if (step.type !== "fetch") return null
+  const n = step.name.trim()
+  return n.length > 0 ? n : null
 }
 
 /**
@@ -159,9 +156,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s1",
         type: "fetch",
-        name: "Fetch records",
-        detail: "Load all PDFs from {{Records}} and extract text",
-        context: { id: "ctx_records_text", name: "Records text", description: "Concatenated extracted text from all uploaded records" },
+        name: "Records text",
+        detail: "Load all PDFs from {{Records}} and extract concatenated text.",
       },
       {
         id: "s2",
@@ -237,14 +233,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s0",
         type: "fetch",
-        name: "Load case documents",
+        name: "Case documents",
         detail:
           "Pull every document attached to {{Case}} into memory: police report, medical records, interrogatory responses, discovery production, prior deposition transcripts, expert reports.",
-        context: {
-            id: "ctx_case_docs",
-            name: "Case documents",
-            description: "All documents attached to the case, normalized for downstream extraction",
-          },
       },
       {
         id: "s1",
@@ -489,9 +480,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s1",
         type: "fetch",
-        name: "Load transcript from case",
-        detail: "Load the deposition transcript file and any related exhibits from {{Case}}",
-        context: { id: "ctx_transcript", name: "Transcript", description: "Raw transcript text + exhibit attachments" },
+        name: "Transcript",
+        detail: "Load the deposition transcript file and any related exhibits from {{Case}}.",
       },
       {
         id: "s2",
@@ -579,10 +569,9 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s1",
         type: "fetch",
-        name: "Load case documents",
+        name: "Deposition documents",
         detail:
           "Load every deposition-related document from {{Case}} — notices, transcripts, errata sheets, exhibits, cover pages.",
-        context: { id: "ctx_depo_docs", name: "Deposition documents", description: "All depo-related documents from the case file" },
       },
       {
         id: "s2",
@@ -649,9 +638,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s1",
         type: "fetch",
-        name: "Fetch case facts",
-        detail: "Load {{Case}} context",
-        context: { id: "ctx_case_facts", name: "Case facts", description: "Compiled case context — facts, parties, timeline" },
+        name: "Case facts",
+        detail: "Load compiled context from {{Case}} — facts, parties, timeline.",
       },
       {
         id: "s2",
@@ -751,9 +739,8 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       {
         id: "s0",
         type: "fetch",
-        name: "Load prior treatment record",
+        name: "Prior treatment record",
         detail: "Pull the most recent provider list, last appointment, and current symptoms from {{Case}} so the agent can reference them.",
-        context: { id: "ctx_prior", name: "Prior treatment record", description: "Provider chain + last 4 weeks of appointment history" },
       },
       {
         id: "s1",
