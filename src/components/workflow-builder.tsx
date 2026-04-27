@@ -44,6 +44,7 @@ const FIELD_TYPES: Record<
   long_text: { icon: TextT, label: "Long text", color: "text-zinc-600", description: "A paragraph or longer — summaries, narratives" },
   number: { icon: Hash, label: "Number", color: "text-emerald-700", description: "Any number — count, amount, score" },
   date: { icon: Calendar, label: "Date", color: "text-amber-700", description: "A calendar date" },
+  phone: { icon: PhoneCall, label: "Phone", color: "text-violet-700", description: "A phone number — formatted, dialable" },
   list: { icon: ListBullets, label: "List", color: "text-sky-700", description: "A list of items — questions, providers, citations" },
   file: { icon: FilePdf, label: "File", color: "text-rose-700", description: "One or more documents" },
   "case-ref": { icon: SuitcaseSimple, label: "Case", color: "text-blue-800", description: "A case from the system" },
@@ -64,7 +65,7 @@ const FIELD_TYPES: Record<
 }
 
 /** Types valid for playbook inputs (what the user fills in to run) */
-const INPUT_TYPES: FieldType[] = ["text", "number", "date", "case-ref", "file", "enum", "list", "kb-ref"]
+const INPUT_TYPES: FieldType[] = ["text", "number", "date", "phone", "case-ref", "file", "enum", "list", "kb-ref"]
 
 /** Types valid for playbook outputs (what the AI extracts + the final deliverable) */
 const OUTPUT_TYPES: FieldType[] = ["text", "long_text", "number", "date", "list", "records", "document"]

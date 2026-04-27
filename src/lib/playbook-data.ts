@@ -18,6 +18,7 @@ export type FieldType =
   | "long_text"
   | "number"
   | "date"
+  | "phone"
   | "file"
   | "case-ref"
   | "enum"
@@ -707,7 +708,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     totalRuns: 1284,
     lastRun: "11m ago",
     inputs: [
-      { id: "in_1", name: "Lead phone", type: "text", required: true, description: "Phone number from the web form", sample: "+1 (415) 555-0142" },
+      { id: "in_1", name: "Lead phone", type: "phone", required: true, description: "Phone number from the web form", sample: "+1 (415) 555-0142" },
       { id: "in_2", name: "Lead name", type: "text", required: true, description: "Name from the web form", sample: "Camille Estrada" },
       { id: "in_3", name: "Form summary", type: "long_text", required: true, description: "What the lead wrote in the contact form", sample: "Rear-ended on the 101 Friday night, back is hurting" },
       { id: "in_4", name: "Reference library", type: "kb-ref", required: false, description: "Standard intake objections + answers (optional)", sample: "Intake KB v3 (47 entries)" },
@@ -763,7 +764,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     lastRun: "2h ago",
     inputs: [
       { id: "in_1", name: "Case", type: "case-ref", required: true, description: "The case this check-in is for", sample: "CVSA-1189" },
-      { id: "in_2", name: "Client phone", type: "text", required: true, description: "Client's primary phone", sample: "+1 (510) 555-0421" },
+      { id: "in_2", name: "Client phone", type: "phone", required: true, description: "Client's primary phone", sample: "+1 (510) 555-0421" },
       { id: "in_3", name: "Client name", type: "text", required: true, sample: "Maria Lopez" },
     ],
     steps: [
