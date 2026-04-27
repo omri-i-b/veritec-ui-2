@@ -14,6 +14,9 @@ import {
   PencilRuler,
   Database,
   Play,
+  PhoneCall,
+  PhoneIncoming,
+  PhoneOutgoing,
 } from "@phosphor-icons/react/dist/ssr"
 
 type IconType = ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>
@@ -139,6 +142,59 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
     ],
   },
   {
+    title: "Voice",
+    subtitle: "Operator surface for inbound + outbound voice agents",
+    tiles: [
+      {
+        title: "Voice inbox",
+        blurb:
+          "Cross-cutting list of voice conversations. Tabs for All / Inbound / Outbound / Escalated / Needs review.",
+        href: "/voice",
+        icon: PhoneCall,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-800",
+        bullets: [
+          "Sort surfaces oldest unreviewed first; escalated bumped to top",
+          "Row click \u2192 detail in side drawer; \"Open page\" routes to full screen",
+          "Filter chips for agent + outcome; search by case, lead, or phone",
+        ],
+        tags: [
+          { label: "Morning review surface", tone: "blue" },
+        ],
+      },
+      {
+        title: "Inbound (live)",
+        blurb:
+          "Real-time view of calls being routed to the inbound agent right now.",
+        href: "/voice?tab=inbound_live",
+        icon: PhoneIncoming,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-700",
+        bullets: [
+          "Live duration ticks per row",
+          "Listen / Escalate / Take over actions",
+          "PHI-gated: only safe transcript snippets surface here",
+        ],
+        tags: [{ label: "HIPAA-aware", tone: "amber" }],
+      },
+      {
+        title: "Outbound pipeline",
+        blurb:
+          "Pending / in-flight / recent — for web-form callbacks and pre-lit cadence calls.",
+        href: "/voice?tab=outbound",
+        icon: PhoneOutgoing,
+        iconBg: "bg-purple-50",
+        iconColor: "text-purple-700",
+        bullets: [
+          "5 tiles: pending, in flight, succeeded, failed, escalated today",
+          "Per-row actions: pause, reschedule, cancel, force-now",
+          "Trigger source visible: web-form vs workflow-cadence",
+        ],
+        tags: [{ label: "5s poll \u2192 SSE", tone: "violet" }],
+      },
+    ],
+  },
+  {
     title: "Operations",
     subtitle: "Day-to-day flows around case files",
     tiles: [
@@ -204,6 +260,8 @@ const HIGHLIGHTS = [
   "Fetch steps write context to memory; Prompt steps emit typed returns",
   "Format steps auto-derive their deliverable from the template",
   "Runs grid renders document, records, and scalar deliverables differently",
+  "Voice agents: inbox, live inbound queue, and outbound pipeline",
+  "Transcript ↔ extracted-fields coupling on every call review",
 ]
 
 export default function TourPage() {
