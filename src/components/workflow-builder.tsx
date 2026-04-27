@@ -1672,6 +1672,14 @@ export function DefinitionPanel() {
               </button>
             </div>
           )}
+
+          {/* Terminator — closes the flow visually. Result lands in the Runs table. */}
+          {steps.length > 0 && selection?.kind !== "step" && (
+            <>
+              <FlowConnector />
+              <FlowTerminator playbookId={playbook.id} />
+            </>
+          )}
         </div>
       </div>
 
@@ -1806,6 +1814,23 @@ function FlowConnector() {
   return (
     <div className="flex justify-center py-1.5" aria-hidden>
       <div className="h-5 w-px bg-gray-300" />
+    </div>
+  )
+}
+
+function FlowTerminator({ playbookId }: { playbookId: string }) {
+  return (
+    <div className="flex justify-center">
+      <Link
+        href={`/playbooks?p=${playbookId}`}
+        className="group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-medium text-zinc-600 hover:border-blue-300 hover:text-blue-800 transition-colors shadow-sm"
+      >
+        <span className="flex items-center justify-center h-4 w-4 rounded-full bg-zinc-100 group-hover:bg-blue-50 transition-colors">
+          <CheckCircle className="h-2.5 w-2.5 text-zinc-500 group-hover:text-blue-800" weight="fill" />
+        </span>
+        <span>Ends &mdash; result is saved to the Runs table</span>
+        <ArrowSquareOut className="h-3 w-3 text-zinc-400 group-hover:text-blue-800" weight="bold" />
+      </Link>
     </div>
   )
 }
