@@ -16,6 +16,7 @@ export function generateStaticParams() {
     { id: "filevine-records-request" },
     { id: "intake-reception-voice" },
     { id: "med-chron-expert" },
+    { id: "case-posture-update" },
   ]
 }
 

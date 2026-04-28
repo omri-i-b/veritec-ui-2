@@ -857,6 +857,90 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
   },
 }
 
+/** Comprehensive end-to-end workflow: fetches case context, analyzes for status changes,
+ *  drafts a posture memo, and produces output that can be auto-saved to the case file
+ *  or copied for paste-elsewhere. Demonstrates the full pipeline. */
+PLAYBOOK_DEFS["case-posture-update"] = {
+  id: "case-posture-update",
+  name: "Case Posture Update",
+  description:
+    "Weekly status memo for the attorney. Pulls everything that's happened on a case in the last 7 days, identifies what's new and what's flagged, and drafts a one-page memo ready to save into the case file or paste into an email.",
+  category: "Litigation",
+  status: "Published",
+  version: "v4",
+  icon: Notepad,
+  iconColor: "text-emerald-700",
+  iconBg: "bg-emerald-50",
+  totalRuns: 1042,
+  lastRun: "16m ago",
+  inputs: [
+    {
+      id: "in_1",
+      name: "Case",
+      type: "case-ref",
+      required: true,
+      description: "The case to summarize",
+      sample: "CVSA-1189",
+    },
+    {
+      id: "in_2",
+      name: "As-of date",
+      type: "date",
+      required: true,
+      description: "Memo describes everything up to this date",
+      sample: "2026-04-28",
+    },
+    {
+      id: "in_3",
+      name: "Lookback",
+      type: "enum",
+      required: true,
+      description: "How far back to compare against",
+      options: ["7 days", "14 days", "30 days", "Since last update"],
+      sample: "7 days",
+    },
+  ],
+  steps: [
+    {
+      id: "s0",
+      type: "fetch",
+      name: "Case file",
+      detail:
+        "Pull every document attached to {{Case}}: medical records, depo transcripts, expert reports, discovery production, prior status memos, attorney notes.",
+    },
+    {
+      id: "s1",
+      type: "fetch",
+      name: "Recent activity",
+      detail:
+        "Pull all activity on {{Case}} since the {{Lookback}} window: new uploads, new providers seen, new contacts logged, witness list changes, calendar events, communications inbound and outbound.",
+    },
+    {
+      id: "s2",
+      type: "prompt",
+      name: "Identify what changed",
+      detail:
+        "Compare {{Recent activity}} against {{Case file}} (and any prior posture memo in there). Extract:\n- New documents added (group by category)\n- New providers seen / dropped\n- New diagnoses / treatment changes\n- Treatment gaps that opened\n- Discovery deadlines coming due in 30 days\n- Open questions / decisions the attorney needs to make\n\nDon't speculate. Cite the source document for every fact.",
+      returns: [
+        { id: "r2_a", name: "New documents", type: "list", description: "Grouped by category, with cite" },
+        { id: "r2_b", name: "New providers", type: "list" },
+        { id: "r2_c", name: "Treatment changes", type: "long_text" },
+        { id: "r2_d", name: "Gaps flagged", type: "list" },
+        { id: "r2_e", name: "Deadlines", type: "list", description: "Within 30 days" },
+        { id: "r2_f", name: "Decisions needed", type: "list" },
+      ],
+    },
+    {
+      id: "s3",
+      type: "format",
+      name: "Compose posture memo",
+      detail:
+        "Fill the Case Posture Update template using the analysis above. Tone: surgical and direct \u2014 attorneys read these in 30 seconds. Lead with the headline (what changed), then the flags, then the decisions. Cite documents inline.",
+      templateId: "case-posture-update",
+    },
+  ],
+}
+
 /** Callable knowledge agent: lives in chat, answers questions about medical chronologies. */
 PLAYBOOK_DEFS["med-chron-expert"] = {
   id: "med-chron-expert",

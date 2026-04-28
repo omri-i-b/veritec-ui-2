@@ -169,6 +169,46 @@ const QUESTIONS: QuestionRow[] = [
   },
 ]
 
+const POSTURE_MEMO_BODY = `# Smith v. Park — Posture Update
+
+**Case:** CVSA-1189
+**As of:** April 28, 2026
+**Lookback:** 7 days
+
+---
+
+## Headline
+
+Treatment is on track. Two new providers added to the file. One discovery deadline (RFP responses) due in **9 days**. One decision needed from the attorney before Friday.
+
+## What changed this week
+
+### New documents (4)
+- **Medical records** — *Bay Area PT — visit 7 (4/22)*, *Bay Area PT — visit 8 (4/24)*
+- **Imaging** — *Cervical MRI report (4/25, SF Sports Medicine)*
+- **Insurance** — *Defendant insurer's reservation-of-rights letter (4/23)*
+
+### New providers
+- Dr. Chen — Pain management specialist (referral from Dr. Han, first visit 4/26)
+- Hand Therapy of SF — Authorized 4/24, first visit scheduled 5/2
+
+### Treatment changes
+Pain management referral indicates the soft-tissue injury is not resolving as expected. Dr. Han ordered the MRI; preliminary read shows mild C5-C6 disc bulge consistent with claimed injury. **No gaps flagged.**
+
+## Flags
+- **Insurer reservation of rights (4/23)** — challenges scope of treatment as exceeding what's reasonable for the mechanism of injury. Worth a response within 30 days.
+- **Pain management referral** — increases the case's medical specials trajectory by ~$12K-$18K on conservative estimate.
+
+## Deadlines (next 30 days)
+- **5/7** — RFP responses due (Defendant's first set, served 4/7)
+- **5/14** — Plaintiff deposition scheduled at 9am, our office
+- **5/22** — Expert disclosure deadline
+
+## Decisions needed
+- **Respond to reservation-of-rights letter?** Yes / No / Send to coverage counsel — *needed by Friday 5/2 to preserve options*
+- **Add Dr. Chen to expert disclosures?** Recommended given the disc finding and likely need for treating-provider testimony.
+`
+
 const DEMAND_LETTER_BODY = `# Smith v. Park, et al. — Demand for Settlement
 
 **Re:** Maria Lopez (Plaintiff) — CVSA-1189
@@ -220,6 +260,41 @@ Very truly yours,
 Veritec Law`
 
 const RUNS: Record<string, RunData> = {
+  run_17CPU: {
+    id: "run_17CPU",
+    playbookId: "case-posture-update",
+    playbookName: "Case Posture Update",
+    playbookIcon: Notepad,
+    playbookIconColor: "text-emerald-700",
+    playbookIconBg: "bg-emerald-50",
+    status: "success",
+    case: "CVSA-1189",
+    started: "16 minutes ago",
+    duration: "27.4s",
+    triggeredBy: { name: "James Rivera", initials: "JR", color: "bg-purple-100 text-purple-700" },
+    inputs: [
+      { label: "Case", value: "CVSA-1189", icon: SuitcaseSimple },
+      { label: "As-of date", value: "2026-04-28" },
+      { label: "Lookback", value: "7 days" },
+    ],
+    scalars: [
+      { name: "New documents", value: "4", icon: Hash },
+      { name: "Flags", value: "2", icon: Hash, tone: "warning" },
+      { name: "Decisions needed", value: "2", icon: Hash, tone: "warning" },
+    ],
+    document: {
+      name: "Smith v. Park — Posture 04-28.docx",
+      format: "DOCX",
+      pageCount: 2,
+      bodyMarkdown: POSTURE_MEMO_BODY,
+    },
+    logSteps: [
+      { name: "Fetch case file", duration: "2.1s", status: "success" },
+      { name: "Fetch recent activity (7 days)", duration: "1.4s", status: "success" },
+      { name: "Identify what changed", duration: "14.8s", status: "success" },
+      { name: "Compose posture memo", duration: "9.1s", status: "success" },
+    ],
+  },
   run_02DLD: {
     id: "run_02DLD",
     playbookId: "demand-letter-draft",
@@ -470,14 +545,7 @@ function DocumentSection({ document: doc }: { document: RunDocument }) {
               {doc.pageCount} page{doc.pageCount !== 1 ? "s" : ""} · generated from template
             </div>
           </div>
-          <button className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors">
-            <DownloadSimple className="h-3.5 w-3.5" />
-            Download
-          </button>
-          <button className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors">
-            <Printer className="h-3.5 w-3.5" />
-            Print
-          </button>
+          <DocumentActions document={doc} />
         </div>
         {/* Body — paper-style preview */}
         <div className="bg-gray-100 px-6 py-6">
@@ -527,6 +595,76 @@ function DocumentSection({ document: doc }: { document: RunDocument }) {
         </div>
       </div>
     </section>
+  )
+}
+
+function DocumentActions({ document: doc }: { document: RunDocument }) {
+  const [savedToCase, setSavedToCase] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleSave = () => {
+    setSavedToCase(true)
+    setTimeout(() => setSavedToCase(false), 2200)
+  }
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(doc.bodyMarkdown)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <button
+        onClick={handleSave}
+        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+          savedToCase
+            ? "border-green-300 bg-green-50 text-green-700"
+            : "border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100"
+        }`}
+        title="Write this memo into the case file in Filevine"
+      >
+        {savedToCase ? (
+          <>
+            <CheckCircle className="h-3.5 w-3.5" weight="fill" />
+            Saved to case
+          </>
+        ) : (
+          <>
+            <SuitcaseSimple className="h-3.5 w-3.5" weight="bold" />
+            Save to case
+          </>
+        )}
+      </button>
+      <button
+        onClick={handleCopy}
+        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+          copied
+            ? "border-green-300 bg-green-50 text-green-700"
+            : "border-gray-200 bg-white text-zinc-700 hover:border-blue-300 hover:text-blue-800"
+        }`}
+        title="Copy memo text \u2014 paste anywhere"
+      >
+        {copied ? (
+          <>
+            <CheckCircle className="h-3.5 w-3.5" weight="fill" />
+            Copied
+          </>
+        ) : (
+          <>
+            <Copy className="h-3.5 w-3.5" weight="bold" />
+            Copy
+          </>
+        )}
+      </button>
+      <button className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors">
+        <DownloadSimple className="h-3.5 w-3.5" />
+        Download
+      </button>
+    </div>
   )
 }
 

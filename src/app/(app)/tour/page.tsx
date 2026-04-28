@@ -240,6 +240,20 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
     subtitle: "Drill into a recent run of each shape.",
     tiles: [
       {
+        title: "End-to-end \u2014 Case Posture Update",
+        blurb: "Fetch \u2192 Fetch \u2192 Prompt \u2192 Format. Output is a posture memo with Save to case + Copy buttons \u2014 paste into a Filevine note or anywhere else.",
+        href: "/runs/run_17CPU",
+        icon: Notepad,
+        iconBg: "bg-emerald-50",
+        iconColor: "text-emerald-700",
+        bullets: [
+          "4 steps total \u2014 demonstrates the whole pipeline",
+          "Save to case writes the memo into Filevine",
+          "Copy puts the markdown on your clipboard",
+        ],
+        tags: [{ label: "End-to-end", tone: "green" }],
+      },
+      {
         title: "Workflow run \u2014 demand letter",
         blurb: "Smith Demand Letter draft, generated 8 minutes ago after a manual run.",
         href: "/runs/run_02DLD",

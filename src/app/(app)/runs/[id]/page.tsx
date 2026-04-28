@@ -8,6 +8,7 @@ export function generateStaticParams() {
     { id: "run_04DTA" },
     { id: "run_08DI" },
     { id: "run_02DLD" },
+    { id: "run_17CPU" },
   ]
 }
 

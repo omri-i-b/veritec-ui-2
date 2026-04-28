@@ -200,6 +200,30 @@ export const TEMPLATES: Record<string, Template> = {
     usedBy: ["Discovery Response"],
   },
 
+  "case-posture-update": {
+    id: "case-posture-update",
+    name: "Case Posture Update",
+    description: "Weekly status memo for the attorney — what changed in the last 7 days, what's flagged, what needs decision.",
+    format: "DOCX",
+    category: "Litigation",
+    sourceType: "placeholder",
+    icon: Notepad,
+    iconColor: "text-emerald-700",
+    iconBg: "bg-emerald-50",
+    sampleCount: 24,
+    placeholders: [
+      "{{case_caption}}",
+      "{{as_of_date}}",
+      "{{summary}}",
+      "{{new_docs}}",
+      "{{new_providers}}",
+      "{{flags}}",
+      "{{decisions_needed}}",
+    ],
+    lastUpdated: "1d ago",
+    usedBy: ["Case Posture Update"],
+  },
+
   "records-request-letter": {
     id: "records-request-letter",
     name: "Records Request Letter",
