@@ -42,7 +42,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { getPlaybook, getStepMemoryName, getStepReturns, type AgentMove, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getPlaybook, getStepMemoryName, getStepReturns, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
@@ -1548,7 +1548,6 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
                       onClick={() => setSelection({ kind: "step", existing: step })}
                       returns={getStepReturns(step)}
                       memoryName={getStepMemoryName(step)}
-                      agentFlow={step.voice?.agentFlow}
                       isLast={isLast}
                     />
                   </div>
@@ -1647,7 +1646,6 @@ function FlowNode({
   onClick,
   returns,
   memoryName,
-  agentFlow,
   isLast = false,
 }: {
   icon: typeof Plus
@@ -1660,7 +1658,6 @@ function FlowNode({
   onClick?: () => void
   returns?: Field[]
   memoryName?: string | null
-  agentFlow?: AgentMove[]
   isLast?: boolean
 }) {
   const Wrapper = onClick ? "button" : "div"
@@ -1687,7 +1684,6 @@ function FlowNode({
         </div>
       </div>
       {children && <div className="border-t border-gray-100 px-3 py-2">{children}</div>}
-      {agentFlow && agentFlow.length > 0 && <AgentFlowPanel moves={agentFlow} />}
       {memoryName && (
         <div className="border-t border-amber-100 bg-amber-50/40 px-3 py-2">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 mb-1">
@@ -1721,87 +1717,6 @@ function FlowNode({
         </div>
       )}
     </Wrapper>
-  )
-}
-
-// ── Agent flow panel — shows the conversational moves inside a Voice step ─
-
-const AGENT_MOVE_ICON: Record<NonNullable<AgentMove["kind"]>, typeof Plus> = {
-  dial: PhoneCall,
-  answer: PhoneIncoming,
-  speak: ChatText,
-  ask: Question,
-  listen: Headphones,
-  branch: ArrowsSplit,
-  log: Database,
-  escalate: Warning,
-  decline: XCircle,
-}
-
-function AgentFlowPanel({ moves }: { moves: AgentMove[] }) {
-  return (
-    <div className="border-t border-violet-100 bg-violet-50/40 px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">
-          Inside the agent
-        </span>
-        <span className="text-[10px] text-zinc-400">
-          · how the runtime walks through this call
-        </span>
-      </div>
-      <AgentFlowList moves={moves} />
-    </div>
-  )
-}
-
-function AgentFlowList({ moves }: { moves: AgentMove[] }) {
-  return (
-    <ol className="space-y-1">
-      {moves.map((m, i) => {
-        const Icon = (m.kind && AGENT_MOVE_ICON[m.kind]) || ChatText
-        const isLastMove = i === moves.length - 1
-        const hasBranches = m.branches && m.branches.length > 0
-        return (
-          <li key={m.id} className="relative flex items-start gap-2 group">
-            {/* Vertical connector line */}
-            {!isLastMove && (
-              <span
-                className="absolute left-[10px] top-5 bottom-[-4px] w-px bg-violet-200"
-                aria-hidden
-              />
-            )}
-            <span className="relative z-[1] flex items-center justify-center h-5 w-5 rounded-full border border-violet-200 bg-white shrink-0 mt-0.5">
-              <Icon className="h-2.5 w-2.5 text-violet-700" weight="bold" />
-            </span>
-            <div className="min-w-0 flex-1 pb-0.5">
-              <div className="text-[12px] font-medium text-zinc-900 leading-tight">
-                {m.label}
-              </div>
-              {m.note && (
-                <div className="text-[11px] text-zinc-500 leading-relaxed mt-0.5 line-clamp-1">
-                  {m.note}
-                </div>
-              )}
-              {hasBranches && (
-                <div className="mt-2 space-y-2 pl-2 border-l border-violet-200">
-                  {m.branches!.map((b) => (
-                    <div key={b.match} className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-violet-800">
-                        <span className="text-zinc-400">if</span>
-                        {b.match}
-                      </div>
-                      <div className="ml-2">
-                        <AgentFlowList moves={b.flow} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </li>
-        )
-      })}
-    </ol>
   )
 }
 
