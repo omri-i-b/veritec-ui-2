@@ -46,10 +46,13 @@ export function AgentsLibrary() {
               happens to dial.
             </p>
           </div>
-          <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
+          <Link
+            href="/playbooks/new"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-3 h-8 text-sm font-medium transition-colors"
+          >
             <PhoneCall className="h-3.5 w-3.5" weight="bold" />
             New agent
-          </Button>
+          </Link>
         </div>
       </header>
 

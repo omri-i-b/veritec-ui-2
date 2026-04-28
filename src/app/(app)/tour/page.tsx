@@ -282,6 +282,64 @@ export default function TourPage() {
         </div>
       </header>
 
+      {/* Concepts — Playbook vs Agent */}
+      <div className="px-6 pt-8">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="mb-3">
+            <h2 className="text-base font-semibold text-zinc-900">Playbook vs Agent</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Same canvas under the hood. Difference is whether the AI initiates contact with an outside party.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ConceptCard
+              kind="Playbook"
+              maps="Attio Workflow"
+              tone="blue"
+              tagline="Automate the system"
+              touches="Internal data, files, records"
+              starts="An event the system observes — record created, attribute updated, manual run, recurring"
+              produces="A document, a table, a record update"
+              steps="Fetch · Prompt · Format"
+              risk="Low — re-runnable, no outside party affected"
+              examples={[
+                "Demand letter draft (memo only)",
+                "Discovery response draft",
+                "Medical records summary memo",
+              ]}
+            />
+            <ConceptCard
+              kind="Agent"
+              maps="Attio Sequence"
+              tone="violet"
+              tagline="Reach out to a person"
+              touches="Outside party — caller, recipient, provider"
+              starts="A person-shaped trigger — web form submitted, cadence step reached, operator clicks Run"
+              produces="An interaction (call, email, SMS) + extracted fields"
+              steps="Fetch · Prompt · Voice (· Email · SMS · E-file later)"
+              risk="High — can mis-speak; needs review, escalation, take-over"
+              examples={[
+                "Intake Callback Voice",
+                "Medical Treatment Verification Voice",
+                "Records desk follow-up call (future)",
+              ]}
+            />
+          </div>
+          <div className="mt-3 rounded-[10px] border border-gray-200 bg-white p-4 flex items-start gap-3">
+            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-amber-50 shrink-0">
+              <CheckCircle className="h-4 w-4 text-amber-700" weight="fill" />
+            </div>
+            <div className="text-xs leading-relaxed text-zinc-700 max-w-[640px]">
+              <span className="font-semibold text-zinc-900">The crisp test —</span>{" "}
+              does the AI itself initiate contact with an outside party? <em>No</em> (human
+              reviews + dispatches) → Playbook. <em>Yes</em> (AI dials / emails / texts) →
+              Agent. Producing a document <em>for someone</em> is a Playbook; <em>sending</em>{" "}
+              it is what makes the next step an Agent.
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Sections */}
       <div className="px-6 py-8">
         <div className="max-w-[1100px] mx-auto space-y-10">
@@ -374,6 +432,76 @@ export default function TourPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ConceptCard({
+  kind,
+  maps,
+  tone,
+  tagline,
+  touches,
+  starts,
+  produces,
+  steps,
+  risk,
+  examples,
+}: {
+  kind: "Playbook" | "Agent"
+  maps: string
+  tone: "blue" | "violet"
+  tagline: string
+  touches: string
+  starts: string
+  produces: string
+  steps: string
+  risk: string
+  examples: string[]
+}) {
+  const cls =
+    tone === "violet"
+      ? { ring: "border-violet-200 bg-violet-50/30", header: "text-violet-800", pill: "bg-violet-100 text-violet-800" }
+      : { ring: "border-blue-200 bg-blue-50/30", header: "text-blue-800", pill: "bg-blue-100 text-blue-800" }
+  return (
+    <div className={`rounded-[10px] border ${cls.ring} p-4`}>
+      <div className="flex items-baseline gap-2 mb-1">
+        <h3 className={`text-base font-semibold ${cls.header}`}>{kind}</h3>
+        <span className={`text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0 ${cls.pill}`}>
+          ≈ {maps}
+        </span>
+      </div>
+      <p className="text-xs text-zinc-700 mb-3 italic">{tagline}.</p>
+      <dl className="text-xs space-y-2">
+        <ConceptRow term="Touches" desc={touches} />
+        <ConceptRow term="Starts when" desc={starts} />
+        <ConceptRow term="Produces" desc={produces} />
+        <ConceptRow term="Steps" desc={steps} mono />
+        <ConceptRow term="Risk" desc={risk} />
+      </dl>
+      <div className="mt-3 pt-3 border-t border-gray-200/70">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1">
+          Today
+        </div>
+        <ul className="space-y-0.5">
+          {examples.map((e) => (
+            <li key={e} className="text-xs text-zinc-700">
+              · {e}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+function ConceptRow({ term, desc, mono = false }: { term: string; desc: string; mono?: boolean }) {
+  return (
+    <div className="grid grid-cols-[100px_1fr] gap-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mt-0.5">
+        {term}
+      </dt>
+      <dd className={`text-zinc-700 ${mono ? "font-mono text-[11px]" : ""}`}>{desc}</dd>
     </div>
   )
 }

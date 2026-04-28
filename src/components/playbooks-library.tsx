@@ -284,10 +284,13 @@ function LibraryHeader() {
         <Compass className="h-4 w-4" />
         Discover
       </Button>
-      <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
+      <Link
+        href="/playbooks/new"
+        className="inline-flex items-center gap-1.5 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-3 h-8 text-sm font-medium transition-colors"
+      >
         <Plus className="h-4 w-4" />
         Create playbook
-      </Button>
+      </Link>
     </div>
   )
 }
