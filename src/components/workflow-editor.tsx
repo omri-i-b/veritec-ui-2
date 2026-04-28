@@ -315,9 +315,10 @@ function InputField({
   )
 }
 
-export function WorkflowEditor() {
+export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: string } = {}) {
   const params = useParams()
-  const playbookId = (params?.id as string | undefined) ?? "medical-records-summary"
+  const playbookId =
+    playbookIdProp ?? (params?.id as string | undefined) ?? "medical-records-summary"
   const [view, setView] = useState<View>("editor")
   const [dirty, setDirty] = useState(true)
   const [runDrawerOpen, setRunDrawerOpen] = useState(false)
@@ -330,7 +331,7 @@ export function WorkflowEditor() {
         <StatusBanner onPublish={() => setDirty(false)} onDiscard={() => setDirty(false)} />
       )}
       <div className="flex-1 min-h-0 flex">
-        {view === "editor" ? <DefinitionPanel /> : <RunsTabBody playbookId={playbookId} />}
+        {view === "editor" ? <DefinitionPanel playbookId={playbookId} /> : <RunsTabBody playbookId={playbookId} />}
       </div>
       {runDrawerOpen && (
         <RunDrawer playbookId={playbookId} onClose={() => setRunDrawerOpen(false)} />

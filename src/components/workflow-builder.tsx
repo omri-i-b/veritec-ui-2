@@ -115,9 +115,10 @@ const STEP_TYPES: Record<
 
 // ── Hook to get current playbook ──────────────────────────────────────
 
-function useCurrentPlaybook() {
+function useCurrentPlaybook(playbookIdProp?: string) {
   const params = useParams()
-  const id = (params?.id as string | undefined) ?? "medical-records-summary"
+  const id =
+    playbookIdProp ?? (params?.id as string | undefined) ?? "medical-records-summary"
   return getPlaybook(id)
 }
 
@@ -1375,8 +1376,8 @@ function StepEditor({
 
 // ── Main: Inline Definition Panel ─────────────────────────────────────
 
-export function DefinitionPanel() {
-  const playbook = useCurrentPlaybook()
+export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
+  const playbook = useCurrentPlaybook(playbookId)
   const [inputs, setInputs] = useState<Field[]>(playbook.inputs)
   const [steps, setSteps] = useState<Step[]>(playbook.steps)
   const [selection, setSelection] = useState<DrawerState>(null)

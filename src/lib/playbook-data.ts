@@ -11,6 +11,7 @@ import {
   UsersThree,
   ChartLineUp,
   Microphone,
+  PencilSimpleLine,
 } from "@phosphor-icons/react"
 
 export type FieldType =
@@ -766,7 +767,25 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
   },
 }
 
+/** Empty draft used as the starting point on /playbooks/new. */
+const NEW_PLAYBOOK: PlaybookDef = {
+  id: "_new",
+  name: "Untitled playbook",
+  description: "Add a description so other operators know what this does.",
+  category: "Draft",
+  status: "Draft",
+  version: "v0",
+  icon: PencilSimpleLine,
+  iconColor: "text-zinc-600",
+  iconBg: "bg-gray-100",
+  totalRuns: 0,
+  lastRun: "—",
+  inputs: [],
+  steps: [],
+}
+
 /** Fallback to Medical Records Summary if id not found */
 export function getPlaybook(id: string): PlaybookDef {
+  if (id === "_new" || id === "new") return NEW_PLAYBOOK
   return PLAYBOOK_DEFS[id] ?? PLAYBOOK_DEFS["medical-records-summary"]
 }

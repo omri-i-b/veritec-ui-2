@@ -1,5 +1,5 @@
-import { BlankWorkflowEditor } from "@/components/blank-workflow-editor"
+import { WorkflowEditor } from "@/components/workflow-editor"
 
 export default function NewPlaybookPage() {
-  return <BlankWorkflowEditor />
+  return <WorkflowEditor playbookId="_new" />
 }
