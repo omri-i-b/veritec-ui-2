@@ -28,10 +28,16 @@ function PencilRulerIcon({ className }: { className?: string }) {
 
 function EditorHeader({
   playbookId,
+  dirty,
   onRunClick,
+  onPublish,
+  onDiscard,
 }: {
   playbookId: string
+  dirty: boolean
   onRunClick: () => void
+  onPublish: () => void
+  onDiscard: () => void
 }) {
   const pb = getPlaybook(playbookId)
   const Icon = pb.icon
@@ -54,10 +60,37 @@ function EditorHeader({
         </div>
         <span className="text-sm font-semibold text-zinc-900 truncate max-w-[260px]">{pb.name}</span>
       </div>
+      {dirty && (
+        <span
+          className="inline-flex items-center gap-1 text-[11px] text-amber-700"
+          title="Changes not yet published"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+          Unpublished
+        </span>
+      )}
       <button className="flex items-center justify-center h-6 w-6 rounded text-zinc-400 hover:text-amber-500 transition-colors" title="Favorite">
         <Star className="h-3.5 w-3.5" />
       </button>
       <div className="flex-1" />
+      {dirty && (
+        <button
+          onClick={onDiscard}
+          className="h-8 px-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:bg-gray-100 rounded transition-colors"
+        >
+          Discard
+        </button>
+      )}
+      {dirty && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPublish}
+          className="h-8 gap-1.5 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+        >
+          Publish
+        </Button>
+      )}
       <Button
         size="sm"
         className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900"
@@ -131,25 +164,6 @@ function TabButton({
   )
 }
 
-function StatusBanner({ onPublish, onDiscard }: { onPublish: () => void; onDiscard: () => void }) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-200 bg-gray-50 shrink-0">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100">
-          <Info className="h-3.5 w-3.5 text-blue-800" weight="fill" />
-        </span>
-        <span className="text-zinc-700">This playbook has unpublished changes</span>
-      </div>
-      <div className="flex-1" />
-      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700" onClick={onDiscard}>
-        Discard changes
-      </Button>
-      <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900" onClick={onPublish}>
-        Publish changes
-      </Button>
-    </div>
-  )
-}
 
 function RunsTabBody({ playbookId }: { playbookId: string }) {
   return <UnifiedRuns initialPlaybookFilter={playbookId} />
@@ -325,11 +339,14 @@ export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: st
 
   return (
     <div className="flex flex-1 flex-col min-h-0 bg-white">
-      <EditorHeader playbookId={playbookId} onRunClick={() => setRunDrawerOpen(true)} />
+      <EditorHeader
+        playbookId={playbookId}
+        dirty={dirty}
+        onRunClick={() => setRunDrawerOpen(true)}
+        onPublish={() => setDirty(false)}
+        onDiscard={() => setDirty(false)}
+      />
       <ViewTabs active={view} onChange={setView} dirty={dirty} />
-      {dirty && view === "editor" && (
-        <StatusBanner onPublish={() => setDirty(false)} onDiscard={() => setDirty(false)} />
-      )}
       <div className="flex-1 min-h-0 flex">
         {view === "editor" ? <DefinitionPanel playbookId={playbookId} /> : <RunsTabBody playbookId={playbookId} />}
       </div>
