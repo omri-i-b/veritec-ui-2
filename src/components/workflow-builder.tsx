@@ -29,6 +29,10 @@ import {
   MagnifyingGlass,
   Play,
   PhoneCall,
+  Plug,
+  Globe,
+  Clock,
+  Lightning,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, getStepMemoryName, getStepReturns, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -1458,6 +1462,16 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
         <div
           className="mx-auto pt-12 pb-12 px-6 flex flex-col items-stretch w-full"
         >
+          {/* Trigger node — shown when the playbook is event-triggered */}
+          {playbook.trigger && playbook.trigger.kind !== "manual" && (
+            <>
+              <div className="w-full max-w-[640px] mx-auto">
+                <TriggerNode trigger={playbook.trigger} />
+              </div>
+              <FlowConnector />
+            </>
+          )}
+
           {/* Trigger / Inputs */}
           <div className="w-full max-w-[640px] mx-auto">
           <FlowNode
@@ -1696,6 +1710,48 @@ function FlowNode({
         </div>
       )}
     </Wrapper>
+  )
+}
+
+function TriggerNode({ trigger }: { trigger: NonNullable<ReturnType<typeof useCurrentPlaybook>["trigger"]> }) {
+  const Icon =
+    trigger.kind === "integration"
+      ? Plug
+      : trigger.kind === "webform"
+        ? Globe
+        : trigger.kind === "cadence"
+          ? Clock
+          : trigger.kind === "webhook"
+            ? Lightning
+            : Lightning
+  return (
+    <div className="rounded-[10px] border border-violet-300 bg-violet-50/40 overflow-hidden">
+      <div className="px-3 py-2.5 flex items-start gap-2.5">
+        <div className="flex items-center justify-center h-6 w-6 rounded-md bg-violet-100 shrink-0 mt-0.5">
+          <Icon className="h-3.5 w-3.5 text-violet-700" weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">
+              Triggered by
+            </span>
+            {trigger.source && (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                · {trigger.source}
+              </span>
+            )}
+          </div>
+          {trigger.event && (
+            <div className="text-sm font-semibold text-zinc-900">{trigger.event}</div>
+          )}
+          {trigger.description && (
+            <div className="text-[11px] text-zinc-500 leading-relaxed mt-0.5">
+              {trigger.description}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

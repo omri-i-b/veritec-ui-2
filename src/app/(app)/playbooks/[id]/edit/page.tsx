@@ -13,6 +13,7 @@ export function generateStaticParams() {
     { id: "discovery-response" },
     { id: "intake-callback-voice" },
     { id: "med-treatment-verification-voice" },
+    { id: "filevine-records-request" },
   ]
 }
 

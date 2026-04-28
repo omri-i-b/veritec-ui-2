@@ -199,6 +199,29 @@ export const TEMPLATES: Record<string, Template> = {
     lastUpdated: "6d ago",
     usedBy: ["Discovery Response"],
   },
+
+  "records-request-letter": {
+    id: "records-request-letter",
+    name: "Records Request Letter",
+    description: "HIPAA-compliant medical records request sent to providers, with HITECH cost-cap language and 30-day deadline.",
+    format: "DOCX",
+    category: "Pre-litigation",
+    sourceType: "placeholder",
+    icon: Notepad,
+    iconColor: "text-blue-800",
+    iconBg: "bg-blue-50",
+    sampleCount: 18,
+    placeholders: [
+      "{{provider_name}}",
+      "{{provider_address}}",
+      "{{patient_name}}",
+      "{{patient_dob}}",
+      "{{date_range}}",
+      "{{auth_attached}}",
+    ],
+    lastUpdated: "2d ago",
+    usedBy: ["Filevine Records Request"],
+  },
 }
 
 export function getTemplate(id: string): Template | undefined {

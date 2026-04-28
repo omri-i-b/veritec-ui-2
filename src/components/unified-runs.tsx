@@ -64,6 +64,7 @@ const PLAYBOOKS: Record<
   "filing-checker": { name: "Filing Compliance", icon: ChartLineUp, color: "text-fuchsia-700", bg: "bg-fuchsia-50" },
   "intake-callback-voice": { name: "Intake Callback", icon: PhoneCall, color: "text-blue-800", bg: "bg-blue-50" },
   "med-treatment-verification-voice": { name: "Medical Treatment Verification", icon: PhoneCall, color: "text-emerald-700", bg: "bg-emerald-50" },
+  "filevine-records-request": { name: "Filevine Records Request", icon: Notepad, color: "text-blue-800", bg: "bg-blue-50" },
 }
 
 /** Playbook IDs whose deliverable is a voice conversation. */
@@ -383,6 +384,33 @@ const RUNS: Run[] = [
     started: "Yesterday",
     duration: "30.0s",
     triggeredBy: { name: "Sam Torres", initials: "ST", color: "bg-rose-100 text-rose-700" },
+  },
+  // ── Integration-triggered runs ──────────────────────────────────────
+  {
+    id: "run_15FV",
+    playbookId: "filevine-records-request",
+    status: "success",
+    case: "FV-PRJ-44218",
+    output: [
+      { label: "Document", value: "Estrada — St. Mary's Records Request.docx", tone: "document" },
+      { label: "Provider", value: "St. Mary's Medical Center" },
+    ],
+    started: "44m ago",
+    duration: "8.2s",
+    triggeredBy: { name: "Filevine event", initials: "FV", color: "bg-blue-100 text-blue-800" },
+  },
+  {
+    id: "run_16FV",
+    playbookId: "filevine-records-request",
+    status: "success",
+    case: "FV-PRJ-44218",
+    output: [
+      { label: "Document", value: "Estrada — Bay PT Records Request.docx", tone: "document" },
+      { label: "Provider", value: "Bay Area Physical Therapy" },
+    ],
+    started: "44m ago",
+    duration: "7.4s",
+    triggeredBy: { name: "Filevine event", initials: "FV", color: "bg-blue-100 text-blue-800" },
   },
   // ── Voice agent runs ────────────────────────────────────────────────
   // Voice playbook runs route to /voice/calls/[id] — the id matches a

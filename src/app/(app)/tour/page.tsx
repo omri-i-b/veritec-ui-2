@@ -141,14 +141,14 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
       {
         title: "1. Blank canvas",
         blurb:
-          "Start a new agent: trigger picker on the right, blank canvas in the middle, or start from a template.",
-        href: "/playbooks/new",
+          "Start fresh — same canvas as a filled-out agent, just empty. Add inputs, then steps.",
+        href: "/agents/new",
         icon: PencilRuler,
         iconBg: "bg-zinc-100",
         iconColor: "text-zinc-700",
         bullets: [
-          "Trigger picker grouped: Records / Lists / Data / Tasks / Utilities",
-          "Or start from a template",
+          "Inputs collected \u2192 Add steps \u2192 Ends",
+          "Same chrome as the filled editor",
         ],
       },
       {
@@ -175,10 +175,41 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
         iconBg: "bg-blue-50",
         iconColor: "text-blue-800",
         bullets: [
-          "Library tab: agent cards with Run / Edit / Runs",
+          "Library tab: agents in a table",
           "Runs tab: every voice run across all agents",
           "Click a row \u2192 transcript, fields, audit trail",
         ],
+      },
+    ],
+  },
+  {
+    title: "Integration-triggered playbooks",
+    subtitle:
+      "Same canvas, but the run kicks off from an outside system event \u2014 not a manual click.",
+    tiles: [
+      {
+        title: "Filevine Records Request",
+        blurb:
+          "Fires when a Filevine project moves into 'Records pending'. Drafts a HIPAA-compliant records request letter for each provider.",
+        href: "/playbooks/filevine-records-request/edit",
+        icon: PhoneCall,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-800",
+        bullets: [
+          "Trigger node at the top of the canvas: Filevine \u2192 Project phase changed",
+          "Fetch the project context, then Format step fills the Records Request Letter template",
+          "287 runs to date; rendered as a download pill in the runs grid",
+        ],
+        tags: [{ label: "Filevine", tone: "blue" }, { label: "Trigger: integration", tone: "violet" }],
+      },
+      {
+        title: "Sample run \u2014 Estrada records request",
+        blurb:
+          "St. Mary's Medical Center letter, drafted 44 minutes ago when the Filevine project flipped phases.",
+        href: "/runs/run_15FV",
+        icon: Play,
+        iconBg: "bg-green-50",
+        iconColor: "text-green-700",
       },
     ],
   },

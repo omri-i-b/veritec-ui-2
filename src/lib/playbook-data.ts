@@ -74,6 +74,17 @@ export interface Step {
   }
 }
 
+/** What kicks off a playbook run. Defaults to "manual" when omitted. */
+export interface PlaybookTrigger {
+  kind: "manual" | "integration" | "webform" | "cadence" | "webhook"
+  /** Display name of the integration (e.g. "Filevine", "Typeform"). */
+  source?: string
+  /** The specific event this trigger fires on (e.g. "Project moved to Records pending"). */
+  event?: string
+  /** Sub-line shown under the trigger node in the canvas. */
+  description?: string
+}
+
 export interface PlaybookDef {
   id: string
   name: string
@@ -88,6 +99,8 @@ export interface PlaybookDef {
   lastRun: string
   inputs: Field[]
   steps: Step[]
+  /** What fires this playbook. Defaults to manual when omitted. */
+  trigger?: PlaybookTrigger
   /** @deprecated — derive from last step's returns instead. Kept for compat during migration. */
   outputs?: Field[]
 }
@@ -765,6 +778,80 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
     ],
   },
+}
+
+/** Filevine integration: fires when a project moves into "Records pending" phase. */
+PLAYBOOK_DEFS["filevine-records-request"] = {
+  id: "filevine-records-request",
+  name: "Filevine Records Request",
+  description:
+    "When a Filevine project moves into the 'Records pending' phase, fetch the project context and draft a HIPAA-compliant records request letter for each treating provider — ready for the paralegal to review and send.",
+  category: "Pre-litigation",
+  status: "Published",
+  version: "v3",
+  icon: Notepad,
+  iconColor: "text-blue-800",
+  iconBg: "bg-blue-50",
+  totalRuns: 287,
+  lastRun: "44m ago",
+  trigger: {
+    kind: "integration",
+    source: "Filevine",
+    event: "Project phase changed",
+    description: "Fires when a project moves into phase: Records pending",
+  },
+  inputs: [
+    {
+      id: "in_1",
+      name: "Project",
+      type: "case-ref",
+      required: true,
+      description: "Filevine project — passed from the trigger payload",
+      sample: "FV-PRJ-44218 (Estrada v. CityRide)",
+    },
+    {
+      id: "in_2",
+      name: "Provider",
+      type: "text",
+      required: true,
+      description: "Provider this letter goes to (one letter per provider)",
+      sample: "St. Mary's Medical Center",
+    },
+    {
+      id: "in_3",
+      name: "Patient",
+      type: "text",
+      required: true,
+      description: "Plaintiff / patient name",
+      sample: "Camille Estrada",
+    },
+    {
+      id: "in_4",
+      name: "DOB",
+      type: "date",
+      required: true,
+      description: "Patient date of birth",
+      sample: "1992-07-14",
+    },
+  ],
+  steps: [
+    {
+      id: "s0",
+      type: "fetch",
+      name: "Project context",
+      detail:
+        "Pull case info and authorization-on-file status from Filevine for {{Project}}. Includes patient, DOB, dates of treatment, signed HIPAA auth.",
+    },
+    {
+      id: "s1",
+      type: "format",
+      name: "Draft records request letter",
+      detail:
+        "Read {{Project context}} and fill the firm's Records Request Letter template for {{Provider}}. Use the HITECH cost-cap language. Set the response deadline to 30 days from today. Attach the patient's signed HIPAA authorization (already on file in Filevine).",
+      templateId: "records-request-letter",
+      expanded: true,
+    },
+  ],
 }
 
 /** Empty draft used as the starting point on /playbooks/new. */

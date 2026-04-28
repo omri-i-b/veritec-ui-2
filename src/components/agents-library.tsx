@@ -79,21 +79,7 @@ export function AgentsLibrary({ initialTab = "library" }: { initialTab?: Tab } =
       </nav>
 
       {tab === "library" ? (
-        <div className="flex-1 min-h-0 overflow-auto px-6 py-5">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {agents.map((a) => (
-                <AgentCard
-                  key={a.id}
-                  agent={a}
-                  onRun={() => setRunDrawerFor(a)}
-                  onSeePastRuns={() => setTab("runs")}
-                />
-              ))}
-              <NewAgentCard />
-            </div>
-          </div>
-        </div>
+        <AgentsTable agents={agents} onRun={(a) => setRunDrawerFor(a)} />
       ) : (
         <UnifiedRuns initialPlaybookFilter={null} agentIdsOnly={AGENT_PLAYBOOK_IDS} />
       )}
@@ -144,97 +130,114 @@ function PrimaryTab({
   )
 }
 
-function AgentCard({
-  agent,
+function AgentsTable({
+  agents,
   onRun,
-  onSeePastRuns,
 }: {
-  agent: PlaybookDef
-  onRun: () => void
-  onSeePastRuns: () => void
+  agents: PlaybookDef[]
+  onRun: (a: PlaybookDef) => void
 }) {
-  const dials = getOutsideContact(agent)
+  const router = useRouter()
   return (
-    <div className="rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-sm transition-all flex flex-col">
-      {/* Header */}
-      <div className="mb-3">
-        <div className="flex items-center gap-1.5 mb-1">
-          <h3 className="text-sm font-semibold text-zinc-900 truncate">{agent.name}</h3>
-          <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0 text-[10px] font-semibold">
-            <PhoneCall className="h-2.5 w-2.5" weight="bold" />
-            Voice
-          </span>
-        </div>
-        <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-3">
-          {agent.description}
-        </p>
-      </div>
-
-      {/* Dials info */}
-      {dials && (
-        <div className="text-[11px] text-zinc-600 mb-2">
-          <span className="text-zinc-400">Dials </span>
-          <code className="font-mono text-[11px] text-violet-700 bg-violet-50 border border-violet-200 px-1 py-0 rounded">
-            {`{{${dials}}}`}
-          </code>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="flex items-center gap-3 text-[11px] text-zinc-500 mb-3">
-        <span className="inline-flex items-center gap-1">
-          <ChartLineUp className="h-3 w-3" weight="bold" />
-          <span className="tabular-nums font-medium text-zinc-700">{agent.totalRuns.toLocaleString()}</span>
-          runs
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {agent.lastRun}
-        </span>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-gray-100">
-        <Button
-          size="sm"
-          className="h-8 flex-1 gap-1.5 bg-blue-800 hover:bg-blue-900"
-          onClick={onRun}
-        >
-          <Play className="h-3.5 w-3.5" weight="fill" />
-          Run
-        </Button>
-        <Link
-          href={`/playbooks/${agent.id}/edit`}
-          className="inline-flex items-center justify-center h-8 px-2 rounded-md border border-gray-200 bg-white text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
-          title="Open editor"
-        >
-          <PencilRuler className="h-3.5 w-3.5" />
-        </Link>
-        <button
-          onClick={onSeePastRuns}
-          className="inline-flex items-center gap-1 h-8 px-2 rounded-md border border-gray-200 bg-white text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
-          title="See past runs"
-        >
-          Runs
-          <CaretRight className="h-3 w-3" weight="bold" />
-        </button>
-      </div>
+    <div className="flex-1 min-h-0 overflow-auto bg-white">
+      <table className="w-full text-sm">
+        <thead className="border-b border-gray-200 bg-gray-50">
+          <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+            <th className="px-4 py-2.5 font-medium">Agent</th>
+            <th className="px-4 py-2.5 font-medium">Type</th>
+            <th className="px-4 py-2.5 font-medium">Dials</th>
+            <th className="px-4 py-2.5 font-medium text-right">Runs</th>
+            <th className="px-4 py-2.5 font-medium">Status</th>
+            <th className="px-4 py-2.5 font-medium">Last run</th>
+            <th className="px-4 py-2.5 w-32" />
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => (
+            <AgentsTableRow key={a.id} agent={a} onRun={() => onRun(a)} onOpen={() => router.push(`/playbooks/${a.id}/edit`)} />
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
 
-function NewAgentCard() {
+function AgentsTableRow({
+  agent,
+  onRun,
+  onOpen,
+}: {
+  agent: PlaybookDef
+  onRun: () => void
+  onOpen: () => void
+}) {
+  const dials = getOutsideContact(agent)
   return (
-    <button className="rounded-[10px] border border-dashed border-gray-300 bg-white px-4 py-6 hover:border-blue-300 hover:bg-blue-50/30 transition-colors flex flex-col items-center justify-center text-center gap-2 min-h-[200px]">
-      <div className="flex items-center justify-center h-10 w-10 rounded-md bg-gray-100">
-        <PhoneCall className="h-5 w-5 text-zinc-400" weight="bold" />
-      </div>
-      <div className="text-sm font-semibold text-zinc-700">New agent</div>
-      <p className="text-[11px] text-zinc-500 leading-relaxed max-w-[240px]">
-        Compose a voice agent in the canvas — single Voice step with goals + extractions, or chain a
-        Fetch first.
-      </p>
-    </button>
+    <tr
+      onClick={onOpen}
+      className="group/row cursor-pointer hover:bg-gray-50 border-b border-gray-100"
+    >
+      <td className="px-4 py-2.5">
+        <div className="text-sm font-medium text-zinc-900">{agent.name}</div>
+        <div className="text-[11px] text-zinc-500 line-clamp-1 mt-0.5 max-w-[440px]">
+          {agent.description}
+        </div>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0.5 text-[10px] font-semibold">
+          <PhoneCall className="h-2.5 w-2.5" weight="bold" />
+          Voice
+        </span>
+      </td>
+      <td className="px-4 py-2.5">
+        {dials ? (
+          <code className="font-mono text-[11px] text-violet-700 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
+            {`{{${dials}}}`}
+          </code>
+        ) : (
+          <span className="text-zinc-400 text-xs">—</span>
+        )}
+      </td>
+      <td className="px-4 py-2.5 text-right text-sm tabular-nums text-zinc-700">
+        {agent.totalRuns.toLocaleString()}
+      </td>
+      <td className="px-4 py-2.5">
+        <span
+          className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+            agent.status === "Published"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-zinc-200 bg-zinc-50 text-zinc-600"
+          }`}
+        >
+          {agent.status === "Published" ? "Live" : "Draft"}
+        </span>
+      </td>
+      <td className="px-4 py-2.5 text-xs text-zinc-600 whitespace-nowrap">{agent.lastRun}</td>
+      <td className="px-2 py-2.5 text-right">
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRun()
+            }}
+            className="inline-flex items-center gap-1 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-2 h-7 text-xs font-medium transition-colors"
+          >
+            <Play className="h-3 w-3" weight="fill" />
+            Run
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpen()
+            }}
+            className="flex items-center justify-center h-7 w-7 rounded-md text-zinc-500 hover:bg-gray-100"
+            title="Edit"
+          >
+            <PencilRuler className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </td>
+    </tr>
   )
 }
 
