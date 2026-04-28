@@ -613,12 +613,21 @@ function PlaybookFilter({
 
 // ── Main Component ─────────────────────────────────────────────────────
 
-export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?: string | null }) {
+export function UnifiedRuns({
+  initialPlaybookFilter,
+  agentIdsOnly,
+}: {
+  initialPlaybookFilter?: string | null
+  /** When set, restrict the grid to runs whose playbookId is in this list. */
+  agentIdsOnly?: string[]
+}) {
   const router = useRouter()
   const [playbookFilter, setPlaybookFilter] = useState<string | null>(initialPlaybookFilter ?? null)
   const [query, setQuery] = useState("")
+  const allowedSet = agentIdsOnly ? new Set(agentIdsOnly) : null
 
   const filtered = RUNS.filter((r) => {
+    if (allowedSet && !allowedSet.has(r.playbookId)) return false
     if (playbookFilter && r.playbookId !== playbookFilter) return false
     if (query) {
       const q = query.toLowerCase()

@@ -134,46 +134,51 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
     ],
   },
   {
-    title: "Agents",
+    title: "Agents — beginning to end",
     subtitle:
-      "Automations that act with an outside party. Configure → kick off → review.",
+      "Compose a blank workflow → fill it out → review every run in one place.",
     tiles: [
       {
-        title: "Agents library",
+        title: "1. Blank canvas",
         blurb:
-          "All agents in one place. Each card has a primary Run button — fill in the inputs and dial.",
-        href: "/agents",
+          "Start a new agent: trigger picker on the right, blank canvas in the middle, or start from a template.",
+        href: "/playbooks/new",
+        icon: PencilRuler,
+        iconBg: "bg-zinc-100",
+        iconColor: "text-zinc-700",
+        bullets: [
+          "Trigger picker grouped: Records / Lists / Data / Tasks / Utilities",
+          "Or start from a template",
+        ],
+      },
+      {
+        title: "2. Filled — Med Treatment Verification",
+        blurb:
+          "A real agent: Fetch the prior treatment record, then a Voice step that calls the client.",
+        href: "/playbooks/med-treatment-verification-voice/edit",
         icon: PhoneCall,
+        iconBg: "bg-emerald-50",
+        iconColor: "text-emerald-700",
+        bullets: [
+          "Inputs: Case, Client phone, Client name",
+          "Editable Call Configuration: dial, language, max duration",
+          "Returns: typed extraction fields",
+        ],
+        tags: [{ label: "Voice agent", tone: "violet" }],
+      },
+      {
+        title: "3. All agent runs",
+        blurb:
+          "Centralized list across every agent — not per-agent. Filter, search, click any row to drill in.",
+        href: "/agents",
+        icon: Play,
         iconBg: "bg-blue-50",
         iconColor: "text-blue-800",
         bullets: [
-          "Voice agents today; email/SMS/e-file later",
-          "Run / Edit / Past runs from each card",
-          "Built on the same canvas as playbooks",
+          "Library tab: agent cards with Run / Edit / Runs",
+          "Runs tab: every voice run across all agents",
+          "Click a row \u2192 transcript, fields, audit trail",
         ],
-        tags: [{ label: "Outside-party automations", tone: "violet" }],
-      },
-      {
-        title: "Sample run \u2014 completed",
-        blurb:
-          "Med-Treatment Verification on the Patel case: client reached, treatment confirmed, outcome qualified.",
-        href: "/agents/runs/vc_005",
-        icon: Play,
-        iconBg: "bg-green-50",
-        iconColor: "text-green-700",
-        bullets: [
-          "Results tab front and center; transcript + recording one click away",
-          "Right rail: inputs collected + system events",
-        ],
-      },
-      {
-        title: "Sample run \u2014 in-flight",
-        blurb:
-          "Maria Lopez weekly check-in on CVSA-1189, currently on the line.",
-        href: "/agents/runs/vc_004",
-        icon: PhoneIncoming,
-        iconBg: "bg-purple-50",
-        iconColor: "text-purple-700",
       },
     ],
   },

@@ -11,9 +11,11 @@ import {
   ChartLineUp,
   Clock,
   X,
+  Stack,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { PLAYBOOK_DEFS, type Field, type PlaybookDef } from "@/lib/playbook-data"
+import { UnifiedRuns } from "@/components/unified-runs"
 
 /** An "agent" is a playbook that contains at least one voice step.
  *  (Future: also email-out, sms-out, e-file steps.) */
@@ -21,17 +23,22 @@ function isAgent(p: PlaybookDef): boolean {
   return p.steps.some((s) => s.type === "voice")
 }
 
+const AGENT_PLAYBOOK_IDS = Object.values(PLAYBOOK_DEFS).filter(isAgent).map((p) => p.id)
+
 /** Surface the dial / external-action input for the card. */
 function getOutsideContact(p: PlaybookDef): string | null {
   const phoneInput = p.inputs.find((i) => i.type === "phone")
   return phoneInput?.name ?? null
 }
 
-export function AgentsLibrary() {
+type Tab = "library" | "runs"
+
+export function AgentsLibrary({ initialTab = "library" }: { initialTab?: Tab } = {}) {
   const agents = useMemo(
     () => Object.values(PLAYBOOK_DEFS).filter(isAgent),
     []
   )
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [runDrawerFor, setRunDrawerFor] = useState<PlaybookDef | null>(null)
 
   return (
@@ -42,8 +49,7 @@ export function AgentsLibrary() {
             <h1 className="text-base font-semibold text-zinc-900 mb-0.5">Agents</h1>
             <p className="text-xs text-zinc-500 leading-relaxed max-w-[640px]">
               Automations that act with an outside party — voice calls today, email and SMS next.
-              Each agent is configured like any other playbook (canvas + memory + returns); it just
-              happens to dial.
+              Each agent is configured like any other playbook; it just happens to dial.
             </p>
           </div>
           <Link
@@ -56,20 +62,41 @@ export function AgentsLibrary() {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto px-6 py-5">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {agents.map((a) => (
-              <AgentCard
-                key={a.id}
-                agent={a}
-                onRun={() => setRunDrawerFor(a)}
-              />
-            ))}
-            <NewAgentCard />
+      <nav className="flex items-center gap-0 border-b border-gray-200 bg-white px-6 shrink-0">
+        <PrimaryTab
+          active={tab === "library"}
+          onClick={() => setTab("library")}
+          icon={<Stack className="h-3.5 w-3.5" weight="bold" />}
+          label="Library"
+          count={agents.length}
+        />
+        <PrimaryTab
+          active={tab === "runs"}
+          onClick={() => setTab("runs")}
+          icon={<Play className="h-3.5 w-3.5" weight="fill" />}
+          label="Runs"
+        />
+      </nav>
+
+      {tab === "library" ? (
+        <div className="flex-1 min-h-0 overflow-auto px-6 py-5">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {agents.map((a) => (
+                <AgentCard
+                  key={a.id}
+                  agent={a}
+                  onRun={() => setRunDrawerFor(a)}
+                  onSeePastRuns={() => setTab("runs")}
+                />
+              ))}
+              <NewAgentCard />
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <UnifiedRuns initialPlaybookFilter={null} agentIdsOnly={AGENT_PLAYBOOK_IDS} />
+      )}
 
       {runDrawerFor && (
         <KickoffDrawer
@@ -81,12 +108,50 @@ export function AgentsLibrary() {
   )
 }
 
+function PrimaryTab({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  count?: number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors relative ${
+        active ? "text-blue-800 font-semibold" : "text-zinc-600 hover:text-zinc-900"
+      }`}
+    >
+      {icon}
+      {label}
+      {typeof count === "number" && (
+        <span
+          className={`text-[10px] px-1.5 py-0 rounded-full font-semibold tabular-nums ${
+            active ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-zinc-600"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+      {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-800" />}
+    </button>
+  )
+}
+
 function AgentCard({
   agent,
   onRun,
+  onSeePastRuns,
 }: {
   agent: PlaybookDef
   onRun: () => void
+  onSeePastRuns: () => void
 }) {
   const Icon = agent.icon
   const dials = getOutsideContact(agent)
@@ -151,14 +216,14 @@ function AgentCard({
         >
           <PencilRuler className="h-3.5 w-3.5" />
         </Link>
-        <Link
-          href={`/playbooks?p=${agent.id}`}
+        <button
+          onClick={onSeePastRuns}
           className="inline-flex items-center gap-1 h-8 px-2 rounded-md border border-gray-200 bg-white text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
           title="See past runs"
         >
           Runs
           <CaretRight className="h-3 w-3" weight="bold" />
-        </Link>
+        </button>
       </div>
     </div>
   )
