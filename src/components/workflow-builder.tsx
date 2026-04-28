@@ -1278,7 +1278,7 @@ function StepEditor({
               : type === "format"
                 ? "How to fill the template"
                 : type === "voice"
-                  ? "Instructions & goals"
+                  ? "What the agent says"
                   : "Prompt"}
           </label>
           <div className="rounded-md border border-gray-200 bg-white overflow-hidden focus-within:border-blue-800 focus-within:ring-2 focus-within:ring-blue-100">
@@ -1524,6 +1524,7 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
                       iconColor={stepCfg.iconColor}
                       title={step.name}
                       subtitle={step.detail || "No description"}
+                      subtitlePrefix={step.type === "voice" ? "Agent says" : undefined}
                       onClick={() => setSelection({ kind: "step", existing: step })}
                       returns={getStepReturns(step)}
                       memoryName={getStepMemoryName(step)}
@@ -1620,6 +1621,7 @@ function FlowNode({
   iconColor,
   title,
   subtitle,
+  subtitlePrefix,
   isSelected = false,
   children,
   onClick,
@@ -1632,6 +1634,7 @@ function FlowNode({
   iconColor: string
   title: string
   subtitle?: string
+  subtitlePrefix?: string
   isSelected?: boolean
   children?: React.ReactNode
   onClick?: () => void
@@ -1656,7 +1659,18 @@ function FlowNode({
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-zinc-900 truncate">{title}</div>
           {subtitle && (
-            <div className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed mt-0.5">{subtitle}</div>
+            <div className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed mt-0.5">
+              {subtitlePrefix ? (
+                <>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-700 mr-1">
+                    {subtitlePrefix}
+                  </span>
+                  <span className="italic">“{subtitle}”</span>
+                </>
+              ) : (
+                subtitle
+              )}
+            </div>
           )}
         </div>
       </div>

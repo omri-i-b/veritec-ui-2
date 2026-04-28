@@ -62,8 +62,8 @@ const PLAYBOOKS: Record<
   "intake-voice": { name: "Voice Intake to Case", icon: PhoneCall, color: "text-sky-700", bg: "bg-sky-50" },
   "witness-list": { name: "Witness List Builder", icon: UsersThree, color: "text-teal-700", bg: "bg-teal-50" },
   "filing-checker": { name: "Filing Compliance", icon: ChartLineUp, color: "text-fuchsia-700", bg: "bg-fuchsia-50" },
-  "intake-callback-voice": { name: "Intake Callback (Voice)", icon: PhoneCall, color: "text-blue-800", bg: "bg-blue-50" },
-  "med-treatment-verification-voice": { name: "Medical Treatment Verification (Voice)", icon: PhoneCall, color: "text-emerald-700", bg: "bg-emerald-50" },
+  "intake-callback-voice": { name: "Intake Callback", icon: PhoneCall, color: "text-blue-800", bg: "bg-blue-50" },
+  "med-treatment-verification-voice": { name: "Medical Treatment Verification", icon: PhoneCall, color: "text-emerald-700", bg: "bg-emerald-50" },
 }
 
 /** Playbook IDs whose deliverable is a voice conversation. */

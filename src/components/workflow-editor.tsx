@@ -31,6 +31,7 @@ function PencilRulerIcon({ className }: { className?: string }) {
 
 function EditorHeader({
   playbookId,
+  parent,
   dirty,
   saveState,
   onRunClick,
@@ -38,6 +39,7 @@ function EditorHeader({
   onDiscard,
 }: {
   playbookId: string
+  parent?: "playbooks" | "agents"
   dirty: boolean
   saveState: SaveState
   onRunClick: () => void
@@ -46,7 +48,7 @@ function EditorHeader({
 }) {
   const pb = getPlaybook(playbookId)
   const Icon = pb.icon
-  const isAgentKind = isAgent(pb)
+  const isAgentKind = parent ? parent === "agents" : isAgent(pb)
   const parentLabel = isAgentKind ? "Agents" : "Playbooks"
   const parentHref = isAgentKind ? "/agents" : "/playbooks"
   return (
@@ -88,7 +90,7 @@ function EditorHeader({
           onClick={onPublish}
           className="h-8 gap-1.5 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
         >
-          Publish
+          Save changes
         </Button>
       )}
       <Button
@@ -113,7 +115,7 @@ function SaveIndicator({ dirty, saveState }: { dirty: boolean; saveState: SaveSt
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-500">
         <CircleNotch className="h-3 w-3 animate-spin" weight="bold" />
-        Publishing…
+        Saving…
       </span>
     )
   }
@@ -121,7 +123,7 @@ function SaveIndicator({ dirty, saveState }: { dirty: boolean; saveState: SaveSt
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-green-700 transition-opacity">
         <CheckCircle className="h-3 w-3" weight="fill" />
-        Published
+        Saved
       </span>
     )
   }
@@ -129,10 +131,10 @@ function SaveIndicator({ dirty, saveState }: { dirty: boolean; saveState: SaveSt
     return (
       <span
         className="inline-flex items-center gap-1 text-[11px] text-amber-700"
-        title="Changes not yet published"
+        title="Unsaved changes"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Unpublished
+        Unsaved changes
       </span>
     )
   }
@@ -348,7 +350,14 @@ function InputField({
   )
 }
 
-export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: string } = {}) {
+export function WorkflowEditor({
+  playbookId: playbookIdProp,
+  parent,
+}: {
+  playbookId?: string
+  /** Override the auto-detected parent breadcrumb (Playbooks vs Agents). */
+  parent?: "playbooks" | "agents"
+} = {}) {
   const params = useParams()
   const playbookId =
     playbookIdProp ?? (params?.id as string | undefined) ?? "medical-records-summary"
@@ -362,8 +371,8 @@ export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: st
     setTimeout(() => {
       setDirty(false)
       setSaveState("saved")
-      setTimeout(() => setSaveState("idle"), 1800)
-    }, 700)
+      setTimeout(() => setSaveState("idle"), 2500)
+    }, 1300)
   }
   const handleDiscard = () => {
     setDirty(false)
@@ -374,6 +383,7 @@ export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: st
     <div className="flex flex-1 flex-col min-h-0 bg-white">
       <EditorHeader
         playbookId={playbookId}
+        parent={parent}
         dirty={dirty}
         saveState={saveState}
         onRunClick={() => setRunDrawerOpen(true)}

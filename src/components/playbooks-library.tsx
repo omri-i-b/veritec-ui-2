@@ -231,7 +231,7 @@ const PLAYBOOKS: Playbook[] = [
   },
   {
     id: "intake-callback-voice",
-    name: "Intake Callback (Voice)",
+    name: "Intake Callback",
     description: "Voice agent that calls a web-form lead within 90 seconds. Qualifies the matter, captures basics, and books a consult — or hands off to a human if it goes off-script.",
     category: "Intake",
     icon: PhoneCall,
@@ -247,7 +247,7 @@ const PLAYBOOKS: Playbook[] = [
   },
   {
     id: "med-treatment-verification-voice",
-    name: "Medical Treatment Verification (Voice)",
+    name: "Medical Treatment Verification",
     description: "Weekly cadence voice call to active clients confirming PT attendance, next appointment, and any new symptoms or providers. Flags treatment gaps before they hurt the case.",
     category: "Pre-litigation",
     icon: PhoneCall,

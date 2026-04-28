@@ -674,7 +674,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
 
   "intake-callback-voice": {
     id: "intake-callback-voice",
-    name: "Intake Callback (Voice)",
+    name: "Intake Callback",
     description:
       "Calls a web-form lead within 90 seconds. Qualifies the matter, captures the basics, and books a consult — or hands off to a human if the conversation goes off-script.",
     category: "Intake",
@@ -720,7 +720,7 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
 
   "med-treatment-verification-voice": {
     id: "med-treatment-verification-voice",
-    name: "Medical Treatment Verification (Voice)",
+    name: "Medical Treatment Verification",
     description:
       "Weekly cadence call to active clients confirming they're attending PT, the next appointment is on the calendar, and there are no new symptoms or providers to track. Flags treatment gaps before they hurt the case.",
     category: "Pre-litigation",
