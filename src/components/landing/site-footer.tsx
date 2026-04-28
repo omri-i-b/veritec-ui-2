@@ -1,47 +1,48 @@
+import Image from "next/image";
+
 const columns = [
   {
-    heading: "Product",
-    links: ["Apps", "Workflows", "Database", "AI", "Mobile", "Pricing"],
-  },
-  {
-    heading: "Solutions",
-    links: ["Operations", "Support", "Finance", "Sales", "Engineering"],
-  },
-  {
-    heading: "Resources",
-    links: ["Docs", "Templates", "Blog", "Customers", "Community", "Changelog"],
-  },
-  {
     heading: "Company",
-    links: ["About", "Careers", "Press", "Security", "Contact"],
+    links: ["Mission", "Newsroom", "Leadership", "Careers"],
+  },
+  {
+    heading: "Work With Us",
+    links: ["Careers", "Early Career", "SkillBridge", "Open Roles"],
+  },
+  {
+    heading: "Social",
+    links: ["X", "YouTube", "Instagram", "Facebook", "LinkedIn"],
   },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="bg-black">
-      <div className="mx-auto max-w-[1360px] border-x border-white/10 px-10 py-16">
-        <div className="grid grid-cols-5 gap-10">
-          <div className="col-span-1">
-            <span className="font-display text-2xl tracking-tight">
-              Acme<span className="italic text-white/60">.</span>
+      <div className="mx-auto max-w-[1680px] px-6 py-16">
+        <div className="grid grid-cols-12 gap-8 border-b border-white/10 pb-12">
+          <div className="col-span-3 flex items-start gap-2">
+            <Image
+              src="/airogistic-mark.png"
+              alt="Airogistic"
+              width={28}
+              height={28}
+              className="h-6 w-6"
+            />
+            <span className="font-display text-lg font-bold tracking-tight uppercase">
+              Airogistic
             </span>
-            <p className="mt-3 text-sm text-white/50">
-              The platform for{" "}
-              <span className="italic">internal software</span>.
-            </p>
           </div>
           {columns.map((col) => (
-            <div key={col.heading}>
-              <h4 className="font-mono text-[11px] tracking-[0.25em] text-white/80 uppercase">
+            <div key={col.heading} className="col-span-3">
+              <h4 className="font-mono text-[10px] tracking-[0.3em] text-white/45 uppercase">
                 {col.heading}
               </h4>
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-5 space-y-2">
                 {col.links.map((link) => (
                   <li key={link}>
                     <a
                       href="#"
-                      className="text-sm text-white/55 transition-colors hover:text-white"
+                      className="text-sm text-white/75 transition-colors hover:text-white"
                     >
                       {link}
                     </a>
@@ -51,13 +52,12 @@ export function SiteFooter() {
             </div>
           ))}
         </div>
-        <div className="mt-16 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-white/40">
-          <span>&copy; {new Date().getFullYear()} Acme, Inc.</span>
-          <div className="flex gap-5">
-            <a href="#" className="hover:text-white/70">Privacy</a>
-            <a href="#" className="hover:text-white/70">Terms</a>
-            <a href="#" className="hover:text-white/70">Cookies</a>
+        <div className="mt-8 flex items-center justify-between font-mono text-[10px] tracking-[0.25em] text-white/40 uppercase">
+          <div className="flex flex-col gap-1">
+            <span>&copy; {new Date().getFullYear()} Airogistic, Inc.</span>
+            <span>Privacy &nbsp;·&nbsp; Terms &nbsp;·&nbsp; Cookies</span>
           </div>
+          <span>Contact &nbsp;·&nbsp; hello@airogistic.com</span>
         </div>
       </div>
     </footer>

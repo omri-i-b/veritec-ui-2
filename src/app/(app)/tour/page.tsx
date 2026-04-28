@@ -318,46 +318,47 @@ export default function TourPage() {
         </div>
       </header>
 
-      {/* Concepts — Playbook vs Agent */}
+      {/* Concepts — Workflow vs Agent runtime */}
       <div className="px-6 pt-8">
         <div className="max-w-[1100px] mx-auto">
           <div className="mb-3">
-            <h2 className="text-base font-semibold text-zinc-900">Playbook vs Agent</h2>
+            <h2 className="text-base font-semibold text-zinc-900">Workflow vs Agent</h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Same canvas under the hood. Difference is whether the AI initiates contact with an outside party.
+              Two layers, not two kinds. The workflow defines structure; the voice agent is
+              the runtime that conducts the conversation inside it.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <ConceptCard
-              kind="Playbook"
-              maps="Backend automation"
+              kind="Workflow"
+              maps="The structure"
               tone="blue"
-              tagline="Automate the system"
-              touches="Internal data, files, records"
-              starts="An event the system observes — record created, attribute updated, manual run, recurring"
-              produces="A document, a table, a record update"
-              steps="Fetch · Prompt · Format"
-              risk="Low — re-runnable, no outside party affected"
+              tagline="What the automation accomplishes, in what order"
+              touches="The sequence — inputs, fetches, conversational steps, deliverable"
+              starts="A trigger — manual, integration event, web form, cadence, webhook"
+              produces="A run record + extracted fields written to memory / case"
+              steps="Fetch \u00b7 Prompt \u00b7 Format \u00b7 Voice"
+              risk="Low \u2014 deterministic at the high level, re-runnable"
               examples={[
-                "Demand letter draft (memo only)",
-                "Discovery response draft",
-                "Medical records summary memo",
+                "Filevine Records Request (drafts a letter on phase change)",
+                "Med Treatment Verification (Fetch \u2192 Voice)",
+                "Intake Callback (Voice)",
               ]}
             />
             <ConceptCard
-              kind="Agent"
-              maps="Outside-party outreach"
+              kind="Voice agent"
+              maps="The runtime"
               tone="violet"
-              tagline="Reach out to a person"
-              touches="Outside party — caller, recipient, provider"
-              starts="A person-shaped trigger — web form submitted, cadence step reached, operator clicks Run"
-              produces="An interaction (call, email, SMS) + extracted fields"
-              steps="Fetch · Prompt · Voice (· Email · SMS · E-file later)"
-              risk="High — can mis-speak; needs review, escalation, take-over"
+              tagline="Conversational intelligence inside conversational steps"
+              touches="The actual call \u2014 speaks naturally, listens, adapts"
+              starts="When a Voice step in the workflow fires"
+              produces="A transcript + extracted structured fields"
+              steps="Speech \u00b7 listening \u00b7 phrasing \u00b7 edge-case handling"
+              risk="High \u2014 can mis-speak; needs review, escalation, take-over"
               examples={[
-                "Intake Callback Voice",
-                "Medical Treatment Verification Voice",
-                "Records desk follow-up call (future)",
+                "Authored as a persona + goals + extraction schema",
+                "Runs inside any Voice step; not its own page",
+                "Same runtime regardless of which workflow it's inside",
               ]}
             />
           </div>
@@ -365,12 +366,13 @@ export default function TourPage() {
             <div className="flex items-center justify-center h-7 w-7 rounded-md bg-amber-50 shrink-0">
               <CheckCircle className="h-4 w-4 text-amber-700" weight="fill" />
             </div>
-            <div className="text-xs leading-relaxed text-zinc-700 max-w-[640px]">
-              <span className="font-semibold text-zinc-900">The crisp test —</span>{" "}
-              does the AI itself initiate contact with an outside party? <em>No</em> (human
-              reviews + dispatches) → Playbook. <em>Yes</em> (AI dials / emails / texts) →
-              Agent. Producing a document <em>for someone</em> is a Playbook; <em>sending</em>{" "}
-              it is what makes the next step an Agent.
+            <div className="text-xs leading-relaxed text-zinc-700 max-w-[680px]">
+              <span className="font-semibold text-zinc-900">Why both \u2014</span>{" "}
+              workflow alone is rigid (call tree breaks on unexpected human responses).
+              Agent alone is chatty and off-script (no measurable outcome). The
+              power is in <em>structured workflow + adaptive agent</em>: the workflow
+              owns the goal and sequence; the agent owns how each conversational step
+              actually plays out.
             </div>
           </div>
         </div>
@@ -484,7 +486,7 @@ function ConceptCard({
   risk,
   examples,
 }: {
-  kind: "Playbook" | "Agent"
+  kind: "Playbook" | "Agent" | "Workflow" | "Voice agent"
   maps: string
   tone: "blue" | "violet"
   tagline: string

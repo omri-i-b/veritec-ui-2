@@ -1,37 +1,44 @@
-import { CaretDown } from "@phosphor-icons/react/dist/ssr";
+import Image from "next/image";
+import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 
-const navItems = ["Product", "Solutions", "Customers", "Pricing", "Docs"];
+const navItems = ["Apps", "Workflows", "AI", "Data", "Security"];
 
 export function SiteNav() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur">
-      <div className="mx-auto flex h-10 max-w-[1360px] items-center justify-between px-10 text-[13px]">
-        <div className="flex items-center gap-8">
-          <span className="font-display text-xl leading-none tracking-tight">
-            Acme<span className="italic text-white/60">.</span>
-          </span>
-          <nav className="flex items-center gap-5 text-white/70">
-            {navItems.map((item) => (
-              <a
-                key={item}
-                href="#"
-                className="flex items-center gap-1 transition-colors hover:text-white"
-              >
-                {item}
-                <CaretDown className="h-3 w-3 opacity-60" />
-              </a>
-            ))}
-          </nav>
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/85 backdrop-blur">
+      <div className="mx-auto flex h-12 max-w-[1680px] items-center justify-between px-6 text-[11px] tracking-[0.2em] uppercase">
+        <div className="flex items-center gap-2">
+          <Image
+            src="/airogistic-mark.png"
+            alt="Airogistic"
+            width={24}
+            height={24}
+            className="h-5 w-5"
+            priority
+          />
+          <span className="font-semibold">Airogistic</span>
         </div>
-        <div className="flex items-center gap-3">
-          <a href="#" className="text-white/70 transition-colors hover:text-white">
-            Sign in
-          </a>
-          <a
-            href="#contact"
-            className="rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black transition-colors hover:bg-white/90"
+        <nav className="flex items-center gap-8 text-white/70">
+          {navItems.map((item) => (
+            <a
+              key={item}
+              href="#"
+              className="transition-colors hover:text-white"
+            >
+              {item}
+            </a>
+          ))}
+        </nav>
+        <div className="flex items-center gap-6 text-white/70">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 transition-colors hover:text-white"
           >
-            Get started
+            <MagnifyingGlass className="h-3 w-3" weight="bold" />
+            Search
+          </button>
+          <a href="#contact" className="transition-colors hover:text-white">
+            Company
           </a>
         </div>
       </div>

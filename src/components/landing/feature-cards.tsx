@@ -7,7 +7,7 @@ import {
 const cards = [
   {
     icon: Lightning,
-    title: "Ship in days, not quarters",
+    title: "Ship in days",
     body: "Pre-built blocks, hosted infra, and a visual editor mean your first internal app is live the same week you start.",
   },
   {
@@ -24,8 +24,8 @@ const cards = [
 
 export function FeatureCards() {
   return (
-    <section className="border-b border-white/10">
-      <div className="mx-auto grid max-w-[1360px] grid-cols-3 border-x border-white/10">
+    <section className="border-b border-white/10 bg-black">
+      <div className="mx-auto grid max-w-[1680px] grid-cols-3">
         {cards.map((card, i) => {
           const Icon = card.icon;
           return (
@@ -33,8 +33,10 @@ export function FeatureCards() {
               key={card.title}
               className={`p-10 ${i < cards.length - 1 ? "border-r border-white/10" : ""}`}
             >
-              <Icon className="h-6 w-6 text-white" weight="regular" />
-              <h3 className="mt-6 text-lg font-semibold">{card.title}</h3>
+              <Icon className="h-7 w-7 text-white" weight="regular" />
+              <h3 className="mt-8 font-display text-2xl font-bold tracking-tight uppercase">
+                {card.title}
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-white/60">
                 {card.body}
               </p>

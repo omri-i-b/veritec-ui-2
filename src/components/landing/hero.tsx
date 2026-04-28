@@ -1,39 +1,46 @@
+import Image from "next/image";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 
 export function Hero() {
   return (
-    <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1360px] border-x border-white/10 px-10 py-28 text-center">
-        <p className="mb-8 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
-          // The Acme Platform &nbsp;·&nbsp; v4.0
-        </p>
-        <h1 className="mx-auto max-w-4xl font-display text-[88px] leading-[0.95] tracking-[-0.03em]">
-          Build how you{" "}
-          <span className="italic text-white/80">want</span>.
+    <section className="relative overflow-hidden border-b border-white/10">
+      <div
+        className="absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            "url(https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=2400&q=80)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black" />
+      <div className="relative mx-auto max-w-[1680px] px-6 pt-24 pb-12">
+        <h1 className="font-display text-[112px] leading-[0.92] font-bold tracking-[-0.02em] uppercase">
+          <span className="mr-3 align-top text-[60px] tracking-normal opacity-80">
+            ©
+          </span>
+          Airogistic Industries
           <br />
-          Ship on a platform
+          Building the operating
           <br />
-          you can{" "}
-          <span className="italic text-white/80">trust</span>.
+          system for{" "}
+          <span className="text-[#A6B0D8]">enterprise AI</span>.
         </h1>
-        <p className="mx-auto mt-8 max-w-xl text-base text-white/60">
-          The fastest way to build internal tools, automations, and AI agents
-          on top of your data — with the guardrails enterprises require.
-        </p>
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <a
-            href="#contact"
-            className="inline-flex items-center gap-1.5 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90"
-          >
-            Get started
-            <ArrowRight className="h-3.5 w-3.5" weight="bold" />
-          </a>
-          <a
-            href="#"
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/5"
-          >
-            Watch demo
-          </a>
+
+        <div className="mt-12 flex items-center gap-6 font-mono text-[12px] tracking-[0.25em] text-white/70 uppercase">
+          <span>Autonomy</span>
+          <span className="text-white/30">FOR</span>
+          <span>Every Operator</span>
+          <Image
+            src="/airogistic-mark.png"
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7 opacity-90"
+          />
+          <span>Est. 2024</span>
+          <ArrowRight className="h-3 w-3" weight="bold" />
+          <span>The Future</span>
         </div>
       </div>
     </section>

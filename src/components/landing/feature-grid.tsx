@@ -61,22 +61,24 @@ const features = [
 export function FeatureGrid() {
   return (
     <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1360px] border-x border-white/10 px-10 py-24">
-        <p className="mb-5 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
+      <div className="mx-auto max-w-[1680px] px-6 py-24">
+        <p className="mb-4 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
           02 &nbsp;/&nbsp; The Toolbox
         </p>
-        <h2 className="max-w-2xl font-display text-[52px] leading-[1.05] tracking-[-0.02em]">
-          Build and run{" "}
-          <span className="italic text-white/75">modern</span> internal
-          software.
+        <h2 className="max-w-4xl font-display text-[64px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+          Build and run modern
+          <br />
+          internal software.
         </h2>
-        <div className="mt-14 grid grid-cols-3 gap-x-12 gap-y-10">
+        <div className="mt-14 grid grid-cols-3 gap-x-12 gap-y-12 border-t border-white/10 pt-12">
           {features.map((feat) => {
             const Icon = feat.icon;
             return (
               <div key={feat.title}>
-                <Icon className="h-5 w-5 text-white/80" weight="regular" />
-                <h3 className="mt-4 text-sm font-semibold">{feat.title}</h3>
+                <Icon className="h-6 w-6 text-white/85" weight="regular" />
+                <h3 className="mt-5 font-display text-xl font-bold tracking-tight uppercase">
+                  {feat.title}
+                </h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/55">
                   {feat.body}
                 </p>

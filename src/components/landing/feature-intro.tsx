@@ -15,29 +15,33 @@ const columns = [
 
 export function FeatureIntro() {
   return (
-    <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1360px] border-x border-white/10 px-10 py-28">
-        <p className="mb-6 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
+    <section className="border-b border-white/10 bg-black">
+      <div className="mx-auto max-w-[1680px] px-6 py-24">
+        <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
           01 &nbsp;/&nbsp; The Trust Layer
         </p>
-        <h2 className="max-w-3xl font-display text-[64px] leading-[1.05] tracking-[-0.02em]">
-          AI made <span className="italic text-white/70">building</span> easy.
+        <h2 className="mt-4 max-w-5xl font-display text-[80px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+          AI made building easy.
           <br />
-          <span className="text-white/45">Acme makes it </span>
-          <span className="italic">safe</span>
-          <span className="text-white/45">.</span>
+          <span className="text-white/40">Airogistic makes it </span>
+          <span className="text-[#A6B0D8]">safe</span>
+          <span className="text-white/40">.</span>
         </h2>
-        <div className="mt-16 grid grid-cols-3 gap-10">
-          {columns.map((col) => (
+        <div className="mt-16 grid grid-cols-3 gap-10 border-t border-white/10 pt-10">
+          {columns.map((col, i) => (
             <div key={col.title}>
-              <h3 className="text-base font-semibold">{col.title}</h3>
+              <p className="font-mono text-[10px] tracking-[0.25em] text-white/40 uppercase">
+                {String(i + 1).padStart(2, "0")} &nbsp;/&nbsp; Pillar
+              </p>
+              <h3 className="mt-3 font-display text-2xl font-bold tracking-tight uppercase">
+                {col.title}
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-white/60">
                 {col.body}
               </p>
             </div>
           ))}
         </div>
-        <div className="mt-16 aspect-[16/7] rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/[0.02] to-white/5" />
       </div>
     </section>
   );

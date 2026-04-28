@@ -1,59 +1,78 @@
+import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+
 const articles = [
   {
+    date: "04.21.2026",
     tag: "Engineering",
-    title: "How we cut build times in half with incremental compilation",
-    excerpt: "A look inside the rewrite that took our editor from 12 to 5 seconds.",
+    title:
+      "How we cut build times in half with incremental compilation",
+    image:
+      "https://images.unsplash.com/photo-1581090700227-1e37b190418e?w=1200&q=80",
   },
   {
+    date: "04.14.2026",
     tag: "Customer Story",
-    title: "Globex shipped 47 internal apps in their first quarter on Acme",
-    excerpt: "How a 200-person ops team replaced spreadsheets and ticketing one workflow at a time.",
+    title:
+      "Meridian shipped 47 internal apps in their first quarter on Airogistic",
+    image:
+      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=1200&q=80",
   },
   {
+    date: "04.02.2026",
     tag: "Product",
     title: "Introducing AI agents you can actually deploy",
-    excerpt: "Long-running agents with tool access, audit trails, and human-in-the-loop checkpoints.",
+    image:
+      "https://images.unsplash.com/photo-1518365050014-70fe7232897f?w=1200&q=80",
   },
 ];
 
 export function Articles() {
   return (
-    <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1360px] border-x border-white/10 px-10 py-24">
-        <p className="mb-5 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
-          05 &nbsp;/&nbsp; Dispatches
-        </p>
+    <section className="border-b border-white/10 bg-[#0a0a0a]">
+      <div className="mx-auto max-w-[1680px] px-6 py-20">
         <div className="flex items-end justify-between">
-          <h2 className="font-display text-[52px] leading-[1.05] tracking-[-0.02em]">
-            Get the latest from{" "}
-            <span className="italic text-white/75">Acme</span>.
-          </h2>
+          <div>
+            <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
+              05 &nbsp;/&nbsp; News &amp; Insights
+            </p>
+            <h2 className="mt-4 font-display text-[44px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+              Dispatches from the field.
+            </h2>
+          </div>
           <a
             href="#"
-            className="text-sm text-white/60 transition-colors hover:text-white"
+            className="font-mono text-[11px] tracking-[0.25em] text-white/60 uppercase transition-colors hover:text-white"
           >
-            See all posts &rarr;
+            All Articles &nbsp;&rarr;
           </a>
         </div>
-        <div className="mt-12 grid grid-cols-3 gap-6">
+        <div className="mt-12 grid grid-cols-3 gap-3">
           {articles.map((article) => (
-            <article
+            <a
               key={article.title}
-              className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition-colors hover:bg-white/[0.06]"
+              href="#"
+              className="group relative overflow-hidden border border-white/10 bg-black"
             >
-              <div className="aspect-[16/9] bg-gradient-to-br from-white/10 via-white/[0.02] to-white/10" />
+              <div className="aspect-[16/10] overflow-hidden">
+                <div
+                  className="h-full w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
+                  style={{ backgroundImage: `url(${article.image})` }}
+                />
+              </div>
               <div className="p-6">
-                <span className="font-mono text-[11px] tracking-[0.2em] text-white/55 uppercase">
-                  {article.tag}
-                </span>
-                <h3 className="mt-3 text-base leading-snug font-semibold">
+                <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.25em] text-white/50 uppercase">
+                  <span>{article.date}</span>
+                  <span>{article.tag}</span>
+                </div>
+                <h3 className="mt-4 font-display text-xl leading-tight font-bold tracking-tight uppercase">
                   {article.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-white/55">
-                  {article.excerpt}
-                </p>
+                <div className="mt-6 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.25em] text-white/60 uppercase">
+                  Read More
+                  <ArrowUpRight className="h-3 w-3" weight="bold" />
+                </div>
               </div>
-            </article>
+            </a>
           ))}
         </div>
       </div>

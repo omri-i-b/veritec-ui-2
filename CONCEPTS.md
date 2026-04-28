@@ -1,14 +1,54 @@
-# Veritec — Playbook vs Agent
+# Veritec — Workflow vs Agent
 
-The line is **intent**, not features. Both run on the same canvas (inputs →
-memory → steps → deliverable, terminator → runs table). What separates them
-is _who the work touches_.
+These are two different things and we should stop conflating them.
 
-The cleanest way to think about it: **Playbooks** are backend automation
-— the system reacts to events. **Agents** are proactive outreach — you
-reach out to a person, often time-based and multi-step.
+> **The workflow is the structure. The agent is the runtime.**
 
-| | **Playbook** | **Agent** |
+A workflow defines _what_ a piece of automation accomplishes — the inputs,
+the sequence of steps, the deliverable. It's deterministic at the high
+level: dial this number, ask this question, log that result.
+
+An agent is the conversational intelligence that operates _inside_
+conversational steps. It speaks naturally, handles interruptions,
+interprets messy answers, and picks phrasing in real time.
+
+For an outbound call, the call IS a workflow; the **voice agent** is the
+thing conducting it. Both are needed. Without the workflow you get a
+chatty robot with no goal. Without the agent you get a call tree that
+breaks the moment a human says something unexpected.
+
+```
+Outbound Call Workflow
+   ├── Dial
+   ├── Introduction
+   ├── Ask questions
+   ├── Handle responses
+   ├── Determine outcome
+   └── Log / trigger follow-up
+
+Voice Agent (runs inside conversational steps)
+   ├── Interprets responses
+   ├── Chooses phrasing
+   ├── Handles edge cases
+   └── Keeps conversation natural
+```
+
+## Where the original Playbook / Agent split fits
+
+We had been using "Playbook" and "Agent" as two _kinds_ of automation:
+
+- **Playbook** — internal data work (no outside party)
+- **Agent** — outside-party outreach (voice today; email/SMS later)
+
+That distinction is still useful as a description of _intent_ — does
+the AI itself initiate contact with an outside party? — but it
+shouldn't lead anyone to think a voice agent is a single primitive.
+A "voice agent" is a workflow that delegates one or more conversational
+steps to the voice-agent runtime.
+
+So in the cleanest possible terms:
+
+| | **Document playbook** | **Voice agent** |
 |---|---|---|
 | **Intent** | Automate the system | Reach out to a person |
 | **Who it touches** | Internal data, files, records | An outside party — caller, recipient, provider |
@@ -54,6 +94,29 @@ The split also drives review surfaces:
   run. Click for the document/records output.
 - **Agents** review at `/agents` (kickoff + library + run detail). One row
   per call. Click for transcript, extracted fields, and the audit trail.
+
+## Inside a voice agent: workflow vs agent runtime
+
+When the workflow has a Voice step, the step itself is just a node in the
+larger structure (dial this person, talk to them for ~3 minutes about X).
+The conversation that happens inside is conducted by the voice agent.
+
+| | **The workflow's job** | **The voice agent's job** |
+|---|---|---|
+| **Owns** | Goal, sequence, success criteria, escalation rules | Speech, listening, phrasing, real-time adaptation |
+| **Looks like** | "Dial → Intro → Ask 5 things → Determine outcome → Log" | "Speaks naturally; handles 'I already did this'; switches to Spanish" |
+| **Authored** | In the canvas — visible to the operator | In the agent's instructions + memory; mostly invisible at runtime |
+| **Failure mode if you only have this** | Rigid, robotic, breaks on unexpected human responses | Chatty, off-script, no measurable outcome |
+
+The power comes from **structured workflow + adaptive agent**.
+
+Today our Voice step compresses both — the workflow side is a single node
+("place this call"), and the agent side is the persona + goals + extraction
+schema. That's enough for short, focused calls (intake callback, weekly
+check-in). When a call needs to branch — "if pain mentioned, escalate; if
+fine, schedule next" — we'll expand the Voice step into a sub-graph of
+conversational nodes (Dial / Intro / Ask / Branch / Outcome / Log), with
+the same agent runtime operating inside each one.
 
 ## Composability
 
