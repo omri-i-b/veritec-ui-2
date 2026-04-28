@@ -62,7 +62,15 @@ const PLAYBOOKS: Record<
   "intake-voice": { name: "Voice Intake to Case", icon: PhoneCall, color: "text-sky-700", bg: "bg-sky-50" },
   "witness-list": { name: "Witness List Builder", icon: UsersThree, color: "text-teal-700", bg: "bg-teal-50" },
   "filing-checker": { name: "Filing Compliance", icon: ChartLineUp, color: "text-fuchsia-700", bg: "bg-fuchsia-50" },
+  "intake-callback-voice": { name: "Intake Callback (Voice)", icon: PhoneCall, color: "text-blue-800", bg: "bg-blue-50" },
+  "med-treatment-verification-voice": { name: "Medical Treatment Verification (Voice)", icon: PhoneCall, color: "text-emerald-700", bg: "bg-emerald-50" },
 }
+
+/** Playbook IDs whose deliverable is a voice conversation. */
+const VOICE_PLAYBOOK_IDS = new Set([
+  "intake-callback-voice",
+  "med-treatment-verification-voice",
+])
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -376,6 +384,51 @@ const RUNS: Run[] = [
     duration: "30.0s",
     triggeredBy: { name: "Sam Torres", initials: "ST", color: "bg-rose-100 text-rose-700" },
   },
+  // ── Voice agent runs ────────────────────────────────────────────────
+  // Voice playbook runs route to /voice/calls/[id] — the id matches a
+  // record in voice-data.ts so the call detail (transcript + extracted
+  // fields + recording) renders.
+  {
+    id: "vc_005",
+    playbookId: "med-treatment-verification-voice",
+    status: "success",
+    case: "CVSA-0998",
+    output: [
+      { label: "Client", value: "Dev Patel" },
+      { label: "Cadence", value: "Tue + Thu" },
+      { label: "Outcome", value: "Continuing per plan", tone: "success" },
+    ],
+    started: "11:14 AM",
+    duration: "3:04",
+    triggeredBy: { name: "Weekly cadence", initials: "WC", color: "bg-emerald-100 text-emerald-700" },
+  },
+  {
+    id: "vc_004",
+    playbookId: "med-treatment-verification-voice",
+    status: "running",
+    case: "CVSA-1189",
+    output: [
+      { label: "Client", value: "Maria Lopez" },
+      { label: "Status", value: "On the line…" },
+    ],
+    started: "Just now",
+    duration: null,
+    triggeredBy: { name: "Weekly cadence", initials: "WC", color: "bg-emerald-100 text-emerald-700" },
+  },
+  {
+    id: "vc_001",
+    playbookId: "intake-callback-voice",
+    status: "success",
+    case: "LEAD-8821",
+    output: [
+      { label: "Lead", value: "Camille Estrada" },
+      { label: "Matter", value: "MVA — rear-end" },
+      { label: "Consult", value: "Booked 4/28 3:30pm", tone: "success" },
+    ],
+    started: "20m ago",
+    duration: "5:12",
+    triggeredBy: { name: "Web form", initials: "WF", color: "bg-blue-100 text-blue-800" },
+  },
 ]
 
 // ── Status Pill ────────────────────────────────────────────────────────
@@ -630,7 +683,13 @@ export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?:
             {filtered.map((run) => (
               <TableRow
                 key={run.id}
-                onClick={() => router.push(`/runs/${run.id}`)}
+                onClick={() =>
+                  router.push(
+                    VOICE_PLAYBOOK_IDS.has(run.playbookId)
+                      ? `/voice/calls/${run.id}`
+                      : `/runs/${run.id}`
+                  )
+                }
                 className="group/row cursor-pointer hover:bg-gray-50 border-b border-gray-100"
               >
                 <TableCell className="py-2">
