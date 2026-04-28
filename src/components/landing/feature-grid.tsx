@@ -61,7 +61,7 @@ const features = [
 export function FeatureGrid() {
   return (
     <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1680px] px-6 py-24">
+      <div className="mx-auto max-w-[1680px] px-12 py-24">
         <p className="mb-4 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
           02 &nbsp;/&nbsp; The Toolbox
         </p>

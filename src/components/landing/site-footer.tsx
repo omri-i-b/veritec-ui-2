@@ -18,17 +18,17 @@ const columns = [
 export function SiteFooter() {
   return (
     <footer className="bg-black">
-      <div className="mx-auto max-w-[1680px] px-6 py-16">
+      <div className="mx-auto max-w-[1680px] px-12 py-16">
         <div className="grid grid-cols-12 gap-8 border-b border-white/10 pb-12">
-          <div className="col-span-3 flex items-start gap-2">
+          <div className="col-span-3 flex items-center gap-2.5">
             <Image
               src="/airogistic-mark.png"
-              alt="Airogistic"
-              width={28}
-              height={28}
-              className="h-6 w-6"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8"
             />
-            <span className="font-display text-lg font-bold tracking-tight uppercase">
+            <span className="font-display text-2xl font-bold tracking-tight">
               Airogistic
             </span>
           </div>

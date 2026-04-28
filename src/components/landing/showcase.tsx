@@ -41,7 +41,7 @@ const tiles = [
 export function Showcase() {
   return (
     <section className="border-b border-white/10 bg-black">
-      <div className="mx-auto max-w-[1680px] px-6 py-20">
+      <div className="mx-auto max-w-[1680px] px-12 py-20">
         <div className="mb-10 flex items-end justify-between">
           <div>
             <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">

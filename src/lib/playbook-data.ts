@@ -71,7 +71,24 @@ export interface Step {
     maxDurationSec?: number
     /** Language preference (ISO) */
     language?: "en" | "es" | "auto"
+    /**
+     * The conversational moves the voice-agent runtime walks through during
+     * the call. The workflow gives this step its goals; the agent decides
+     * how to actually execute each move (phrasing, listening, edge cases).
+     * Visualized inline on the canvas so the structure is visible at a glance.
+     */
+    agentFlow?: AgentMove[]
   }
+}
+
+export interface AgentMove {
+  id: string
+  /** Short label — "Dial", "Verify identity", "Confirm appointments" */
+  label: string
+  /** Optional one-line note describing what the agent does at this point */
+  note?: string
+  /** Categorical kind — drives the leading icon */
+  kind?: "dial" | "speak" | "ask" | "listen" | "branch" | "log" | "escalate"
 }
 
 /** What kicks off a playbook run. Defaults to "manual" when omitted. */
@@ -715,6 +732,17 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
           phoneInput: "Lead phone",
           maxDurationSec: 600,
           language: "auto",
+          agentFlow: [
+            { id: "dial", kind: "dial", label: "Dial", note: "Call {{Lead phone}}" },
+            { id: "intro", kind: "speak", label: "Open warmly", note: "Reference the form, set tone" },
+            { id: "story", kind: "ask", label: "Get the incident story", note: "What happened, when, where" },
+            { id: "injury", kind: "ask", label: "Confirm injury + treatment", note: "What hurts, urgent care or ER, ongoing" },
+            { id: "represented", kind: "ask", label: "Check representation", note: "Other firm? Insurance reached out?" },
+            { id: "objection", kind: "branch", label: "Handle objection", note: "If money concern \u2192 explain contingency" },
+            { id: "book", kind: "ask", label: "Book consultation", note: "Default 3:30pm next business day with James Rivera" },
+            { id: "escalate", kind: "escalate", label: "Escalate if off-script", note: "Criminal / settled / out-of-state" },
+            { id: "log", kind: "log", label: "Hang up + log", note: "Write extracted fields to lead record" },
+          ],
         },
         returns: [
           { id: "r1_a", name: "Caller name", type: "text" },
@@ -766,6 +794,15 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
           phoneInput: "Client phone",
           maxDurationSec: 300,
           language: "auto",
+          agentFlow: [
+            { id: "dial", kind: "dial", label: "Dial", note: "Call {{Client phone}}" },
+            { id: "verify", kind: "ask", label: "Verify identity", note: "Confirm speaking with {{Client name}}, not a family member" },
+            { id: "appts", kind: "ask", label: "Confirm last week\u2019s appointments", note: "Compare against {{Prior treatment record}}" },
+            { id: "next", kind: "ask", label: "Confirm next appointment", note: "If none booked \u2192 offer to flag the case manager" },
+            { id: "symptoms", kind: "ask", label: "Ask about new symptoms / providers", note: "Capture name + clinic for any new providers" },
+            { id: "outcome", kind: "branch", label: "Determine outcome", note: "Continuing per plan / Gap flagged / Escalated" },
+            { id: "log", kind: "log", label: "Hang up + log", note: "Write extracted fields back to the case" },
+          ],
         },
         returns: [
           { id: "r1_a", name: "Client reached", type: "enum", options: ["Yes", "Family member", "Voicemail", "No answer"] },

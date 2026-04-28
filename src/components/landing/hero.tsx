@@ -14,7 +14,7 @@ export function Hero() {
         }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black" />
-      <div className="relative mx-auto max-w-[1680px] px-6 pt-24 pb-12">
+      <div className="relative mx-auto max-w-[1680px] px-12 pt-28 pb-16">
         <h1 className="font-display text-[112px] leading-[0.92] font-bold tracking-[-0.02em] uppercase">
           <span className="mr-3 align-top text-[60px] tracking-normal opacity-80">
             ©

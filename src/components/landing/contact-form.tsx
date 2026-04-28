@@ -51,7 +51,7 @@ export function ContactForm() {
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black via-black/85 to-black" />
 
-      <div className="relative mx-auto max-w-[1680px] px-6 py-28">
+      <div className="relative mx-auto max-w-[1680px] px-12 py-28">
         <div className="grid grid-cols-2 gap-16">
           <div>
             <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">

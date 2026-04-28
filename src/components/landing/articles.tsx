@@ -29,7 +29,7 @@ const articles = [
 export function Articles() {
   return (
     <section className="border-b border-white/10 bg-[#0a0a0a]">
-      <div className="mx-auto max-w-[1680px] px-6 py-20">
+      <div className="mx-auto max-w-[1680px] px-12 py-20">
         <div className="flex items-end justify-between">
           <div>
             <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
