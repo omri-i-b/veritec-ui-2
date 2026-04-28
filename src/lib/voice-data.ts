@@ -58,6 +58,8 @@ export interface VoiceCall {
   triggerSource?: { kind: "web-form" | "workflow-cadence" | "manual"; label: string }
   /** Audit / system events distinct from transcript */
   systemEvents?: { id: string; at: string; kind: "started" | "retried" | "escalated" | "errored" | "ended"; note: string }[]
+  /** Inputs that were filled in when this run was kicked off */
+  inputs?: { label: string; value: string }[]
 }
 
 // ── Agents ─────────────────────────────────────────────────────────────
@@ -114,6 +116,12 @@ export const VOICE_CALLS: VoiceCall[] = [
     recordingUrl: "/audio/vc_001.mp3",
     reviewed: false,
     retryCount: 0,
+    inputs: [
+      { label: "Lead phone", value: "+1 (415) 555-0142" },
+      { label: "Lead name", value: "Camille Estrada" },
+      { label: "Form summary", value: "Rear-ended on 101, Friday 4/24, back pain" },
+      { label: "Reference library", value: "Intake KB v3 (47 entries)" },
+    ],
     transcript: [
       { id: "t1", speaker: "agent", text: "Thanks for calling Veritec Law. I'm an intake specialist — can I get your name and a callback number in case we get disconnected?", startMs: 0, endMs: 6800 },
       { id: "t2", speaker: "caller", text: "Camille Estrada, my number is the one I'm calling from, four-one-five five-five-five oh-one-four-two.", startMs: 6900, endMs: 13400 },
@@ -210,6 +218,11 @@ export const VOICE_CALLS: VoiceCall[] = [
     triggerSource: { kind: "workflow-cadence", label: "Weekly cadence (CVSA-1189)" },
     reviewed: false,
     retryCount: 0,
+    inputs: [
+      { label: "Case", value: "CVSA-1189" },
+      { label: "Client phone", value: "+1 (510) 555-0421" },
+      { label: "Client name", value: "Maria Lopez" },
+    ],
     transcript: [
       { id: "t1", speaker: "agent", text: "Hi, this is calling on behalf of Veritec Law for Maria Lopez. We're doing a quick check-in on her physical therapy schedule.", startMs: 0, endMs: 8400 },
       { id: "t2", speaker: "caller", text: "Yes, this is Maria.", startMs: 8500, endMs: 10200 },
@@ -239,6 +252,11 @@ export const VOICE_CALLS: VoiceCall[] = [
     recordingUrl: "/audio/vc_005.mp3",
     reviewed: true,
     retryCount: 0,
+    inputs: [
+      { label: "Case", value: "CVSA-0998" },
+      { label: "Client phone", value: "+1 (619) 555-0233" },
+      { label: "Client name", value: "Dev Patel" },
+    ],
     transcript: [
       { id: "t1", speaker: "agent", text: "Hi Mr. Patel — this is the Veritec team checking in on your physical therapy. Have you been making your appointments?", startMs: 0, endMs: 7200 },
       { id: "t2", speaker: "caller", text: "Yes, every Tuesday and Thursday with Dr. Han at SF Sports Medicine.", startMs: 7400, endMs: 13600 },

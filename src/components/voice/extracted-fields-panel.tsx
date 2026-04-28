@@ -9,12 +9,15 @@ export function ExtractedFieldsPanel({
   onJumpToTurn,
   onFieldEdit,
   initialPhiVisible = true,
+  showToolbar = true,
 }: {
   fields: ExtractedField[]
   onJumpToTurn?: (turnId: string) => void
   onFieldEdit?: (key: string, newValue: string) => void
   /** When false, PHI fields are masked until the operator reveals them. */
   initialPhiVisible?: boolean
+  /** Hide the field-count + PHI toggle row (we already have a chrome above). */
+  showToolbar?: boolean
 }) {
   const [phiVisible, setPhiVisible] = useState(initialPhiVisible)
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -34,27 +37,29 @@ export function ExtractedFieldsPanel({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50/60 shrink-0">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-          Extracted fields
-        </h3>
-        <span className="text-[11px] text-zinc-400">· {fields.length}</span>
-        <div className="flex-1" />
-        {hasPhi && (
-          <button
-            onClick={() => setPhiVisible((v) => !v)}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
-              phiVisible
-                ? "border-amber-300 bg-amber-50 text-amber-800"
-                : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300"
-            }`}
-            title={phiVisible ? "Mask PHI fields" : "Reveal PHI fields"}
-          >
-            {phiVisible ? <Eye className="h-3 w-3" weight="bold" /> : <EyeSlash className="h-3 w-3" weight="bold" />}
-            PHI {phiVisible ? "shown" : "masked"}
-          </button>
-        )}
-      </div>
+      {showToolbar && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50/60 shrink-0">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Extracted fields
+          </h3>
+          <span className="text-[11px] text-zinc-400">· {fields.length}</span>
+          <div className="flex-1" />
+          {hasPhi && (
+            <button
+              onClick={() => setPhiVisible((v) => !v)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+                phiVisible
+                  ? "border-amber-300 bg-amber-50 text-amber-800"
+                  : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300"
+              }`}
+              title={phiVisible ? "Mask PHI fields" : "Reveal PHI fields"}
+            >
+              {phiVisible ? <Eye className="h-3 w-3" weight="bold" /> : <EyeSlash className="h-3 w-3" weight="bold" />}
+              PHI {phiVisible ? "shown" : "masked"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Field list */}
       <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
