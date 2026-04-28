@@ -8,7 +8,9 @@ The defining axis is **how the automation is invoked**, not what it does.
 | **Agent — triggered** | An external event fires (incoming call, integration event, cadence) | Intake Reception (incoming call) · Filevine Records Request (project phase changed) · Medical Treatment Verification (weekly cadence) |
 | **Agent — callable** | Someone asks it a question (chat, @-mention, button somewhere in the UI) | Med Chron Expert · Statute Tracker · Discovery Coach |
 
-All three are the same primitive under the hood — same canvas, same skills (Fetch / Prompt / Format / Voice), same memory model. They differ in *what kicks them off*.
+**Workflows and triggered agents are the same primitive** — same canvas (Fetch / Prompt / Format / Voice steps), same memory model. They differ in *what kicks them off*.
+
+**Callable agents are a different primitive.** They aren't a sequence of steps — they're a knowledge bundle: a persona, one or more bound knowledge sources, sample questions, guardrails, and a return schema. The runtime is a Q&A loop, not a procedure walk. Forcing a callable agent into a step canvas would be the wrong abstraction; we use a separate, simpler editor (no canvas, no steps, no terminator) that surfaces just the knobs that matter.
 
 ## The crisp tests
 

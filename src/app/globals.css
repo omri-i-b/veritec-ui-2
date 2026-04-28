@@ -49,21 +49,6 @@
 }
 
 :root {
-  --font-display: "Cal Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono-src);
-
-  /* Airogistic brand palette */
-  --airo-base: #1f2747;
-  --airo-dark: #1f2937;
-  --airo-800: #171d35;
-  --airo-700: #1f2747;
-  --airo-600: #36447c;
-  --airo-500: #4658a0;
-  --airo-400: #5f71b9;
-  --airo-300: #8391c9;
-  --airo-200: #a6b0d8;
-  --airo-100: #cad0e8;
-
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

@@ -16,12 +16,14 @@ import {
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { DefinitionPanel } from "@/components/workflow-builder"
+import { CallableAgentEditor } from "@/components/callable-agent-editor"
 import { getPlaybook, isAlwaysOnTrigger, type Field, type PlaybookDef } from "@/lib/playbook-data"
 import { UnifiedRuns } from "@/components/unified-runs"
 
-/** A playbook is an agent if it has any voice step (matches /agents library logic). */
+/** A playbook is an agent if it has a non-manual trigger
+ *  (matches /agents library logic — anything that runs on its own or is callable). */
 function isAgent(p: PlaybookDef): boolean {
-  return p.steps.some((s) => s.type === "voice")
+  return isAlwaysOnTrigger(p.trigger)
 }
 
 type View = "editor" | "runs"
@@ -383,6 +385,7 @@ export function WorkflowEditor({
   const params = useParams()
   const playbookId =
     playbookIdProp ?? (params?.id as string | undefined) ?? "medical-records-summary"
+  const pb = getPlaybook(playbookId)
   const [view, setView] = useState<View>("editor")
   const [dirty, setDirty] = useState(true)
   const [saveState, setSaveState] = useState<SaveState>("idle")
@@ -414,7 +417,13 @@ export function WorkflowEditor({
       />
       <ViewTabs active={view} onChange={setView} />
       <div className="flex-1 min-h-0 flex">
-        {view === "editor" ? <DefinitionPanel playbookId={playbookId} /> : <RunsTabBody playbookId={playbookId} />}
+        {view === "runs" ? (
+          <RunsTabBody playbookId={playbookId} />
+        ) : pb.trigger?.kind === "callable" ? (
+          <CallableAgentEditor playbookId={playbookId} />
+        ) : (
+          <DefinitionPanel playbookId={playbookId} />
+        )}
       </div>
       {runDrawerOpen && (
         <RunDrawer playbookId={playbookId} onClose={() => setRunDrawerOpen(false)} />

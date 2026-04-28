@@ -145,6 +145,13 @@ export interface PlaybookDef {
   steps: Step[]
   /** What fires this playbook. Defaults to manual when omitted. */
   trigger?: PlaybookTrigger
+  /**
+   * For callable agents only — staff-facing prompts that surface in the
+   * chat invocation surface so people know what to ask.
+   */
+  sampleQuestions?: string[]
+  /** For callable agents — guardrails the agent must obey. */
+  guardrails?: string[]
   /** @deprecated — derive from last step's returns instead. Kept for compat during migration. */
   outputs?: Field[]
 }
@@ -876,8 +883,8 @@ PLAYBOOK_DEFS["med-chron-expert"] = {
       name: "Question",
       type: "long_text",
       required: true,
-      description: "What you want to ask the expert",
-      sample: "Are there any treatment gaps in this case that opposing counsel will flag?",
+      description: "What the staff member wants to ask",
+      sample: "Are there any treatment gaps opposing counsel will flag in this case?",
     },
     {
       id: "in_2",
@@ -902,12 +909,25 @@ PLAYBOOK_DEFS["med-chron-expert"] = {
       type: "prompt",
       name: "Answer the question",
       detail:
-        "You are an expert on medical chronologies for personal injury cases. Use {{Med chron knowledge}} as your reference. If a {{Case}} is bound, ground the answer in that case's medical record; otherwise answer in general terms.\n\nQuestion: {{Question}}\n\nBe direct. If you don't know, say so. Cite the source from {{Med chron knowledge}} when answering with specifics. Don't speculate about the legal strategy \u2014 the attorney owns that.",
+        "You are an expert on medical chronologies for personal-injury cases. Plainspoken, direct, and surgical \u2014 these calls go to attorneys who don't want hedge words. Use the bound knowledge as your reference. If a case is in scope, ground the answer in that case's medical record; otherwise answer in general terms. Cite the source when answering with specifics. Say so if you don't know.",
       returns: [
         { id: "r1_a", name: "Answer", type: "long_text", description: "The expert's response" },
         { id: "r1_b", name: "Sources cited", type: "list", description: "References from the bound knowledge" },
       ],
     },
+  ],
+  sampleQuestions: [
+    "Are there any treatment gaps in this case that opposing counsel will flag?",
+    "What's the typical PT cadence for a grade 2 cervical strain?",
+    "Compare this case's pain management timeline to similar MVA cases we've settled.",
+    "What ICD codes are typically associated with this injury pattern?",
+    "Is the 4-month gap between the accident and first medical visit a problem?",
+  ],
+  guardrails: [
+    "Never quote settlement amounts \u2014 attorneys own valuation",
+    "Never speculate about legal strategy or admissibility",
+    "Never claim certainty when the bound knowledge is silent",
+    "Always cite the source when stating a specific clinical fact",
   ],
 }
 
