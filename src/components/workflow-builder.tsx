@@ -42,7 +42,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { getPlaybook, getStepMemoryName, getStepReturns, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
+import { getPlaybook, getStepMemoryName, getStepReturns, isAlwaysOnTrigger, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
 import { getTemplate, TEMPLATES } from "@/lib/template-data"
 
 // ── Field type config ──────────────────────────────────────────────────
@@ -1479,41 +1479,55 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
             </>
           )}
 
-          {/* Trigger / Inputs */}
-          <div className="w-full max-w-[640px] mx-auto">
-          <FlowNode
-            icon={SuitcaseSimple}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-800"
-            title="Inputs collected"
-            subtitle={
-              inputs.length === 0
-                ? "Add the fields the user provides"
-                : `${inputs.length} field${inputs.length !== 1 ? "s" : ""}`
-            }
-            isSelected={selection?.kind === "input" && selection.existing === null}
-          >
-            <div className="space-y-0.5">
-              {inputs.map((f) => (
-                <CompactFieldRow
-                  key={f.id}
-                  field={f}
-                  selected={selection?.kind === "input" && selection.existing?.id === f.id}
-                  onClick={() => setSelection({ kind: "input", existing: f })}
-                />
-              ))}
-              <button
-                onClick={() => setSelection({ kind: "input", existing: null })}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add input
-              </button>
-            </div>
-          </FlowNode>
-          </div>
-
-          <FlowConnector />
+          {/* Inputs node — hidden for always-on workflows that take no inputs
+              (the trigger payload provides everything). For event-triggered
+              workflows that DO have inputs (e.g. Filevine project + provider),
+              we still render the node, but reframe it as "From the trigger". */}
+          {(() => {
+            const triggerProvides = isAlwaysOnTrigger(playbook.trigger)
+            if (triggerProvides && inputs.length === 0) return null
+            const title = triggerProvides ? "From the trigger" : "Inputs collected"
+            const emptySubtitle = triggerProvides
+              ? "Mapped from the trigger payload"
+              : "Add the fields the user provides"
+            return (
+              <>
+                <div className="w-full max-w-[640px] mx-auto">
+                  <FlowNode
+                    icon={SuitcaseSimple}
+                    iconBg="bg-blue-50"
+                    iconColor="text-blue-800"
+                    title={title}
+                    subtitle={
+                      inputs.length === 0
+                        ? emptySubtitle
+                        : `${inputs.length} field${inputs.length !== 1 ? "s" : ""}`
+                    }
+                    isSelected={selection?.kind === "input" && selection.existing === null}
+                  >
+                    <div className="space-y-0.5">
+                      {inputs.map((f) => (
+                        <CompactFieldRow
+                          key={f.id}
+                          field={f}
+                          selected={selection?.kind === "input" && selection.existing?.id === f.id}
+                          onClick={() => setSelection({ kind: "input", existing: f })}
+                        />
+                      ))}
+                      <button
+                        onClick={() => setSelection({ kind: "input", existing: null })}
+                        className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-dashed border-gray-300 text-[11px] font-medium text-zinc-500 hover:border-blue-300 hover:text-blue-800 hover:bg-blue-50/40 transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add input
+                      </button>
+                    </div>
+                  </FlowNode>
+                </div>
+                <FlowConnector />
+              </>
+            )
+          })()}
 
           {/* Step nodes */}
           {steps.map((step, i) => {

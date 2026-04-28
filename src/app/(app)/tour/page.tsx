@@ -17,6 +17,7 @@ import {
   PhoneCall,
   PhoneIncoming,
   PhoneOutgoing,
+  ChatCircleText,
 } from "@phosphor-icons/react/dist/ssr"
 
 type IconType = ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>
@@ -183,70 +184,84 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
     ],
   },
   {
-    title: "User-run vs always-on (event-triggered)",
+    title: "All three shapes \u2014 one of each",
     subtitle:
-      "Same workflow primitive. Different triggers and operator UX.",
+      "Same canvas under the hood. Different invocation models drive different operator UX.",
     tiles: [
       {
-        title: "User-run \u2014 Med Treatment Verification",
+        title: "Workflow \u2014 user-run",
         blurb:
-          "Operator (or a cadence) kicks it off per case. Linear: dial, ask, log. Click Run on the agent card to fire it.",
-        href: "/playbooks/med-treatment-verification-voice/edit",
+          "Intake Callback: a voice playbook the operator runs per web-form lead. Click Run, fill inputs, dial.",
+        href: "/playbooks/intake-callback-voice/edit",
         icon: PencilRuler,
-        iconBg: "bg-emerald-50",
-        iconColor: "text-emerald-700",
-        bullets: [
-          "Trigger: Manual (or cadence on the case)",
-          "Tight 7-move agent flow \u2014 known goals up-front",
-          "Editor has a Run button",
-        ],
-        tags: [{ label: "Manual / cadence", tone: "green" }],
-      },
-      {
-        title: "Always-on \u2014 Intake Reception",
-        blurb:
-          "Live agent answering the firm's main line. Branches on matter type, declines what we don't handle, books consults for what we do.",
-        href: "/playbooks/intake-reception-voice/edit",
-        icon: PhoneIncoming,
         iconBg: "bg-blue-50",
         iconColor: "text-blue-800",
         bullets: [
-          "Trigger: Incoming call on (415) 555-LAW1",
-          "Branched agent flow \u2014 5 matter-type tracks",
-          "No Run button \u2014 status pill says \u25cf Live instead",
+          "Trigger: Manual",
+          "Editor has a primary Run button",
+          "Lives in /playbooks (sidebar: Workflows)",
         ],
-        tags: [{ label: "Inbound call", tone: "blue" }, { label: "Always-on", tone: "amber" }],
+        tags: [{ label: "User-run", tone: "blue" }],
+      },
+      {
+        title: "Triggered agent \u2014 cadence / event",
+        blurb:
+          "Intake Reception (incoming call) and Med Treatment Verification (weekly cadence) and Filevine Records Request (project phase changed). Three flavors of triggered.",
+        href: "/playbooks/intake-reception-voice/edit",
+        icon: PhoneIncoming,
+        iconBg: "bg-violet-50",
+        iconColor: "text-violet-700",
+        bullets: [
+          "Trigger node at the top of the canvas",
+          "No Run button \u2014 status pill says \u25cf Live",
+          "Hover-action: Test (or Test call for inbound)",
+        ],
+        tags: [{ label: "Always-on", tone: "violet" }],
+      },
+      {
+        title: "Callable agent \u2014 ask anytime",
+        blurb:
+          "Med Chron Expert: a knowledge agent staff invoke from chat. Bound to the firm's medical-chronology KB.",
+        href: "/playbooks/med-chron-expert/edit",
+        icon: ChatCircleText,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-800",
+        bullets: [
+          "Trigger: Callable (chat)",
+          "No fixed sequence \u2014 it's a Q&A loop",
+          "Hover-action: Ask (opens a chat panel)",
+        ],
+        tags: [{ label: "Callable", tone: "violet" }, { label: "Knowledge KB", tone: "amber" }],
       },
     ],
   },
   {
-    title: "Integration-triggered playbooks",
-    subtitle:
-      "Same canvas, but the run kicks off from an outside system event \u2014 not a manual click.",
+    title: "Sample runs",
+    subtitle: "Drill into a recent run of each shape.",
     tiles: [
       {
-        title: "Filevine Records Request",
-        blurb:
-          "Fires when a Filevine project moves into 'Records pending'. Drafts a HIPAA-compliant records request letter for each provider.",
-        href: "/playbooks/filevine-records-request/edit",
-        icon: PhoneCall,
+        title: "Workflow run \u2014 demand letter",
+        blurb: "Smith Demand Letter draft, generated 8 minutes ago after a manual run.",
+        href: "/runs/run_02DLD",
+        icon: Play,
         iconBg: "bg-blue-50",
         iconColor: "text-blue-800",
-        bullets: [
-          "Trigger node at the top of the canvas: Filevine \u2192 Project phase changed",
-          "Fetch the project context, then Format step fills the Records Request Letter template",
-          "287 runs to date; rendered as a download pill in the runs grid",
-        ],
-        tags: [{ label: "Filevine", tone: "blue" }, { label: "Trigger: integration", tone: "violet" }],
       },
       {
-        title: "Sample run \u2014 Estrada records request",
-        blurb:
-          "St. Mary's Medical Center letter, drafted 44 minutes ago when the Filevine project flipped phases.",
+        title: "Triggered run \u2014 Filevine records request",
+        blurb: "St. Mary's records request, drafted 44 minutes ago when the Filevine project moved into phase.",
         href: "/runs/run_15FV",
         icon: Play,
-        iconBg: "bg-green-50",
-        iconColor: "text-green-700",
+        iconBg: "bg-violet-50",
+        iconColor: "text-violet-700",
+      },
+      {
+        title: "Triggered run \u2014 weekly check-in call",
+        blurb: "Patel weekly treatment verification, completed 11:14 AM. Cadence-fired, voice agent conducted.",
+        href: "/agents/runs/vc_005",
+        icon: PhoneCall,
+        iconBg: "bg-emerald-50",
+        iconColor: "text-emerald-700",
       },
     ],
   },

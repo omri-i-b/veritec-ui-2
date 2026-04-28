@@ -66,6 +66,7 @@ const PLAYBOOKS: Record<
   "med-treatment-verification-voice": { name: "Medical Treatment Verification", icon: PhoneCall, color: "text-emerald-700", bg: "bg-emerald-50" },
   "filevine-records-request": { name: "Filevine Records Request", icon: Notepad, color: "text-blue-800", bg: "bg-blue-50" },
   "intake-reception-voice": { name: "Intake Reception", icon: PhoneCall, color: "text-blue-800", bg: "bg-blue-50" },
+  "med-chron-expert": { name: "Med Chron Expert", icon: Notepad, color: "text-blue-800", bg: "bg-blue-50" },
 }
 
 /** Playbook IDs whose deliverable is a voice conversation. */

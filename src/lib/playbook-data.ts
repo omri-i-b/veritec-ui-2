@@ -102,6 +102,7 @@ export interface PlaybookTrigger {
     | "cadence"
     | "webhook"
     | "incoming-call"
+    | "callable"
   /** Display name of the integration (e.g. "Filevine", "Typeform"). */
   source?: string
   /** The specific event this trigger fires on. */
@@ -113,7 +114,19 @@ export interface PlaybookTrigger {
 /** True for triggers that run the workflow always-on (no manual Run button). */
 export function isAlwaysOnTrigger(t: PlaybookTrigger | undefined): boolean {
   if (!t) return false
-  return t.kind === "incoming-call" || t.kind === "integration" || t.kind === "webform" || t.kind === "cadence" || t.kind === "webhook"
+  return (
+    t.kind === "incoming-call" ||
+    t.kind === "integration" ||
+    t.kind === "webform" ||
+    t.kind === "cadence" ||
+    t.kind === "webhook" ||
+    t.kind === "callable"
+  )
+}
+
+/** Anything with a non-manual trigger is an agent. Manual = workflow. */
+export function isAgentByTrigger(p: PlaybookDef): boolean {
+  return isAlwaysOnTrigger(p.trigger)
 }
 
 export interface PlaybookDef {
@@ -786,6 +799,12 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
     iconBg: "bg-emerald-50",
     totalRuns: 612,
     lastRun: "2h ago",
+    trigger: {
+      kind: "cadence",
+      source: "Cadence",
+      event: "Weekly check-in",
+      description: "Fires every Tuesday for cases in active treatment phase",
+    },
     inputs: [
       { id: "in_1", name: "Case", type: "case-ref", required: true, description: "The case this check-in is for", sample: "CVSA-1189" },
       { id: "in_2", name: "Client phone", type: "phone", required: true, description: "Client's primary phone", sample: "+1 (510) 555-0421" },
@@ -831,6 +850,67 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
   },
 }
 
+/** Callable knowledge agent: lives in chat, answers questions about medical chronologies. */
+PLAYBOOK_DEFS["med-chron-expert"] = {
+  id: "med-chron-expert",
+  name: "Med Chron Expert",
+  description:
+    "Always-on expert on medical chronologies for personal injury cases. Ask about treatment patterns, gap analysis, red flags, or how a case's medical record compares to similar PI cases the firm has handled.",
+  category: "Knowledge",
+  status: "Published",
+  version: "v3",
+  icon: Notepad,
+  iconColor: "text-blue-800",
+  iconBg: "bg-blue-50",
+  totalRuns: 4823,
+  lastRun: "8m ago",
+  trigger: {
+    kind: "callable",
+    source: "Chat",
+    event: "Question asked",
+    description: "Available in the global chat surface and on every case page",
+  },
+  inputs: [
+    {
+      id: "in_1",
+      name: "Question",
+      type: "long_text",
+      required: true,
+      description: "What you want to ask the expert",
+      sample: "Are there any treatment gaps in this case that opposing counsel will flag?",
+    },
+    {
+      id: "in_2",
+      name: "Case",
+      type: "case-ref",
+      required: false,
+      description: "Optional \u2014 bind to a case for case-aware answers; omit for general questions",
+      sample: "CVSA-1189",
+    },
+    {
+      id: "in_3",
+      name: "Med chron knowledge",
+      type: "kb-ref",
+      required: true,
+      description: "Treatment patterns, gap thresholds, prior PI cases, ICD code reference",
+      sample: "PI Med Chron KB v6 (2,140 entries)",
+    },
+  ],
+  steps: [
+    {
+      id: "s1",
+      type: "prompt",
+      name: "Answer the question",
+      detail:
+        "You are an expert on medical chronologies for personal injury cases. Use {{Med chron knowledge}} as your reference. If a {{Case}} is bound, ground the answer in that case's medical record; otherwise answer in general terms.\n\nQuestion: {{Question}}\n\nBe direct. If you don't know, say so. Cite the source from {{Med chron knowledge}} when answering with specifics. Don't speculate about the legal strategy \u2014 the attorney owns that.",
+      returns: [
+        { id: "r1_a", name: "Answer", type: "long_text", description: "The expert's response" },
+        { id: "r1_b", name: "Sources cited", type: "list", description: "References from the bound knowledge" },
+      ],
+    },
+  ],
+}
+
 /** Inbound intake: always-on workflow answering the firm's main line. */
 PLAYBOOK_DEFS["intake-reception-voice"] = {
   id: "intake-reception-voice",
@@ -851,16 +931,7 @@ PLAYBOOK_DEFS["intake-reception-voice"] = {
     event: "Incoming call",
     description: "Always-on. Picks up calls to (415) 555-LAW1.",
   },
-  inputs: [
-    {
-      id: "in_1",
-      name: "Caller phone",
-      type: "phone",
-      required: true,
-      description: "Phone number from the incoming call (provided by the trigger)",
-      sample: "+1 (650) 555-0903",
-    },
-  ],
+  inputs: [],
   steps: [
     {
       id: "s1",

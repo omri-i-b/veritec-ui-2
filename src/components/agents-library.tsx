@@ -16,15 +16,17 @@ import {
   PhoneIncoming,
   Plug,
   Globe,
+  ChatCircleText,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { PLAYBOOK_DEFS, isAlwaysOnTrigger, type Field, type PlaybookDef } from "@/lib/playbook-data"
 import { UnifiedRuns } from "@/components/unified-runs"
 
-/** An "agent" is a playbook that contains at least one voice step.
- *  (Future: also email-out, sms-out, e-file steps.) */
+/** An "agent" is a playbook with a non-manual trigger \u2014 it acts on its own
+ *  (incoming call, integration event, cadence, callable from chat). Workflows
+ *  are user-run; agents are triggered or callable. */
 function isAgent(p: PlaybookDef): boolean {
-  return p.steps.some((s) => s.type === "voice")
+  return isAlwaysOnTrigger(p.trigger)
 }
 
 const AGENT_PLAYBOOK_IDS = Object.values(PLAYBOOK_DEFS).filter(isAgent).map((p) => p.id)
@@ -196,7 +198,7 @@ function AgentsTableRow({
             {`{{${dials}}}`}
           </code>
         ) : (
-          <span className="text-zinc-400 text-xs">\u2014 inbound</span>
+          <span className="text-zinc-400 text-xs">\u2014</span>
         )}
       </td>
       <td className="px-4 py-2.5 text-right text-sm tabular-nums text-zinc-700">
@@ -223,7 +225,7 @@ function AgentsTableRow({
       <td className="px-4 py-2.5 text-xs text-zinc-600 whitespace-nowrap">{agent.lastRun}</td>
       <td className="px-2 py-2.5 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
-          {!isAlwaysOnTrigger(agent.trigger) && (
+          {agent.trigger?.kind === "callable" && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -231,8 +233,34 @@ function AgentsTableRow({
               }}
               className="inline-flex items-center gap-1 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-2 h-7 text-xs font-medium transition-colors"
             >
+              <ChatCircleText className="h-3 w-3" weight="bold" />
+              Ask
+            </button>
+          )}
+          {agent.trigger?.kind === "incoming-call" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onRun()
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white hover:border-blue-300 hover:text-blue-800 text-zinc-700 px-2 h-7 text-xs font-medium transition-colors"
+            >
+              <PhoneIncoming className="h-3 w-3" weight="bold" />
+              Test call
+            </button>
+          )}
+          {(agent.trigger?.kind === "cadence" ||
+            agent.trigger?.kind === "integration" ||
+            agent.trigger?.kind === "webform") && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onRun()
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white hover:border-blue-300 hover:text-blue-800 text-zinc-700 px-2 h-7 text-xs font-medium transition-colors"
+            >
               <Play className="h-3 w-3" weight="fill" />
-              Run
+              Test
             </button>
           )}
           <button
@@ -296,6 +324,14 @@ function TriggerCell({ trigger }: { trigger: PlaybookDef["trigger"] }) {
       <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold">
         <Clock className="h-2.5 w-2.5" weight="bold" />
         Cadence
+      </span>
+    )
+  }
+  if (trigger.kind === "callable") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[10px] font-semibold">
+        <ChatCircleText className="h-2.5 w-2.5" weight="bold" />
+        Callable
       </span>
     )
   }

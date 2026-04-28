@@ -58,15 +58,14 @@ const mainNavItems = [
     ],
   },
   { title: "Agents", icon: Sparkle, href: "/agents" },
+  { title: "Workflows", icon: BookOpen, href: "/playbooks" },
   { title: "Intake", icon: ClipboardText, href: "/intake" },
-  { title: "Playbooks", icon: BookOpen, href: "/playbooks" },
-  { title: "Workflows", icon: FlowArrow, href: "/workflows" },
+  { title: "Case pipelines", icon: FlowArrow, href: "/workflows" },
   { title: "Knowledge Base", icon: Books, href: "/knowledge" },
   { title: "Templates", icon: Stack, href: "/templates" },
   { title: "Reporting", icon: ChartBar, href: "/reporting" },
   { title: "DocIntel", icon: Brain, href: "/docintel" },
   { title: "Drafting", icon: PencilSimpleLine, href: "/drafting" },
-  { title: "Voice", icon: PhoneCall, href: "/voice" },
   { title: "More", icon: DotsThree, href: "/more" },
 ]
 

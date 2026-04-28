@@ -12,6 +12,7 @@ import {
   X,
   CheckCircle,
   CircleNotch,
+  ChatCircleText,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { DefinitionPanel } from "@/components/workflow-builder"
@@ -87,7 +88,7 @@ function EditorHeader({
           Save changes
         </Button>
       )}
-      {isAlwaysOnTrigger(pb.trigger) ? (
+      {isAlwaysOnTrigger(pb.trigger) && (
         <span
           className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-[11px] font-semibold"
           title={`Always-on \u2014 fires on ${pb.trigger?.event ?? "trigger"}`}
@@ -95,6 +96,26 @@ function EditorHeader({
           <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
           Live
         </span>
+      )}
+      {pb.trigger?.kind === "callable" ? (
+        <Button
+          size="sm"
+          className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900"
+          onClick={onRunClick}
+        >
+          <ChatCircleText className="h-3.5 w-3.5" weight="bold" />
+          Ask
+        </Button>
+      ) : isAlwaysOnTrigger(pb.trigger) ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-zinc-700"
+          onClick={onRunClick}
+        >
+          <Play className="h-3.5 w-3.5" weight="fill" />
+          Test
+        </Button>
       ) : (
         <Button
           size="sm"
