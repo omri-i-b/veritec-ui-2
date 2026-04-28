@@ -34,7 +34,6 @@ export function VoiceCallDetail({
   const [call, setCall] = useState(initial)
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null)
   const [scrubToMs, setScrubToMs] = useState<number | null>(null)
-  const [systemEventsOpen, setSystemEventsOpen] = useState(false)
 
   const handleTurnClick = (turnId: string, startMs: number) => {
     setActiveTurnId(turnId)
@@ -104,47 +103,6 @@ export function VoiceCallDetail({
         scrubToMs={scrubToMs}
       />
 
-      {/* System events (collapsible) */}
-      {call.systemEvents && call.systemEvents.length > 0 && (
-        <div className="border-t border-gray-200 bg-white shrink-0">
-          <button
-            onClick={() => setSystemEventsOpen((v) => !v)}
-            className="w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
-          >
-            {systemEventsOpen ? (
-              <CaretUp className="h-3 w-3 text-zinc-500" weight="bold" />
-            ) : (
-              <CaretDown className="h-3 w-3 text-zinc-500" weight="bold" />
-            )}
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              System events
-            </span>
-            <span className="text-[11px] text-zinc-400">
-              · {call.systemEvents.length}
-            </span>
-          </button>
-          {systemEventsOpen && (
-            <ul className="px-4 pb-3 space-y-1">
-              {call.systemEvents.map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center gap-2 text-xs text-zinc-700"
-                >
-                  <span className="w-32 text-zinc-400 font-mono tabular-nums shrink-0">
-                    {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                  </span>
-                  <SystemEventDot kind={e.kind} />
-                  <span className="text-zinc-500 uppercase tracking-wide text-[10px] font-semibold w-20 shrink-0">
-                    {e.kind}
-                  </span>
-                  <span className="text-zinc-700">{e.note}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       {/* Actions row */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-200 bg-white shrink-0">
         <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
@@ -177,97 +135,82 @@ function BodyTabs({
   scrubToMs: number | null
 }) {
   const [tab, setTab] = useState<"results" | "evidence">("results")
-  const [inputsOpen, setInputsOpen] = useState(false)
   return (
-    <div className="flex flex-1 min-h-0 flex-col bg-white">
-      <nav className="flex items-center gap-0 border-b border-gray-200 bg-white px-4 shrink-0">
-        <Tab
-          active={tab === "results"}
-          onClick={() => setTab("results")}
-          label="Results"
-          count={call.fields.length}
-        />
-        <Tab
-          active={tab === "evidence"}
-          onClick={() => setTab("evidence")}
-          label="Transcript & recording"
-          count={call.transcript.length}
-        />
-        <div className="flex-1" />
-        {call.inputs && call.inputs.length > 0 && (
-          <button
-            onClick={() => setInputsOpen((v) => !v)}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-              inputsOpen
-                ? "border-blue-300 bg-blue-50 text-blue-800"
-                : "border-gray-200 bg-white text-zinc-700 hover:border-gray-300"
-            }`}
-          >
-            <CaretDown
-              className={`h-3 w-3 transition-transform ${inputsOpen ? "rotate-180" : ""}`}
-              weight="bold"
-            />
-            Inputs
-            <span className="text-[10px] text-zinc-500">· {call.inputs.length}</span>
-          </button>
-        )}
-      </nav>
+    <div className="flex flex-1 min-h-0 overflow-hidden">
+      {/* Main column: tabs + content */}
+      <div className="flex flex-1 min-h-0 flex-col bg-white">
+        <nav className="flex items-center gap-0 border-b border-gray-200 bg-white px-4 shrink-0">
+          <Tab
+            active={tab === "results"}
+            onClick={() => setTab("results")}
+            label="Results"
+            count={call.fields.length}
+          />
+          <Tab
+            active={tab === "evidence"}
+            onClick={() => setTab("evidence")}
+            label="Transcript & recording"
+            count={call.transcript.length}
+          />
+        </nav>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Main content */}
-        <div className="flex flex-1 min-h-0 flex-col">
-          {tab === "results" ? (
-            <div className="flex-1 min-h-0 overflow-auto bg-gray-50">
-              <div className="max-w-[1100px] mx-auto p-5">
-                <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
-                  <ExtractedFieldsPanel
-                    fields={call.fields}
-                    onJumpToTurn={(turnId) => {
-                      const t = call.transcript.find((x) => x.id === turnId)
-                      if (t) {
-                        onTurnClick(turnId, t.startMs)
-                        setTab("evidence")
-                      }
-                    }}
-                    onFieldEdit={onFieldEdit}
-                    initialPhiVisible
-                    showToolbar={false}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 min-h-0 flex flex-col">
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <TranscriptView
-                  turns={call.transcript}
-                  activeTurnId={activeTurnId}
-                  onTurnClick={(t) => onTurnClick(t.id, t.startMs)}
+        {tab === "results" ? (
+          <div className="flex-1 min-h-0 overflow-auto bg-gray-50">
+            <div className="max-w-[1100px] mx-auto p-5">
+              <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+                <ExtractedFieldsPanel
+                  fields={call.fields}
+                  onJumpToTurn={(turnId) => {
+                    const t = call.transcript.find((x) => x.id === turnId)
+                    if (t) {
+                      onTurnClick(turnId, t.startMs)
+                      setTab("evidence")
+                    }
+                  }}
+                  onFieldEdit={onFieldEdit}
+                  initialPhiVisible
+                  showToolbar={false}
                 />
               </div>
-              {call.recordingUrl && call.durationSec && (
-                <RecordingPlayer durationSec={call.durationSec} scrubToMs={scrubToMs} />
-              )}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <TranscriptView
+                turns={call.transcript}
+                activeTurnId={activeTurnId}
+                onTurnClick={(t) => onTurnClick(t.id, t.startMs)}
+              />
+            </div>
+            {call.recordingUrl && call.durationSec && (
+              <RecordingPlayer durationSec={call.durationSec} scrubToMs={scrubToMs} />
+            )}
+          </div>
+        )}
+      </div>
 
-        {/* Inputs side panel */}
-        {inputsOpen && call.inputs && (
-          <aside className="w-[300px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50 shrink-0">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Inputs collected
-              </span>
-              <button
-                onClick={() => setInputsOpen(false)}
-                className="flex items-center justify-center h-5 w-5 rounded text-zinc-400 hover:text-zinc-700 hover:bg-gray-100"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </header>
-            <div className="flex-1 overflow-auto p-3 space-y-2.5">
-              {call.inputs.map((inp) => (
+      {/* Right rail — always visible. Run metadata: inputs + system events. */}
+      <RunMetaRail call={call} />
+    </div>
+  )
+}
+
+function RunMetaRail({ call }: { call: VoiceCall }) {
+  const hasInputs = call.inputs && call.inputs.length > 0
+  const hasEvents = call.systemEvents && call.systemEvents.length > 0
+  if (!hasInputs && !hasEvents) return null
+
+  return (
+    <aside className="w-[300px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto">
+        {hasInputs && (
+          <section className="p-3 border-b border-gray-100">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+              Inputs
+            </h3>
+            <div className="space-y-2.5">
+              {call.inputs!.map((inp) => (
                 <div key={inp.label}>
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-0.5">
                     {inp.label}
@@ -276,10 +219,37 @@ function BodyTabs({
                 </div>
               ))}
             </div>
-          </aside>
+          </section>
+        )}
+
+        {hasEvents && (
+          <section className="p-3">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+              System events
+            </h3>
+            <ul className="space-y-1.5">
+              {call.systemEvents!.map((e) => (
+                <li key={e.id} className="flex items-start gap-2 text-xs text-zinc-700">
+                  <span className="font-mono tabular-nums text-[10px] text-zinc-400 mt-0.5 shrink-0 w-14">
+                    {new Date(e.at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <SystemEventDot kind={e.kind} />
+                  <span className="min-w-0 flex-1 leading-snug">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mr-1">
+                      {e.kind}
+                    </span>
+                    <span className="text-zinc-700">{e.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
-    </div>
+    </aside>
   )
 }
 
