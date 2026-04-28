@@ -686,7 +686,7 @@ export function UnifiedRuns({ initialPlaybookFilter }: { initialPlaybookFilter?:
                 onClick={() =>
                   router.push(
                     VOICE_PLAYBOOK_IDS.has(run.playbookId)
-                      ? `/voice/calls/${run.id}`
+                      ? `/agents/runs/${run.id}`
                       : `/runs/${run.id}`
                   )
                 }

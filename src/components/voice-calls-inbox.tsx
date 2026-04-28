@@ -208,7 +208,7 @@ export function VoiceCallsInbox() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      router.push(`/voice/calls/${call.id}`)
+                      router.push(`/agents/runs/${call.id}`)
                     }}
                     className="opacity-0 group-hover/row:opacity-100 transition-opacity text-[11px] font-medium text-blue-800 hover:underline whitespace-nowrap"
                   >

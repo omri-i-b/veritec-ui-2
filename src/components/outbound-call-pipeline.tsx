@@ -67,7 +67,7 @@ export function OutboundCallPipeline() {
           ) : (
             <div className="divide-y divide-gray-100">
               {pending.map((c) => (
-                <PendingRow key={c.id} call={c} onOpen={() => router.push(`/voice/calls/${c.id}`)} />
+                <PendingRow key={c.id} call={c} onOpen={() => router.push(`/agents/runs/${c.id}`)} />
               ))}
             </div>
           )}
@@ -80,7 +80,7 @@ export function OutboundCallPipeline() {
           ) : (
             <div className="divide-y divide-gray-100">
               {inFlight.map((c) => (
-                <InFlightRow key={c.id} call={c} onOpen={() => router.push(`/voice/calls/${c.id}`)} />
+                <InFlightRow key={c.id} call={c} onOpen={() => router.push(`/agents/runs/${c.id}`)} />
               ))}
             </div>
           )}
@@ -93,7 +93,7 @@ export function OutboundCallPipeline() {
           ) : (
             <div className="divide-y divide-gray-100">
               {recent.map((c) => (
-                <RecentRow key={c.id} call={c} onOpen={() => router.push(`/voice/calls/${c.id}`)} />
+                <RecentRow key={c.id} call={c} onOpen={() => router.push(`/agents/runs/${c.id}`)} />
               ))}
             </div>
           )}

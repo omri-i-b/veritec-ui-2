@@ -166,9 +166,9 @@ const VOICE_PLAYBOOK_IDS = new Set([
 function sampleRunDestinationFor(playbookId: string): string {
   switch (playbookId) {
     case "med-treatment-verification-voice":
-      return "/voice/calls/vc_004" // in-flight: Maria Lopez weekly check-in
+      return "/agents/runs/vc_004" // in-flight: Maria Lopez weekly check-in
     case "intake-callback-voice":
-      return "/voice/calls/vc_001" // recently completed intake callback
+      return "/agents/runs/vc_001" // recently completed intake callback
     case "depo-prep":
       return "/runs/run_03DPT"
     case "demand-letter-draft":

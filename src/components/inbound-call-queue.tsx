@@ -72,7 +72,7 @@ export function InboundCallQueue() {
                 <LiveRow
                   key={call.id}
                   call={call}
-                  onOpen={() => router.push(`/voice/calls/${call.id}`)}
+                  onOpen={() => router.push(`/agents/runs/${call.id}`)}
                 />
               ))}
             </div>

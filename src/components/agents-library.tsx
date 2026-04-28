@@ -1,413 +1,310 @@
-"use client";
+"use client"
 
+import { useMemo, useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
-  MagnifyingGlass,
-  Plus,
-  Robot,
-  UserPlus,
-  FileMagnifyingGlass,
-  Gavel,
-  CalendarBlank,
-  Handshake,
-  ChatCircleDots,
-  Scales,
-  Binoculars,
-  CheckCircle,
-  PauseCircle,
-  WarningCircle,
-  DotsThree,
+  PhoneCall,
+  Play,
+  PencilRuler,
+  CaretRight,
+  ChartLineUp,
   Clock,
-  Sparkle,
-} from "@phosphor-icons/react/dist/ssr";
-import type { Icon } from "@phosphor-icons/react";
+  X,
+} from "@phosphor-icons/react"
+import { Button } from "@/components/ui/button"
+import { PLAYBOOK_DEFS, type Field, type PlaybookDef } from "@/lib/playbook-data"
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-type AgentStatus = "active" | "paused" | "error";
-
-type Agent = {
-  id: string;
-  name: string;
-  description: string;
-  status: AgentStatus;
-  icon: Icon;
-  iconBg: string;
-  iconFg: string;
-  tasksToday: number;
-  successRate: number;
-  lastRun: string;
-  usedOnCases: number;
-};
-
-const AGENTS: Agent[] = [
-  {
-    id: "intake",
-    name: "Intake Agent",
-    description: "Monitors incoming leads, qualifies prospects, and books intake calls.",
-    status: "active",
-    icon: UserPlus,
-    iconBg: "bg-[#eef2ff]",
-    iconFg: "text-[#4338ca]",
-    tasksToday: 42,
-    successRate: 97,
-    lastRun: "2 min ago",
-    usedOnCases: 318,
-  },
-  {
-    id: "records",
-    name: "Medical Records Chaser",
-    description: "Tracks record requests, follows up with providers, and ingests returned records.",
-    status: "active",
-    icon: FileMagnifyingGlass,
-    iconBg: "bg-[#f5f3ff]",
-    iconFg: "text-[#6d28d9]",
-    tasksToday: 128,
-    successRate: 91,
-    lastRun: "6 min ago",
-    usedOnCases: 214,
-  },
-  {
-    id: "filing",
-    name: "Filing Agent",
-    description: "Watches court deadlines, prepares filings, and submits documents to e-file portals.",
-    status: "active",
-    icon: Gavel,
-    iconBg: "bg-[#f0fdfa]",
-    iconFg: "text-[#0f766e]",
-    tasksToday: 9,
-    successRate: 100,
-    lastRun: "24 min ago",
-    usedOnCases: 67,
-  },
-  {
-    id: "demand",
-    name: "Demand Calendar Agent",
-    description: "Tracks 30-day demand windows per carrier and escalates approaching expirations.",
-    status: "active",
-    icon: CalendarBlank,
-    iconBg: "bg-[#fffbeb]",
-    iconFg: "text-[#b45309]",
-    tasksToday: 23,
-    successRate: 99,
-    lastRun: "1 hr ago",
-    usedOnCases: 142,
-  },
-  {
-    id: "negotiator",
-    name: "Settlement Negotiator",
-    description: "Drafts counter-offers grounded in case value models and recent comparable settlements.",
-    status: "paused",
-    icon: Handshake,
-    iconBg: "bg-[#f0f9ff]",
-    iconFg: "text-[#0369a1]",
-    tasksToday: 0,
-    successRate: 88,
-    lastRun: "Yesterday",
-    usedOnCases: 54,
-  },
-  {
-    id: "comms",
-    name: "Client Comms Agent",
-    description: "Sends proactive status updates and answers routine client questions over SMS and email.",
-    status: "active",
-    icon: ChatCircleDots,
-    iconBg: "bg-[#faf5ff]",
-    iconFg: "text-[#7e22ce]",
-    tasksToday: 311,
-    successRate: 96,
-    lastRun: "Just now",
-    usedOnCases: 489,
-  },
-  {
-    id: "lien",
-    name: "Lien Resolution Agent",
-    description: "Tracks active liens, negotiates reductions with providers, and reconciles payoff letters.",
-    status: "error",
-    icon: Scales,
-    iconBg: "bg-[#fff1f2]",
-    iconFg: "text-[#be123c]",
-    tasksToday: 4,
-    successRate: 82,
-    lastRun: "12 min ago",
-    usedOnCases: 73,
-  },
-  {
-    id: "discovery",
-    name: "Discovery Monitor",
-    description: "Watches case folders for new documents, flags substantive changes, and routes to the handling attorney.",
-    status: "active",
-    icon: Binoculars,
-    iconBg: "bg-[#ecfdf5]",
-    iconFg: "text-[#047857]",
-    tasksToday: 57,
-    successRate: 94,
-    lastRun: "3 min ago",
-    usedOnCases: 201,
-  },
-  {
-    id: "damages",
-    name: "Damages Drafting Agent",
-    description: "Assembles special damages tables from medical bills, liens, and wage-loss records.",
-    status: "active",
-    icon: Sparkle,
-    iconBg: "bg-[#fdf4ff]",
-    iconFg: "text-[#a21caf]",
-    tasksToday: 18,
-    successRate: 93,
-    lastRun: "38 min ago",
-    usedOnCases: 96,
-  },
-];
-
-const FILTERS = [
-  { label: "All", count: 9, active: true },
-  { label: "Active", count: 7, active: false },
-  { label: "Paused", count: 1, active: false },
-  { label: "Error", count: 1, active: false },
-];
-
-function StatusPill({ status }: { status: AgentStatus }) {
-  if (status === "active") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-2 py-[2px] text-[11px] font-medium leading-4 text-[#15803d]">
-        <CheckCircle size={12} weight="fill" />
-        Active
-      </span>
-    );
-  }
-  if (status === "paused") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-[#fde68a] bg-[#fffbeb] px-2 py-[2px] text-[11px] font-medium leading-4 text-[#b45309]">
-        <PauseCircle size={12} weight="fill" />
-        Paused
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-[#fecaca] bg-[#fef2f2] px-2 py-[2px] text-[11px] font-medium leading-4 text-[#b91c1c]">
-      <WarningCircle size={12} weight="fill" />
-      Error
-    </span>
-  );
+/** An "agent" is a playbook that contains at least one voice step.
+ *  (Future: also email-out, sms-out, e-file steps.) */
+function isAgent(p: PlaybookDef): boolean {
+  return p.steps.some((s) => s.type === "voice")
 }
 
-function StatBlock({
-  eyebrow,
-  value,
-  hint,
-}: {
-  eyebrow: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="flex-1 border-r border-[#e5e7eb] px-4 py-3 last:border-r-0">
-      <div className="text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-zinc-500">
-        {eyebrow}
-      </div>
-      <div className="mt-1 text-[18px] font-semibold leading-6 tracking-[-0.005em] text-zinc-900 tabular-nums">
-        {value}
-      </div>
-      {hint ? (
-        <div className="mt-0.5 text-[11px] leading-4 text-zinc-500">{hint}</div>
-      ) : null}
-    </div>
-  );
-}
-
-function AgentCard({ agent }: { agent: Agent }) {
-  const Icon = agent.icon;
-  return (
-    <div className="group relative flex flex-col rounded-[10px] border border-[#e5e7eb] bg-white p-4 transition-shadow hover:border-[#dbeafe] hover:shadow-[0_2px_8px_rgba(30,64,175,0.08)]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] ${agent.iconBg}`}
-          >
-            <Icon size={20} className={agent.iconFg} weight="regular" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[14px] font-semibold leading-5 text-zinc-900">
-              {agent.name}
-            </div>
-            <div className="mt-0.5">
-              <StatusPill status={agent.status} />
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-[6px] text-zinc-500 opacity-0 transition-opacity hover:bg-gray-100 hover:text-zinc-900 group-hover:opacity-100"
-          aria-label="Agent actions"
-        >
-          <DotsThree size={16} weight="bold" />
-        </button>
-      </div>
-
-      <p className="mt-3 line-clamp-2 text-[12px] leading-4 text-zinc-500">
-        {agent.description}
-      </p>
-
-      <div className="mt-4 grid grid-cols-3 gap-2 rounded-[6px] border border-[#f1f5f9] bg-[#f9fafb] px-3 py-2">
-        <div>
-          <div className="text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-zinc-500">
-            Today
-          </div>
-          <div className="mt-0.5 text-[14px] font-semibold leading-5 text-zinc-900 tabular-nums">
-            {agent.tasksToday}
-          </div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-zinc-500">
-            Success
-          </div>
-          <div className="mt-0.5 text-[14px] font-semibold leading-5 text-zinc-900 tabular-nums">
-            {agent.successRate}%
-          </div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-zinc-500">
-            Last run
-          </div>
-          <div className="mt-0.5 flex items-center gap-1 text-[12px] font-medium leading-5 text-zinc-700">
-            <Clock size={12} className="text-zinc-400" />
-            <span className="truncate">{agent.lastRun}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between border-t border-[#f1f5f9] pt-3">
-        <span className="inline-flex items-center gap-1 rounded-[6px] bg-[#eff6ff] px-1.5 py-[2px] text-[12px] font-medium text-[#1e40af]">
-          Used on {agent.usedOnCases} cases
-        </span>
-        <button
-          type="button"
-          className="text-[12px] font-medium text-zinc-500 hover:text-[#1e40af]"
-        >
-          View
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function CreateAgentCard() {
-  return (
-    <button
-      type="button"
-      className="group flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-[#d1d5db] bg-transparent p-4 text-zinc-500 transition-colors hover:border-[#dbeafe] hover:bg-[#eff6ff] hover:text-[#1e40af]"
-    >
-      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-dashed border-[#d1d5db] bg-white text-zinc-400 transition-colors group-hover:border-[#dbeafe] group-hover:bg-white group-hover:text-[#1e40af]">
-        <Plus size={20} weight="regular" />
-      </div>
-      <div className="text-[14px] font-semibold leading-5">Create agent</div>
-      <div className="max-w-[220px] text-center text-[12px] leading-4 text-zinc-500">
-        Design a new autonomous worker for your firm.
-      </div>
-    </button>
-  );
+/** Surface the dial / external-action input for the card. */
+function getOutsideContact(p: PlaybookDef): string | null {
+  const phoneInput = p.inputs.find((i) => i.type === "phone")
+  return phoneInput?.name ?? null
 }
 
 export function AgentsLibrary() {
+  const agents = useMemo(
+    () => Object.values(PLAYBOOK_DEFS).filter(isAgent),
+    []
+  )
+  const [runDrawerFor, setRunDrawerFor] = useState<PlaybookDef | null>(null)
+
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      {/* Page header */}
-      <header className="flex h-12 items-center justify-between border-b border-[#e5e7eb] bg-[#f9fafb] px-4">
-        <div className="flex items-center gap-2">
-          <Robot size={16} className="text-zinc-700" weight="regular" />
-          <h1 className="text-[14px] font-semibold leading-5 text-zinc-900">
-            Agents
-          </h1>
-          <span className="ml-1 inline-flex items-center rounded-full border border-[#e5e7eb] bg-white px-2 py-[1px] text-[11px] font-medium text-zinc-500">
-            9
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-8 rounded-[6px] border-[#e5e7eb] px-3 text-[14px] font-medium text-zinc-700 hover:bg-[#f9fafb]"
-          >
-            Documentation
-          </Button>
-          <Button className="h-8 rounded-[6px] bg-[#1e40af] px-3 text-[14px] font-medium text-white hover:bg-[#1e3a8a]">
-            <Plus size={14} weight="bold" className="mr-1" />
+    <div className="flex flex-col flex-1 min-h-0 bg-gray-50">
+      <header className="border-b border-gray-200 bg-white px-6 py-5 shrink-0">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-base font-semibold text-zinc-900 mb-0.5">Agents</h1>
+            <p className="text-xs text-zinc-500 leading-relaxed max-w-[640px]">
+              Automations that act with an outside party — voice calls today, email and SMS next.
+              Each agent is configured like any other playbook (canvas + memory + returns); it just
+              happens to dial.
+            </p>
+          </div>
+          <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
+            <PhoneCall className="h-3.5 w-3.5" weight="bold" />
             New agent
           </Button>
         </div>
       </header>
 
-      {/* Body */}
-      <div className="mx-auto w-full max-w-[1280px] flex-1 px-6 py-6">
-        {/* Title + subtitle */}
-        <div className="mb-5">
-          <h2 className="text-[18px] font-semibold leading-6 tracking-[-0.005em] text-zinc-900">
-            Agent Library
-          </h2>
-          <p className="mt-1 text-[14px] leading-5 text-zinc-500">
-            Autonomous AI workers that run continuously against your case
-            inventory. Unlike playbooks, agents monitor, decide, and act over
-            days and weeks.
-          </p>
-        </div>
-
-        {/* Stats band */}
-        <div className="mb-5 flex items-stretch rounded-[10px] border border-[#e5e7eb] bg-white">
-          <StatBlock eyebrow="Active agents" value="7" hint="of 9 total" />
-          <StatBlock eyebrow="Tasks this week" value="4,218" hint="+18% vs last week" />
-          <StatBlock eyebrow="Success rate" value="94%" hint="rolling 7 days" />
-          <StatBlock eyebrow="Cases covered" value="612" hint="across 9 agents" />
-          <StatBlock eyebrow="Hours saved" value="328h" hint="this week, est." />
-        </div>
-
-        {/* Filter / search row */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.label}
-                type="button"
-                className={
-                  f.active
-                    ? "inline-flex items-center gap-1.5 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2 py-[2px] text-[11px] font-medium text-[#1e40af]"
-                    : "inline-flex items-center gap-1.5 rounded-full border border-[#e5e7eb] bg-white px-2 py-[2px] text-[11px] font-medium text-zinc-600 hover:border-[#d1d5db] hover:bg-[#f9fafb]"
-                }
-              >
-                {f.label}
-                <span
-                  className={
-                    f.active
-                      ? "rounded-full bg-white px-1 text-[10px] font-semibold text-[#1e40af] tabular-nums"
-                      : "rounded-full bg-[#f3f4f6] px-1 text-[10px] font-semibold text-zinc-500 tabular-nums"
-                  }
-                >
-                  {f.count}
-                </span>
-              </button>
+      <div className="flex-1 min-h-0 overflow-auto px-6 py-5">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {agents.map((a) => (
+              <AgentCard
+                key={a.id}
+                agent={a}
+                onRun={() => setRunDrawerFor(a)}
+              />
             ))}
+            <NewAgentCard />
           </div>
-
-          <div className="relative w-full max-w-[300px]">
-            <MagnifyingGlass
-              size={14}
-              weight="regular"
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-            />
-            <Input
-              placeholder="Search agents"
-              className="h-8 rounded-[6px] border-[#e5e7eb] bg-white pl-8 pr-3 text-[14px] text-zinc-900 placeholder:text-zinc-500 focus-visible:border-[#1e40af] focus-visible:ring-[3px] focus-visible:ring-[#dbeafe]"
-            />
-          </div>
-        </div>
-
-        {/* Card grid */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {AGENTS.map((a) => (
-            <AgentCard key={a.id} agent={a} />
-          ))}
-          <CreateAgentCard />
         </div>
       </div>
+
+      {runDrawerFor && (
+        <KickoffDrawer
+          agent={runDrawerFor}
+          onClose={() => setRunDrawerFor(null)}
+        />
+      )}
     </div>
-  );
+  )
+}
+
+function AgentCard({
+  agent,
+  onRun,
+}: {
+  agent: PlaybookDef
+  onRun: () => void
+}) {
+  const Icon = agent.icon
+  const dials = getOutsideContact(agent)
+  return (
+    <div className="rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-sm transition-all flex flex-col">
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-3">
+        <div className={`flex items-center justify-center h-10 w-10 rounded-md ${agent.iconBg} shrink-0`}>
+          <Icon className={`h-5 w-5 ${agent.iconColor}`} weight="bold" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-zinc-900 truncate">{agent.name}</h3>
+            <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0 text-[10px] font-semibold">
+              <PhoneCall className="h-2.5 w-2.5" weight="bold" />
+              Voice
+            </span>
+          </div>
+          <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-3 mt-0.5">
+            {agent.description}
+          </p>
+        </div>
+      </div>
+
+      {/* Dials info */}
+      {dials && (
+        <div className="text-[11px] text-zinc-600 mb-2">
+          <span className="text-zinc-400">Dials </span>
+          <code className="font-mono text-[11px] text-violet-700 bg-violet-50 border border-violet-200 px-1 py-0 rounded">
+            {`{{${dials}}}`}
+          </code>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="flex items-center gap-3 text-[11px] text-zinc-500 mb-3">
+        <span className="inline-flex items-center gap-1">
+          <ChartLineUp className="h-3 w-3" weight="bold" />
+          <span className="tabular-nums font-medium text-zinc-700">{agent.totalRuns.toLocaleString()}</span>
+          runs
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {agent.lastRun}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-gray-100">
+        <Button
+          size="sm"
+          className="h-8 flex-1 gap-1.5 bg-blue-800 hover:bg-blue-900"
+          onClick={onRun}
+        >
+          <Play className="h-3.5 w-3.5" weight="fill" />
+          Run
+        </Button>
+        <Link
+          href={`/playbooks/${agent.id}/edit`}
+          className="inline-flex items-center justify-center h-8 px-2 rounded-md border border-gray-200 bg-white text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
+          title="Open editor"
+        >
+          <PencilRuler className="h-3.5 w-3.5" />
+        </Link>
+        <Link
+          href={`/playbooks?p=${agent.id}`}
+          className="inline-flex items-center gap-1 h-8 px-2 rounded-md border border-gray-200 bg-white text-xs font-medium text-zinc-700 hover:border-blue-300 hover:text-blue-800 transition-colors"
+          title="See past runs"
+        >
+          Runs
+          <CaretRight className="h-3 w-3" weight="bold" />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function NewAgentCard() {
+  return (
+    <button className="rounded-[10px] border border-dashed border-gray-300 bg-white px-4 py-6 hover:border-blue-300 hover:bg-blue-50/30 transition-colors flex flex-col items-center justify-center text-center gap-2 min-h-[200px]">
+      <div className="flex items-center justify-center h-10 w-10 rounded-md bg-gray-100">
+        <PhoneCall className="h-5 w-5 text-zinc-400" weight="bold" />
+      </div>
+      <div className="text-sm font-semibold text-zinc-700">New agent</div>
+      <p className="text-[11px] text-zinc-500 leading-relaxed max-w-[240px]">
+        Compose a voice agent in the canvas — single Voice step with goals + extractions, or chain a
+        Fetch first.
+      </p>
+    </button>
+  )
+}
+
+// ── Kickoff drawer ────────────────────────────────────────────────────
+
+const SAMPLE_RUN_FOR: Record<string, string> = {
+  "intake-callback-voice": "vc_001",
+  "med-treatment-verification-voice": "vc_004",
+}
+
+function KickoffDrawer({
+  agent,
+  onClose,
+}: {
+  agent: PlaybookDef
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(agent.inputs.map((f) => [f.id, f.sample ?? ""]))
+  )
+  const handleRun = () => {
+    const sampleId = SAMPLE_RUN_FOR[agent.id]
+    if (sampleId) {
+      router.push(`/agents/runs/${sampleId}`)
+    } else {
+      router.push(`/playbooks?p=${agent.id}`)
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-zinc-900/15 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="w-[480px] max-w-[92vw] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
+        <header className="flex items-center gap-2 px-4 h-12 border-b border-gray-200 shrink-0">
+          <div className={`flex items-center justify-center h-7 w-7 rounded ${agent.iconBg}`}>
+            <agent.icon className={`h-4 w-4 ${agent.iconColor}`} weight="bold" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-zinc-900 truncate">Run {agent.name}</div>
+            <div className="text-[11px] text-zinc-500">
+              Fill in the fields below and the agent will dial.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="flex-1 min-h-0 overflow-auto p-4 space-y-3">
+          {agent.inputs.map((field) => (
+            <KickoffField
+              key={field.id}
+              field={field}
+              value={values[field.id] ?? ""}
+              onChange={(v) => setValues((s) => ({ ...s, [field.id]: v }))}
+            />
+          ))}
+        </div>
+
+        <footer className="border-t border-gray-200 px-4 py-3 flex items-center gap-2 shrink-0 bg-white">
+          <span className="text-[11px] text-zinc-500">Call fires within ~10s</span>
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" onClick={onClose} className="h-9">
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleRun}
+            className="h-9 gap-1.5 bg-blue-800 hover:bg-blue-900"
+          >
+            <Play className="h-3.5 w-3.5" weight="fill" />
+            Place call
+          </Button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
+function KickoffField({
+  field,
+  value,
+  onChange,
+}: {
+  field: Field
+  value: string
+  onChange: (v: string) => void
+}) {
+  const isLong = field.type === "long_text"
+  const isPhone = field.type === "phone"
+  return (
+    <div>
+      <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 block mb-1">
+        {field.name}
+        {field.required && <span className="text-rose-600 ml-0.5">*</span>}
+      </label>
+      {field.description && (
+        <div className="text-[11px] text-zinc-500 leading-relaxed mb-1.5">{field.description}</div>
+      )}
+      {field.type === "enum" ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="">— pick one —</option>
+          {(field.options ?? []).map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      ) : isLong ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 resize-none leading-relaxed"
+        />
+      ) : (
+        <input
+          type={isPhone ? "tel" : "text"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`w-full h-9 px-3 text-sm rounded-md border border-gray-200 bg-white focus:outline-none focus:border-blue-800 focus:ring-2 focus:ring-blue-100 ${
+            isPhone ? "font-mono tabular-nums" : ""
+          }`}
+        />
+      )}
+    </div>
+  )
 }

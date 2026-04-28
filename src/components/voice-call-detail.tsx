@@ -76,7 +76,7 @@ export function VoiceCallDetail({
         )}
         <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
           <CaretRight className="h-3 w-3 text-zinc-300" weight="bold" />
-          <span>Voice</span>
+          <span>Agents</span>
         </div>
         <span className="text-zinc-300">/</span>
         <div className="flex items-center gap-1.5">
