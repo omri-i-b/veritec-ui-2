@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
+  ArrowSquareOut,
   CaretRight,
   CheckCircle,
   Warning,
@@ -139,40 +140,14 @@ export function VoiceCallDetail({
         </div>
       )}
 
-      {/* Two-column body */}
-      <div className="flex-1 min-h-0 grid grid-cols-[55fr_45fr] overflow-hidden">
-        {/* Left — transcript */}
-        <div className="flex flex-col min-h-0 border-r border-gray-200 bg-white">
-          <div className="px-3 py-1.5 border-b border-gray-200 bg-gray-50/60 shrink-0">
-            <div className="flex items-center gap-2">
-              <ChatText className="h-3.5 w-3.5 text-zinc-500" weight="bold" />
-              <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Transcript
-              </h2>
-              <span className="text-[11px] text-zinc-400">
-                · click any turn to scrub the recording
-              </span>
-            </div>
-          </div>
-          <TranscriptView
-            turns={call.transcript}
-            activeTurnId={activeTurnId}
-            onTurnClick={(t) => handleTurnClick(t.id, t.startMs)}
-          />
-        </div>
-
-        {/* Right — extracted fields */}
-        <div className="flex flex-col min-h-0 bg-white">
-          <ExtractedFieldsPanel
-            fields={call.fields}
-            onJumpToTurn={(turnId) => {
-              const t = call.transcript.find((x) => x.id === turnId)
-              if (t) handleTurnClick(turnId, t.startMs)
-            }}
-            onFieldEdit={handleFieldEdit}
-          />
-        </div>
-      </div>
+      {/* Body — Results primary; Transcript & recording secondary tab */}
+      <BodyTabs
+        call={call}
+        activeTurnId={activeTurnId}
+        onTurnClick={handleTurnClick}
+        onFieldEdit={handleFieldEdit}
+        scrubToMs={scrubToMs}
+      />
 
       {/* System events (collapsible) */}
       {call.systemEvents && call.systemEvents.length > 0 && (
@@ -215,11 +190,6 @@ export function VoiceCallDetail({
         </div>
       )}
 
-      {/* Recording player */}
-      {call.recordingUrl && call.durationSec && (
-        <RecordingPlayer durationSec={call.durationSec} scrubToMs={scrubToMs} />
-      )}
-
       {/* Actions row */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-200 bg-white shrink-0">
         <Button size="sm" className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900">
@@ -243,6 +213,148 @@ export function VoiceCallDetail({
           <ChatText className="h-3.5 w-3.5" />
           Add note
         </Button>
+      </div>
+    </div>
+  )
+}
+
+// ── Body tabs: Results | Transcript & recording ──────────────────────
+
+function BodyTabs({
+  call,
+  activeTurnId,
+  onTurnClick,
+  onFieldEdit,
+  scrubToMs,
+}: {
+  call: VoiceCall
+  activeTurnId: string | null
+  onTurnClick: (turnId: string, startMs: number) => void
+  onFieldEdit: (key: string, value: string) => void
+  scrubToMs: number | null
+}) {
+  const [tab, setTab] = useState<"results" | "evidence">("results")
+  return (
+    <div className="flex flex-1 min-h-0 flex-col bg-white">
+      <nav className="flex items-center gap-0 border-b border-gray-200 bg-white px-4 shrink-0">
+        <Tab
+          active={tab === "results"}
+          onClick={() => setTab("results")}
+          icon={<ArrowSquareOut className="h-3.5 w-3.5" weight="bold" />}
+          label="Results"
+          count={call.fields.length}
+        />
+        <Tab
+          active={tab === "evidence"}
+          onClick={() => setTab("evidence")}
+          icon={<ChatText className="h-3.5 w-3.5" weight="bold" />}
+          label="Transcript & recording"
+          count={call.transcript.length}
+        />
+        <div className="flex-1" />
+        {tab === "results" && (
+          <button
+            onClick={() => setTab("evidence")}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-blue-800 transition-colors"
+          >
+            Verify against transcript
+            <CaretRight className="h-3 w-3" weight="bold" />
+          </button>
+        )}
+      </nav>
+
+      {tab === "results" ? (
+        <div className="flex-1 min-h-0 overflow-auto bg-gray-50">
+          <div className="max-w-[1100px] mx-auto p-5">
+            <ResultsView
+              call={call}
+              onJumpToTurn={(turnId) => {
+                const t = call.transcript.find((x) => x.id === turnId)
+                if (t) {
+                  onTurnClick(turnId, t.startMs)
+                  setTab("evidence")
+                }
+              }}
+              onFieldEdit={onFieldEdit}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <TranscriptView
+              turns={call.transcript}
+              activeTurnId={activeTurnId}
+              onTurnClick={(t) => onTurnClick(t.id, t.startMs)}
+            />
+          </div>
+          {call.recordingUrl && call.durationSec && (
+            <RecordingPlayer durationSec={call.durationSec} scrubToMs={scrubToMs} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Tab({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  count?: number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-2.5 text-sm transition-colors relative ${
+        active ? "text-blue-800 font-semibold" : "text-zinc-600 hover:text-zinc-900"
+      }`}
+    >
+      {icon}
+      {label}
+      {typeof count === "number" && count > 0 && (
+        <span
+          className={`text-[10px] px-1.5 py-0 rounded-full font-semibold tabular-nums ${
+            active ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-zinc-600"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+      {active && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-blue-800" />}
+    </button>
+  )
+}
+
+// ── Results view (the primary surface) ────────────────────────────────
+
+function ResultsView({
+  call,
+  onJumpToTurn,
+  onFieldEdit,
+}: {
+  call: VoiceCall
+  onJumpToTurn: (turnId: string) => void
+  onFieldEdit: (key: string, value: string) => void
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 mb-2">
+        Extracted by the agent
+      </div>
+      <div className="rounded-[10px] border border-gray-200 bg-white overflow-hidden">
+        <ExtractedFieldsPanel
+          fields={call.fields}
+          onJumpToTurn={onJumpToTurn}
+          onFieldEdit={onFieldEdit}
+        />
       </div>
     </div>
   )
