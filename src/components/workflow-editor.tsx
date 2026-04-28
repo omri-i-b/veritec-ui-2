@@ -47,7 +47,6 @@ function EditorHeader({
   onDiscard: () => void
 }) {
   const pb = getPlaybook(playbookId)
-  const Icon = pb.icon
   const isAgentKind = parent ? parent === "agents" : isAgent(pb)
   const parentLabel = isAgentKind ? "Agents" : "Playbooks"
   const parentHref = isAgentKind ? "/agents" : "/playbooks"
@@ -61,12 +60,7 @@ function EditorHeader({
         {parentLabel}
       </Link>
       <span className="text-zinc-300">/</span>
-      <div className="flex items-center gap-1.5">
-        <div className={`flex items-center justify-center h-5 w-5 rounded ${pb.iconBg}`}>
-          <Icon className={`h-3 w-3 ${pb.iconColor}`} weight="bold" />
-        </div>
-        <span className="text-sm font-semibold text-zinc-900 truncate max-w-[280px]">{pb.name}</span>
-      </div>
+      <span className="text-sm font-semibold text-zinc-900 truncate max-w-[320px]">{pb.name}</span>
       <SaveIndicator dirty={dirty} saveState={saveState} />
       <button
         className="flex items-center justify-center h-6 w-6 rounded text-zinc-400 hover:text-amber-500 transition-colors"
@@ -238,9 +232,6 @@ function RunDrawer({
       />
       <div className="w-[480px] max-w-[92vw] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
         <header className="flex items-center gap-2 px-4 h-12 border-b border-gray-200 shrink-0">
-          <div className={`flex items-center justify-center h-6 w-6 rounded ${pb.iconBg}`}>
-            <pb.icon className={`h-3.5 w-3.5 ${pb.iconColor}`} weight="bold" />
-          </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-zinc-900 truncate">
               Run {pb.name}

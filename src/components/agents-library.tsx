@@ -153,27 +153,21 @@ function AgentCard({
   onRun: () => void
   onSeePastRuns: () => void
 }) {
-  const Icon = agent.icon
   const dials = getOutsideContact(agent)
   return (
     <div className="rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-sm transition-all flex flex-col">
       {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
-        <div className={`flex items-center justify-center h-10 w-10 rounded-md ${agent.iconBg} shrink-0`}>
-          <Icon className={`h-5 w-5 ${agent.iconColor}`} weight="bold" />
+      <div className="mb-3">
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-sm font-semibold text-zinc-900 truncate">{agent.name}</h3>
+          <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0 text-[10px] font-semibold">
+            <PhoneCall className="h-2.5 w-2.5" weight="bold" />
+            Voice
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="text-sm font-semibold text-zinc-900 truncate">{agent.name}</h3>
-            <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0 text-[10px] font-semibold">
-              <PhoneCall className="h-2.5 w-2.5" weight="bold" />
-              Voice
-            </span>
-          </div>
-          <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-3 mt-0.5">
-            {agent.description}
-          </p>
-        </div>
+        <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-3">
+          {agent.description}
+        </p>
       </div>
 
       {/* Dials info */}
@@ -275,9 +269,6 @@ function KickoffDrawer({
       <div className="flex-1 bg-zinc-900/15 backdrop-blur-sm" onClick={onClose} aria-hidden />
       <div className="w-[480px] max-w-[92vw] bg-white border-l border-gray-200 shadow-xl flex flex-col overflow-hidden">
         <header className="flex items-center gap-2 px-4 h-12 border-b border-gray-200 shrink-0">
-          <div className={`flex items-center justify-center h-7 w-7 rounded ${agent.iconBg}`}>
-            <agent.icon className={`h-4 w-4 ${agent.iconColor}`} weight="bold" />
-          </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-zinc-900 truncate">Run {agent.name}</div>
             <div className="text-[11px] text-zinc-500">

@@ -381,17 +381,13 @@ function LibraryToolbar({
 // ── Playbook Card ───────────────────────────────────────────────────────
 
 function PlaybookCard({ playbook }: { playbook: Playbook }) {
-  const Icon = playbook.icon
   return (
     <Link
       href={`/playbooks/${playbook.id}/edit`}
       className="group relative flex flex-col rounded-[10px] border border-gray-200 bg-white p-4 hover:border-blue-300 hover:shadow-[0_2px_8px_rgba(30,64,175,0.08)] transition-all"
     >
-      {/* Top row: icon + badges */}
-      <div className="flex items-start justify-between mb-3">
-        <div className={`flex items-center justify-center h-10 w-10 rounded-[10px] ${playbook.iconBg}`}>
-          <Icon className={`h-5 w-5 ${playbook.iconColor}`} weight="regular" />
-        </div>
+      {/* Top row: badges */}
+      <div className="flex items-start justify-end gap-1 mb-2 min-h-[24px]">
         <div className="flex items-center gap-1">
           {playbook.trending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">

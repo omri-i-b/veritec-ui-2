@@ -1804,13 +1804,8 @@ function RightSidebar({
     <div className="w-[360px] shrink-0 border-l border-gray-200 bg-white flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto p-4 space-y-5">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className={`flex items-center justify-center h-7 w-7 rounded-md ${playbook.iconBg}`}>
-              <playbook.icon className={`h-4 w-4 ${playbook.iconColor}`} weight="bold" />
-            </span>
-            <h3 className="text-sm font-semibold text-zinc-900">{playbook.name}</h3>
-          </div>
-          <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{playbook.description}</p>
+          <h3 className="text-sm font-semibold text-zinc-900 mb-1">{playbook.name}</h3>
+          <p className="text-xs text-zinc-600 leading-relaxed line-clamp-4">{playbook.description}</p>
         </div>
 
         <div>
