@@ -88,18 +88,32 @@ export interface AgentMove {
   /** Optional one-line note describing what the agent does at this point */
   note?: string
   /** Categorical kind — drives the leading icon */
-  kind?: "dial" | "speak" | "ask" | "listen" | "branch" | "log" | "escalate"
+  kind?: "dial" | "answer" | "speak" | "ask" | "listen" | "branch" | "log" | "escalate" | "decline"
+  /** For branch moves: sub-flows under classification labels */
+  branches?: { match: string; flow: AgentMove[] }[]
 }
 
 /** What kicks off a playbook run. Defaults to "manual" when omitted. */
 export interface PlaybookTrigger {
-  kind: "manual" | "integration" | "webform" | "cadence" | "webhook"
+  kind:
+    | "manual"
+    | "integration"
+    | "webform"
+    | "cadence"
+    | "webhook"
+    | "incoming-call"
   /** Display name of the integration (e.g. "Filevine", "Typeform"). */
   source?: string
-  /** The specific event this trigger fires on (e.g. "Project moved to Records pending"). */
+  /** The specific event this trigger fires on. */
   event?: string
   /** Sub-line shown under the trigger node in the canvas. */
   description?: string
+}
+
+/** True for triggers that run the workflow always-on (no manual Run button). */
+export function isAlwaysOnTrigger(t: PlaybookTrigger | undefined): boolean {
+  if (!t) return false
+  return t.kind === "incoming-call" || t.kind === "integration" || t.kind === "webform" || t.kind === "cadence" || t.kind === "webhook"
 }
 
 export interface PlaybookDef {
@@ -815,6 +829,107 @@ export const PLAYBOOK_DEFS: Record<string, PlaybookDef> = {
       },
     ],
   },
+}
+
+/** Inbound intake: always-on workflow answering the firm's main line. */
+PLAYBOOK_DEFS["intake-reception-voice"] = {
+  id: "intake-reception-voice",
+  name: "Intake Reception",
+  description:
+    "Live agent answering the firm's main line. Greets callers, classifies the matter type, qualifies or declines, books a consult, and creates a lead in Filevine.",
+  category: "Intake",
+  status: "Published",
+  version: "v2",
+  icon: PhoneCall,
+  iconColor: "text-blue-800",
+  iconBg: "bg-blue-50",
+  totalRuns: 3147,
+  lastRun: "2m ago",
+  trigger: {
+    kind: "incoming-call",
+    source: "Phone line",
+    event: "Incoming call",
+    description: "Always-on. Picks up calls to (415) 555-LAW1.",
+  },
+  inputs: [
+    {
+      id: "in_1",
+      name: "Caller phone",
+      type: "phone",
+      required: true,
+      description: "Phone number from the incoming call (provided by the trigger)",
+      sample: "+1 (650) 555-0903",
+    },
+  ],
+  steps: [
+    {
+      id: "s1",
+      type: "voice",
+      name: "Live intake call",
+      detail:
+        "You are the receptionist for Veritec Law's main line. Answer warmly. Get the caller's name and a callback number. Identify the matter type, then walk the right qualification track. Decline politely for matter types we don't handle (criminal, family, immigration) and for callers who already have an attorney. Book a free consultation if they qualify.\n\nNever give legal advice. Never quote settlement amounts. Switch to Spanish if the caller opens in Spanish.",
+      voice: {
+        maxDurationSec: 600,
+        language: "auto",
+        agentFlow: [
+          { id: "answer", kind: "answer", label: "Answer warmly", note: "\u201cThanks for calling Veritec Law\u201d" },
+          { id: "name", kind: "ask", label: "Get name + callback number" },
+          {
+            id: "classify",
+            kind: "branch",
+            label: "Classify matter type",
+            note: "Listen for the type before going deeper",
+            branches: [
+              {
+                match: "Auto / MVA / Personal injury",
+                flow: [
+                  { id: "mva-incident", kind: "ask", label: "Date + location of incident" },
+                  { id: "mva-injury", kind: "ask", label: "Injuries + treatment status" },
+                  { id: "mva-rep", kind: "ask", label: "Already represented?" },
+                  { id: "mva-book", kind: "ask", label: "Book free consult" },
+                ],
+              },
+              {
+                match: "Premises / slip and fall",
+                flow: [
+                  { id: "prem-where", kind: "ask", label: "Where + circumstances" },
+                  { id: "prem-injury", kind: "ask", label: "Injuries + treatment" },
+                  { id: "prem-book", kind: "ask", label: "Book free consult" },
+                ],
+              },
+              {
+                match: "Criminal / family / immigration",
+                flow: [
+                  { id: "decline-matter", kind: "decline", label: "Decline politely + refer", note: "\u201cWe focus on personal injury\u201d" },
+                ],
+              },
+              {
+                match: "Already represented",
+                flow: [
+                  { id: "decline-rep", kind: "decline", label: "Decline politely", note: "Conflict-of-interest rule" },
+                ],
+              },
+              {
+                match: "Off-script (settled, out-of-state, distress)",
+                flow: [
+                  { id: "escalate", kind: "escalate", label: "Hand off to bilingual associate" },
+                ],
+              },
+            ],
+          },
+          { id: "log", kind: "log", label: "Hang up + create Lead in Filevine" },
+        ],
+      },
+      returns: [
+        { id: "r1_a", name: "Caller name", type: "text" },
+        { id: "r1_b", name: "Callback phone", type: "phone" },
+        { id: "r1_c", name: "Matter type", type: "enum", options: ["MVA", "Premises", "Dog bite", "Workplace", "Criminal (declined)", "Family (declined)", "Already represented (declined)", "Off-script (escalated)", "Other"] },
+        { id: "r1_d", name: "Outcome", type: "enum", options: ["Qualified \u2014 consult booked", "Qualified \u2014 callback needed", "Declined \u2014 matter type", "Declined \u2014 already represented", "Voicemail / hangup", "Escalated"] },
+        { id: "r1_e", name: "Consult booked", type: "text", description: "Date/time + attorney, or 'No'" },
+        { id: "r1_f", name: "Outcome reason", type: "long_text", description: "1\u20132 sentences for the operator review" },
+      ],
+    },
+  ],
 }
 
 /** Filevine integration: fires when a project moves into "Records pending" phase. */

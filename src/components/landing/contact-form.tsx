@@ -55,23 +55,20 @@ export function ContactForm() {
         <div className="grid grid-cols-2 gap-16">
           <div>
             <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
-              06 &nbsp;/&nbsp; Your Move
+              06 &nbsp;/&nbsp; Get Started
             </p>
-            <h2 className="mt-4 font-display text-[80px] leading-[0.92] font-bold tracking-[-0.02em] uppercase">
-              It&rsquo;s your turn
-              <br />
-              to build.
+            <h2 className="mt-4 font-display text-[44px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+              Talk to the team.
             </h2>
-            <p className="mt-8 max-w-md text-base text-white/60">
-              Tell us what you&rsquo;re working on. We&rsquo;ll set you up
-              with a workspace, sample data, and a 30-minute walkthrough
-              with our team.
+            <p className="mt-6 max-w-md text-base text-white/60">
+              Tell us about your fleet and what&rsquo;s breaking today.
+              We&rsquo;ll get back within one business day.
             </p>
-            <ul className="mt-10 space-y-3 text-sm text-white/70">
+            <ul className="mt-8 space-y-2.5 text-sm text-white/70">
               {[
-                "Free 14-day trial, no credit card required",
-                "White-glove onboarding from a solutions engineer",
-                "Cancel anytime — keep what you've built",
+                "Free start with parameter management",
+                "Self-host in the field, sync when you're online",
+                "A fraction of legacy fleet-tool pricing",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <CheckCircle
@@ -137,14 +134,14 @@ export function ContactForm() {
                     placeholder="Acme Corp."
                   />
                 </Field>
-                <Field label="What are you building?" htmlFor="message">
+                <Field label="Fleet & use case" htmlFor="message">
                   <textarea
                     id="message"
                     rows={4}
                     value={values.message}
                     onChange={update("message")}
                     className={fieldClass + " resize-none"}
-                    placeholder="A few sentences about your team, your stack, and what you'd like to ship first."
+                    placeholder="What are you flying, how many vehicles, and what's painful about testing today?"
                   />
                 </Field>
 
@@ -157,7 +154,7 @@ export function ContactForm() {
                 >
                   {state === "submitting"
                     ? "Sending…"
-                    : "Request a Workspace"}
+                    : "Request Early Access"}
                   {state !== "submitting" && (
                     <ArrowRight className="h-3 w-3" weight="bold" />
                   )}

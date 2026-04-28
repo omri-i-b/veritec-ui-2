@@ -12,9 +12,13 @@ import {
   Clock,
   X,
   Stack,
+  CursorClick,
+  PhoneIncoming,
+  Plug,
+  Globe,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
-import { PLAYBOOK_DEFS, type Field, type PlaybookDef } from "@/lib/playbook-data"
+import { PLAYBOOK_DEFS, isAlwaysOnTrigger, type Field, type PlaybookDef } from "@/lib/playbook-data"
 import { UnifiedRuns } from "@/components/unified-runs"
 
 /** An "agent" is a playbook that contains at least one voice step.
@@ -144,7 +148,7 @@ function AgentsTable({
         <thead className="border-b border-gray-200 bg-gray-50">
           <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-zinc-500">
             <th className="px-4 py-2.5 font-medium">Agent</th>
-            <th className="px-4 py-2.5 font-medium">Type</th>
+            <th className="px-4 py-2.5 font-medium">Trigger</th>
             <th className="px-4 py-2.5 font-medium">Dials</th>
             <th className="px-4 py-2.5 font-medium text-right">Runs</th>
             <th className="px-4 py-2.5 font-medium">Status</th>
@@ -184,10 +188,7 @@ function AgentsTableRow({
         </div>
       </td>
       <td className="px-4 py-2.5">
-        <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0.5 text-[10px] font-semibold">
-          <PhoneCall className="h-2.5 w-2.5" weight="bold" />
-          Voice
-        </span>
+        <TriggerCell trigger={agent.trigger} />
       </td>
       <td className="px-4 py-2.5">
         {dials ? (
@@ -195,36 +196,45 @@ function AgentsTableRow({
             {`{{${dials}}}`}
           </code>
         ) : (
-          <span className="text-zinc-400 text-xs">—</span>
+          <span className="text-zinc-400 text-xs">\u2014 inbound</span>
         )}
       </td>
       <td className="px-4 py-2.5 text-right text-sm tabular-nums text-zinc-700">
         {agent.totalRuns.toLocaleString()}
       </td>
       <td className="px-4 py-2.5">
-        <span
-          className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
-            agent.status === "Published"
-              ? "border-green-200 bg-green-50 text-green-700"
-              : "border-zinc-200 bg-zinc-50 text-zinc-600"
-          }`}
-        >
-          {agent.status === "Published" ? "Live" : "Draft"}
-        </span>
+        {isAlwaysOnTrigger(agent.trigger) ? (
+          <span className="inline-flex items-center gap-1 rounded-md border border-green-200 bg-green-50 text-green-700 px-1.5 py-0.5 text-[10px] font-semibold">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+              agent.status === "Published"
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-zinc-200 bg-zinc-50 text-zinc-600"
+            }`}
+          >
+            {agent.status === "Published" ? "Published" : "Draft"}
+          </span>
+        )}
       </td>
       <td className="px-4 py-2.5 text-xs text-zinc-600 whitespace-nowrap">{agent.lastRun}</td>
       <td className="px-2 py-2.5 text-right">
         <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRun()
-            }}
-            className="inline-flex items-center gap-1 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-2 h-7 text-xs font-medium transition-colors"
-          >
-            <Play className="h-3 w-3" weight="fill" />
-            Run
-          </button>
+          {!isAlwaysOnTrigger(agent.trigger) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onRun()
+              }}
+              className="inline-flex items-center gap-1 rounded-md bg-blue-800 hover:bg-blue-900 text-white px-2 h-7 text-xs font-medium transition-colors"
+            >
+              <Play className="h-3 w-3" weight="fill" />
+              Run
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -246,6 +256,54 @@ function AgentsTableRow({
 const SAMPLE_RUN_FOR: Record<string, string> = {
   "intake-callback-voice": "vc_001",
   "med-treatment-verification-voice": "vc_004",
+}
+
+function TriggerCell({ trigger }: { trigger: PlaybookDef["trigger"] }) {
+  if (!trigger || trigger.kind === "manual") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 text-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold">
+        <CursorClick className="h-2.5 w-2.5" weight="bold" />
+        Manual
+      </span>
+    )
+  }
+  if (trigger.kind === "incoming-call") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 text-blue-800 px-1.5 py-0.5 text-[10px] font-semibold">
+        <PhoneIncoming className="h-2.5 w-2.5" weight="bold" />
+        Inbound call
+      </span>
+    )
+  }
+  if (trigger.kind === "integration") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 text-violet-700 px-1.5 py-0.5 text-[10px] font-semibold">
+        <Plug className="h-2.5 w-2.5" weight="bold" />
+        {trigger.source ?? "Integration"}
+      </span>
+    )
+  }
+  if (trigger.kind === "webform") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 text-amber-800 px-1.5 py-0.5 text-[10px] font-semibold">
+        <Globe className="h-2.5 w-2.5" weight="bold" />
+        Web form
+      </span>
+    )
+  }
+  if (trigger.kind === "cadence") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold">
+        <Clock className="h-2.5 w-2.5" weight="bold" />
+        Cadence
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 text-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold">
+      Webhook
+    </span>
+  )
 }
 
 function KickoffDrawer({

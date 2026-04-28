@@ -1,82 +1,62 @@
 import {
-  Code,
-  Database,
+  AirplaneTilt,
   GitBranch,
-  Lock,
-  Plugs,
-  Stack,
-  UsersThree,
-  Wrench,
-  ChartLine,
+  CheckSquare,
+  Broadcast,
+  Cube,
+  ListChecks,
 } from "@phosphor-icons/react/dist/ssr";
 
 const features = [
   {
-    icon: Code,
-    title: "Code when you need it",
-    body: "JavaScript, Python, and SQL anywhere — no proprietary languages to learn.",
-  },
-  {
-    icon: Plugs,
-    title: "Connect to anything",
-    body: "100+ native integrations and a generic REST/GraphQL block for the rest.",
-  },
-  {
-    icon: Database,
-    title: "Bring your own data",
-    body: "Postgres, Snowflake, MongoDB, S3 — query in place, no copying required.",
+    icon: AirplaneTilt,
+    title: "Fleet registry",
+    body: "Vehicles, ground stations, types — tracked in one place.",
   },
   {
     icon: GitBranch,
-    title: "Source control built in",
-    body: "Branch, review, and roll back changes the way your engineers already work.",
+    title: "Parameter version control",
+    body: "Every flight pinned to a known-good config. No surprise changes.",
   },
   {
-    icon: UsersThree,
-    title: "Roles & permissions",
-    body: "Per-app, per-resource, per-row. The defaults work; the overrides are easy.",
+    icon: CheckSquare,
+    title: "Pre-flight test suites",
+    body: "Block takeoff until every check passes. All scriptable.",
   },
   {
-    icon: Lock,
-    title: "Self-hosted option",
-    body: "Run on your VPC. Your data, your network, your compliance posture.",
+    icon: Broadcast,
+    title: "In-flight assertions",
+    body: "Telemetry checks that fire mid-mission and abort on anomaly.",
   },
   {
-    icon: Stack,
-    title: "Composable blocks",
-    body: "Tables, forms, charts, and an embedded code editor — all in one canvas.",
+    icon: Cube,
+    title: "Sim + hardware",
+    body: "Same test definitions run in your simulator and on real fleets.",
   },
   {
-    icon: Wrench,
-    title: "Built for operators",
-    body: "Ops, support, and finance ship their own tools without filing tickets.",
-  },
-  {
-    icon: ChartLine,
-    title: "Observability included",
-    body: "Logs, traces, and usage analytics on every app you ship.",
+    icon: ListChecks,
+    title: "Mission workflows",
+    body: "Sequence steps and tests. The base layer for AI-driven missions.",
   },
 ];
 
 export function FeatureGrid() {
   return (
     <section className="border-b border-white/10">
-      <div className="mx-auto max-w-[1680px] px-12 py-24">
+      <div className="mx-auto max-w-[1680px] px-12 py-20">
         <p className="mb-4 font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
-          02 &nbsp;/&nbsp; The Toolbox
+          02 &nbsp;/&nbsp; The Platform
         </p>
-        <h2 className="max-w-4xl font-display text-[64px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
-          Build and run modern
-          <br />
-          internal software.
+        <h2 className="max-w-3xl font-display text-[44px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+          Fleet, parameters, tests, missions — one system.
         </h2>
-        <div className="mt-14 grid grid-cols-3 gap-x-12 gap-y-12 border-t border-white/10 pt-12">
+        <div className="mt-12 grid grid-cols-3 gap-x-12 gap-y-10 border-t border-white/10 pt-10">
           {features.map((feat) => {
             const Icon = feat.icon;
             return (
               <div key={feat.title}>
-                <Icon className="h-6 w-6 text-white/85" weight="regular" />
-                <h3 className="mt-5 font-display text-xl font-bold tracking-tight uppercase">
+                <Icon className="h-5 w-5 text-white/85" weight="regular" />
+                <h3 className="mt-4 font-display text-lg font-bold tracking-tight uppercase">
                   {feat.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/55">

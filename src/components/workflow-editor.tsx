@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { DefinitionPanel } from "@/components/workflow-builder"
-import { getPlaybook, type Field, type PlaybookDef } from "@/lib/playbook-data"
+import { getPlaybook, isAlwaysOnTrigger, type Field, type PlaybookDef } from "@/lib/playbook-data"
 import { UnifiedRuns } from "@/components/unified-runs"
 
 /** A playbook is an agent if it has any voice step (matches /agents library logic). */
@@ -87,14 +87,24 @@ function EditorHeader({
           Save changes
         </Button>
       )}
-      <Button
-        size="sm"
-        className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900"
-        onClick={onRunClick}
-      >
-        <Play className="h-3.5 w-3.5" weight="fill" />
-        Run
-      </Button>
+      {isAlwaysOnTrigger(pb.trigger) ? (
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 px-2 py-0.5 text-[11px] font-semibold"
+          title={`Always-on \u2014 fires on ${pb.trigger?.event ?? "trigger"}`}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+          Live
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          className="h-8 gap-1.5 bg-blue-800 hover:bg-blue-900"
+          onClick={onRunClick}
+        >
+          <Play className="h-3.5 w-3.5" weight="fill" />
+          Run
+        </Button>
+      )}
       <button className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500">
         <DotsThree className="h-4 w-4" weight="bold" />
       </button>

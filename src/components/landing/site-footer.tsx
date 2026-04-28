@@ -1,63 +1,26 @@
 import Image from "next/image";
 
-const columns = [
-  {
-    heading: "Company",
-    links: ["Mission", "Newsroom", "Leadership", "Careers"],
-  },
-  {
-    heading: "Work With Us",
-    links: ["Careers", "Early Career", "SkillBridge", "Open Roles"],
-  },
-  {
-    heading: "Social",
-    links: ["X", "YouTube", "Instagram", "Facebook", "LinkedIn"],
-  },
-];
-
 export function SiteFooter() {
   return (
     <footer className="bg-black">
-      <div className="mx-auto max-w-[1680px] px-12 py-16">
-        <div className="grid grid-cols-12 gap-8 border-b border-white/10 pb-12">
-          <div className="col-span-3 flex items-center gap-2.5">
-            <Image
-              src="/airogistic-mark.png"
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
-            <span className="font-display text-2xl font-bold tracking-tight">
-              Airogistic
-            </span>
-          </div>
-          {columns.map((col) => (
-            <div key={col.heading} className="col-span-3">
-              <h4 className="font-mono text-[10px] tracking-[0.3em] text-white/45 uppercase">
-                {col.heading}
-              </h4>
-              <ul className="mt-5 space-y-2">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm text-white/75 transition-colors hover:text-white"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+      <div className="mx-auto flex max-w-[1680px] flex-col gap-6 px-12 py-12 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2.5">
+          <Image
+            src="/airogistic-mark.png"
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7"
+          />
+          <span className="font-display text-xl font-bold tracking-tight">
+            Airogistic
+          </span>
         </div>
-        <div className="mt-8 flex items-center justify-between font-mono text-[10px] tracking-[0.25em] text-white/40 uppercase">
-          <div className="flex flex-col gap-1">
-            <span>&copy; {new Date().getFullYear()} Airogistic, Inc.</span>
-            <span>Privacy &nbsp;·&nbsp; Terms &nbsp;·&nbsp; Cookies</span>
-          </div>
-          <span>Contact &nbsp;·&nbsp; hello@airogistic.com</span>
+        <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.25em] text-white/45 uppercase">
+          <a href="#contact" className="transition-colors hover:text-white">
+            Contact
+          </a>
+          <span>&copy; {new Date().getFullYear()} Airogistic, Inc.</span>
         </div>
       </div>
     </footer>

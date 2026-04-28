@@ -10,10 +10,10 @@ const logos = [
 ];
 
 const stats = [
-  { value: "50,000+", label: "Apps shipped on Airogistic this year" },
-  { value: "90%", label: "Of Fortune 500s have an Airogistic deployment" },
-  { value: "$1.2B", label: "In annual operations costs saved by customers" },
-  { value: "4.9/5", label: "Average G2 rating across 1,200+ reviews" },
+  { value: "0", label: "Vehicles lost to a bad parameter on Airogistic" },
+  { value: "10×", label: "Faster test cycles vs. manual checklists" },
+  { value: "<$2K", label: "Per month — a fraction of legacy fleet tools" },
+  { value: "100%", label: "Of flights replayable from logged config + telemetry" },
 ];
 
 export function SocialProof() {
@@ -23,10 +23,8 @@ export function SocialProof() {
         <p className="font-mono text-[11px] tracking-[0.3em] text-white/40 uppercase">
           04 &nbsp;/&nbsp; The Receipts
         </p>
-        <h2 className="mt-4 max-w-4xl font-display text-[64px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
-          Built by — and chosen by —
-          <br />
-          businesses of all sizes.
+        <h2 className="mt-4 max-w-4xl font-display text-[44px] leading-[0.95] font-bold tracking-[-0.02em] uppercase">
+          Trusted by teams flying real fleets.
         </h2>
 
         <div className="mt-14 grid grid-cols-4 border-t border-l border-white/10">

@@ -183,6 +183,43 @@ const SECTIONS: { title: string; subtitle: string; tiles: Tile[] }[] = [
     ],
   },
   {
+    title: "User-run vs always-on (event-triggered)",
+    subtitle:
+      "Same workflow primitive. Different triggers and operator UX.",
+    tiles: [
+      {
+        title: "User-run \u2014 Med Treatment Verification",
+        blurb:
+          "Operator (or a cadence) kicks it off per case. Linear: dial, ask, log. Click Run on the agent card to fire it.",
+        href: "/playbooks/med-treatment-verification-voice/edit",
+        icon: PencilRuler,
+        iconBg: "bg-emerald-50",
+        iconColor: "text-emerald-700",
+        bullets: [
+          "Trigger: Manual (or cadence on the case)",
+          "Tight 7-move agent flow \u2014 known goals up-front",
+          "Editor has a Run button",
+        ],
+        tags: [{ label: "Manual / cadence", tone: "green" }],
+      },
+      {
+        title: "Always-on \u2014 Intake Reception",
+        blurb:
+          "Live agent answering the firm's main line. Branches on matter type, declines what we don't handle, books consults for what we do.",
+        href: "/playbooks/intake-reception-voice/edit",
+        icon: PhoneIncoming,
+        iconBg: "bg-blue-50",
+        iconColor: "text-blue-800",
+        bullets: [
+          "Trigger: Incoming call on (415) 555-LAW1",
+          "Branched agent flow \u2014 5 matter-type tracks",
+          "No Run button \u2014 status pill says \u25cf Live instead",
+        ],
+        tags: [{ label: "Inbound call", tone: "blue" }, { label: "Always-on", tone: "amber" }],
+      },
+    ],
+  },
+  {
     title: "Integration-triggered playbooks",
     subtitle:
       "Same canvas, but the run kicks off from an outside system event \u2014 not a manual click.",

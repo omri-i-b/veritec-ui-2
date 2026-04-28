@@ -1,24 +1,24 @@
 import {
-  Lightning,
-  ShieldCheck,
-  Sparkle,
+  GitBranch,
+  CheckCircle,
+  ArrowsClockwise,
 } from "@phosphor-icons/react/dist/ssr";
 
 const cards = [
   {
-    icon: Lightning,
-    title: "Ship in days",
-    body: "Pre-built blocks, hosted infra, and a visual editor mean your first internal app is live the same week you start.",
+    icon: GitBranch,
+    title: "Version every parameter",
+    body: "Diff, review, and roll back configs the way your engineers ship code.",
   },
   {
-    icon: ShieldCheck,
-    title: "Secure by default",
-    body: "Granular access controls, audit logs, and SSO out of the box. Your data never leaves your perimeter unless you say so.",
+    icon: CheckCircle,
+    title: "Automate every test",
+    body: "Pre-flight, in-flight, post-flight. Scriptable, repeatable, history-backed.",
   },
   {
-    icon: Sparkle,
-    title: "AI that fits in",
-    body: "Drop agents into existing workflows. They read the same data, follow the same rules, and answer to the same humans.",
+    icon: ArrowsClockwise,
+    title: "Field-first, cloud-synced",
+    body: "Run locally without internet. Reconcile back to cloud when you're online.",
   },
 ];
 
@@ -33,11 +33,11 @@ export function FeatureCards() {
               key={card.title}
               className={`p-10 ${i < cards.length - 1 ? "border-r border-white/10" : ""}`}
             >
-              <Icon className="h-7 w-7 text-white" weight="regular" />
-              <h3 className="mt-8 font-display text-2xl font-bold tracking-tight uppercase">
+              <Icon className="h-6 w-6 text-white" weight="regular" />
+              <h3 className="mt-6 font-display text-xl font-bold tracking-tight uppercase">
                 {card.title}
               </h3>
-              <p className="mt-3 text-sm leading-relaxed text-white/60">
+              <p className="mt-2 text-sm leading-relaxed text-white/60">
                 {card.body}
               </p>
             </div>

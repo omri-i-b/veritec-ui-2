@@ -38,6 +38,8 @@ import {
   Headphones,
   ArrowsSplit,
   Warning,
+  PhoneIncoming,
+  XCircle,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, getStepMemoryName, getStepReturns, type AgentMove, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -1726,12 +1728,14 @@ function FlowNode({
 
 const AGENT_MOVE_ICON: Record<NonNullable<AgentMove["kind"]>, typeof Plus> = {
   dial: PhoneCall,
+  answer: PhoneIncoming,
   speak: ChatText,
   ask: Question,
   listen: Headphones,
   branch: ArrowsSplit,
   log: Database,
   escalate: Warning,
+  decline: XCircle,
 }
 
 function AgentFlowPanel({ moves }: { moves: AgentMove[] }) {
@@ -1742,40 +1746,62 @@ function AgentFlowPanel({ moves }: { moves: AgentMove[] }) {
           Inside the agent
         </span>
         <span className="text-[10px] text-zinc-400">
-          · {moves.length} move{moves.length !== 1 ? "s" : ""} the runtime walks through
+          · how the runtime walks through this call
         </span>
       </div>
-      <ol className="space-y-1">
-        {moves.map((m, i) => {
-          const Icon = (m.kind && AGENT_MOVE_ICON[m.kind]) || ChatText
-          const isLastMove = i === moves.length - 1
-          return (
-            <li key={m.id} className="relative flex items-start gap-2 group">
-              {/* Vertical connector line */}
-              {!isLastMove && (
-                <span
-                  className="absolute left-[10px] top-5 bottom-[-4px] w-px bg-violet-200"
-                  aria-hidden
-                />
-              )}
-              <span className="relative z-[1] flex items-center justify-center h-5 w-5 rounded-full border border-violet-200 bg-white shrink-0 mt-0.5">
-                <Icon className="h-2.5 w-2.5 text-violet-700" weight="bold" />
-              </span>
-              <div className="min-w-0 flex-1 pb-0.5">
-                <div className="text-[12px] font-medium text-zinc-900 leading-tight">
-                  {m.label}
-                </div>
-                {m.note && (
-                  <div className="text-[11px] text-zinc-500 leading-relaxed mt-0.5 line-clamp-1">
-                    {m.note}
-                  </div>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ol>
+      <AgentFlowList moves={moves} />
     </div>
+  )
+}
+
+function AgentFlowList({ moves }: { moves: AgentMove[] }) {
+  return (
+    <ol className="space-y-1">
+      {moves.map((m, i) => {
+        const Icon = (m.kind && AGENT_MOVE_ICON[m.kind]) || ChatText
+        const isLastMove = i === moves.length - 1
+        const hasBranches = m.branches && m.branches.length > 0
+        return (
+          <li key={m.id} className="relative flex items-start gap-2 group">
+            {/* Vertical connector line */}
+            {!isLastMove && (
+              <span
+                className="absolute left-[10px] top-5 bottom-[-4px] w-px bg-violet-200"
+                aria-hidden
+              />
+            )}
+            <span className="relative z-[1] flex items-center justify-center h-5 w-5 rounded-full border border-violet-200 bg-white shrink-0 mt-0.5">
+              <Icon className="h-2.5 w-2.5 text-violet-700" weight="bold" />
+            </span>
+            <div className="min-w-0 flex-1 pb-0.5">
+              <div className="text-[12px] font-medium text-zinc-900 leading-tight">
+                {m.label}
+              </div>
+              {m.note && (
+                <div className="text-[11px] text-zinc-500 leading-relaxed mt-0.5 line-clamp-1">
+                  {m.note}
+                </div>
+              )}
+              {hasBranches && (
+                <div className="mt-2 space-y-2 pl-2 border-l border-violet-200">
+                  {m.branches!.map((b) => (
+                    <div key={b.match} className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-violet-800">
+                        <span className="text-zinc-400">if</span>
+                        {b.match}
+                      </div>
+                      <div className="ml-2">
+                        <AgentFlowList moves={b.flow} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 

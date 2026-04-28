@@ -14,6 +14,7 @@ export function generateStaticParams() {
     { id: "intake-callback-voice" },
     { id: "med-treatment-verification-voice" },
     { id: "filevine-records-request" },
+    { id: "intake-reception-voice" },
   ]
 }
 
