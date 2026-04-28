@@ -6,19 +6,22 @@ import { useParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Star,
-  Share,
   DotsThree,
-  Clock,
-  Info,
   PencilRuler,
   Play,
-  CaretRight,
   X,
+  CheckCircle,
+  CircleNotch,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { DefinitionPanel } from "@/components/workflow-builder"
-import { getPlaybook, type Field } from "@/lib/playbook-data"
+import { getPlaybook, type Field, type PlaybookDef } from "@/lib/playbook-data"
 import { UnifiedRuns } from "@/components/unified-runs"
+
+/** A playbook is an agent if it has any voice step (matches /agents library logic). */
+function isAgent(p: PlaybookDef): boolean {
+  return p.steps.some((s) => s.type === "voice")
+}
 
 type View = "editor" | "runs"
 
@@ -29,51 +32,48 @@ function PencilRulerIcon({ className }: { className?: string }) {
 function EditorHeader({
   playbookId,
   dirty,
+  saveState,
   onRunClick,
   onPublish,
   onDiscard,
 }: {
   playbookId: string
   dirty: boolean
+  saveState: SaveState
   onRunClick: () => void
   onPublish: () => void
   onDiscard: () => void
 }) {
   const pb = getPlaybook(playbookId)
   const Icon = pb.icon
+  const isAgentKind = isAgent(pb)
+  const parentLabel = isAgentKind ? "Agents" : "Playbooks"
+  const parentHref = isAgentKind ? "/agents" : "/playbooks"
   return (
     <div className="flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 shrink-0">
       <Link
-        href="/playbooks"
-        className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors"
+        href={parentHref}
+        className="inline-flex items-center gap-1.5 h-7 px-2 -ml-1 rounded-md hover:bg-gray-100 text-zinc-500 hover:text-zinc-900 transition-colors text-[11px] font-semibold uppercase tracking-[0.08em]"
       >
-        <ArrowLeft className="h-4 w-4" weight="bold" />
+        <ArrowLeft className="h-3.5 w-3.5" weight="bold" />
+        {parentLabel}
       </Link>
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-        <CaretRight className="h-3 w-3 text-zinc-300" weight="bold" />
-        <span>Playbooks</span>
-      </div>
       <span className="text-zinc-300">/</span>
       <div className="flex items-center gap-1.5">
         <div className={`flex items-center justify-center h-5 w-5 rounded ${pb.iconBg}`}>
           <Icon className={`h-3 w-3 ${pb.iconColor}`} weight="bold" />
         </div>
-        <span className="text-sm font-semibold text-zinc-900 truncate max-w-[260px]">{pb.name}</span>
+        <span className="text-sm font-semibold text-zinc-900 truncate max-w-[280px]">{pb.name}</span>
       </div>
-      {dirty && (
-        <span
-          className="inline-flex items-center gap-1 text-[11px] text-amber-700"
-          title="Changes not yet published"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-          Unpublished
-        </span>
-      )}
-      <button className="flex items-center justify-center h-6 w-6 rounded text-zinc-400 hover:text-amber-500 transition-colors" title="Favorite">
+      <SaveIndicator dirty={dirty} saveState={saveState} />
+      <button
+        className="flex items-center justify-center h-6 w-6 rounded text-zinc-400 hover:text-amber-500 transition-colors"
+        title="Favorite"
+      >
         <Star className="h-3.5 w-3.5" />
       </button>
       <div className="flex-1" />
-      {dirty && (
+      {dirty && saveState === "idle" && (
         <button
           onClick={onDiscard}
           className="h-8 px-2 text-xs font-medium text-zinc-500 hover:text-zinc-900 hover:bg-gray-100 rounded transition-colors"
@@ -81,7 +81,7 @@ function EditorHeader({
           Discard
         </button>
       )}
-      {dirty && (
+      {dirty && saveState === "idle" && (
         <Button
           variant="outline"
           size="sm"
@@ -99,10 +99,6 @@ function EditorHeader({
         <Play className="h-3.5 w-3.5" weight="fill" />
         Run
       </Button>
-      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-zinc-700">
-        <Share className="h-3.5 w-3.5" />
-        Share
-      </Button>
       <button className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 text-zinc-500">
         <DotsThree className="h-4 w-4" weight="bold" />
       </button>
@@ -110,7 +106,40 @@ function EditorHeader({
   )
 }
 
-function ViewTabs({ active, onChange, dirty }: { active: View; onChange: (v: View) => void; dirty: boolean }) {
+type SaveState = "idle" | "saving" | "saved"
+
+function SaveIndicator({ dirty, saveState }: { dirty: boolean; saveState: SaveState }) {
+  if (saveState === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-500">
+        <CircleNotch className="h-3 w-3 animate-spin" weight="bold" />
+        Publishing…
+      </span>
+    )
+  }
+  if (saveState === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] text-green-700 transition-opacity">
+        <CheckCircle className="h-3 w-3" weight="fill" />
+        Published
+      </span>
+    )
+  }
+  if (dirty) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[11px] text-amber-700"
+        title="Changes not yet published"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        Unpublished
+      </span>
+    )
+  }
+  return null
+}
+
+function ViewTabs({ active, onChange }: { active: View; onChange: (v: View) => void }) {
   return (
     <div className="flex items-center gap-0 border-b border-gray-200 bg-white px-4 shrink-0">
       <TabButton
@@ -125,16 +154,6 @@ function ViewTabs({ active, onChange, dirty }: { active: View; onChange: (v: Vie
         icon={<Play className="h-3.5 w-3.5" weight="fill" />}
         label="Runs"
       />
-      <div className="flex-1" />
-      <div className="flex items-center gap-2 text-xs text-zinc-600">
-        <div className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-          <span>Live</span>
-        </div>
-        <button className="relative inline-flex h-5 w-9 items-center rounded-full bg-blue-800 transition-colors">
-          <span className="inline-block h-3.5 w-3.5 transform rounded-full bg-white translate-x-[18px] shadow" />
-        </button>
-      </div>
     </div>
   )
 }
@@ -335,18 +354,33 @@ export function WorkflowEditor({ playbookId: playbookIdProp }: { playbookId?: st
     playbookIdProp ?? (params?.id as string | undefined) ?? "medical-records-summary"
   const [view, setView] = useState<View>("editor")
   const [dirty, setDirty] = useState(true)
+  const [saveState, setSaveState] = useState<SaveState>("idle")
   const [runDrawerOpen, setRunDrawerOpen] = useState(false)
+
+  const handlePublish = () => {
+    setSaveState("saving")
+    setTimeout(() => {
+      setDirty(false)
+      setSaveState("saved")
+      setTimeout(() => setSaveState("idle"), 1800)
+    }, 700)
+  }
+  const handleDiscard = () => {
+    setDirty(false)
+    setSaveState("idle")
+  }
 
   return (
     <div className="flex flex-1 flex-col min-h-0 bg-white">
       <EditorHeader
         playbookId={playbookId}
         dirty={dirty}
+        saveState={saveState}
         onRunClick={() => setRunDrawerOpen(true)}
-        onPublish={() => setDirty(false)}
-        onDiscard={() => setDirty(false)}
+        onPublish={handlePublish}
+        onDiscard={handleDiscard}
       />
-      <ViewTabs active={view} onChange={setView} dirty={dirty} />
+      <ViewTabs active={view} onChange={setView} />
       <div className="flex-1 min-h-0 flex">
         {view === "editor" ? <DefinitionPanel playbookId={playbookId} /> : <RunsTabBody playbookId={playbookId} />}
       </div>

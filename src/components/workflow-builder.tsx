@@ -1589,13 +1589,10 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
             </div>
           )}
 
-          {/* Terminator — closes the flow visually. Always rendered when there are steps. */}
-          {steps.length > 0 && (
-            <>
-              <FlowConnector />
-              <FlowTerminator playbookId={playbook.id} />
-            </>
-          )}
+          {/* Terminator — always closes the flow visually, even on a blank canvas. */}
+          <FlowConnector />
+          <FlowTerminator playbookId={playbook.id} />
+
         </div>
       </div>
 
