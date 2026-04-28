@@ -4,13 +4,12 @@ The line is **intent**, not features. Both run on the same canvas (inputs →
 memory → steps → deliverable, terminator → runs table). What separates them
 is _who the work touches_.
 
-This mirrors Attio's clean split between **workflows** (backend automation,
-system reacts to events) and **sequences** (outbound communication, you
-proactively reach out to people). Same idea, different vocabulary.
+The cleanest way to think about it: **Playbooks** are backend automation
+— the system reacts to events. **Agents** are proactive outreach — you
+reach out to a person, often time-based and multi-step.
 
 | | **Playbook** | **Agent** |
 |---|---|---|
-| **Maps to (Attio)** | Workflow | Sequence |
 | **Intent** | Automate the system | Reach out to a person |
 | **Who it touches** | Internal data, files, records | An outside party — caller, recipient, provider |
 | **How it starts** | An event the system observes (record created, attribute updated, recurring schedule, manual run) | A person-shaped trigger (web form submitted, cadence reaches a step, operator clicks Run) |

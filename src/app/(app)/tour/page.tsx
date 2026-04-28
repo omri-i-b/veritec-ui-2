@@ -294,7 +294,7 @@ export default function TourPage() {
           <div className="grid grid-cols-2 gap-3">
             <ConceptCard
               kind="Playbook"
-              maps="Attio Workflow"
+              maps="Backend automation"
               tone="blue"
               tagline="Automate the system"
               touches="Internal data, files, records"
@@ -310,7 +310,7 @@ export default function TourPage() {
             />
             <ConceptCard
               kind="Agent"
-              maps="Attio Sequence"
+              maps="Outside-party outreach"
               tone="violet"
               tagline="Reach out to a person"
               touches="Outside party — caller, recipient, provider"
@@ -468,7 +468,7 @@ function ConceptCard({
       <div className="flex items-baseline gap-2 mb-1">
         <h3 className={`text-base font-semibold ${cls.header}`}>{kind}</h3>
         <span className={`text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0 ${cls.pill}`}>
-          ≈ {maps}
+          {maps}
         </span>
       </div>
       <p className="text-xs text-zinc-700 mb-3 italic">{tagline}.</p>
