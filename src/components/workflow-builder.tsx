@@ -40,6 +40,7 @@ import {
   Warning,
   PhoneIncoming,
   XCircle,
+  CaretUp,
 } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { getPlaybook, getStepMemoryName, getStepReturns, isAlwaysOnTrigger, type Field, type FieldType, type Step, type StepType } from "@/lib/playbook-data"
@@ -1455,6 +1456,18 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
     setSelection(null)
   }
 
+  /** Move a step up or down by one position. Inputs and the terminator
+   *  are not part of the steps array \u2014 they're not moveable. */
+  const moveStep = (index: number, direction: -1 | 1) => {
+    setSteps((prev) => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
   return (
     <div className="flex flex-1 min-h-0">
       {/* Canvas — dot grid bg */}
@@ -1552,7 +1565,7 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
                     />
                   </div>
                 ) : (
-                  <div className="w-full max-w-[640px] mx-auto">
+                  <div className="w-full max-w-[640px] mx-auto relative group/step">
                     <FlowNode
                       icon={StepIcon}
                       iconBg={stepCfg.iconBg}
@@ -1563,6 +1576,18 @@ export function DefinitionPanel({ playbookId }: { playbookId?: string } = {}) {
                       returns={getStepReturns(step)}
                       memoryName={getStepMemoryName(step)}
                       isLast={isLast}
+                    />
+                    <ReorderControls
+                      canMoveUp={i > 0}
+                      canMoveDown={i < steps.length - 1}
+                      onMoveUp={(e) => {
+                        e.stopPropagation()
+                        moveStep(i, -1)
+                      }}
+                      onMoveDown={(e) => {
+                        e.stopPropagation()
+                        moveStep(i, 1)
+                      }}
                     />
                   </div>
                 )}
@@ -1731,6 +1756,40 @@ function FlowNode({
         </div>
       )}
     </Wrapper>
+  )
+}
+
+function ReorderControls({
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+}: {
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMoveUp: (e: React.MouseEvent) => void
+  onMoveDown: (e: React.MouseEvent) => void
+}) {
+  if (!canMoveUp && !canMoveDown) return null
+  return (
+    <div className="absolute -right-1 top-1/2 -translate-y-1/2 translate-x-full pl-2 flex flex-col gap-0.5 opacity-0 group-hover/step:opacity-100 transition-opacity">
+      <button
+        onClick={onMoveUp}
+        disabled={!canMoveUp}
+        className="flex items-center justify-center h-6 w-6 rounded-md bg-white border border-gray-200 text-zinc-500 hover:text-zinc-900 hover:border-blue-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-zinc-500"
+        title="Move up"
+      >
+        <CaretUp className="h-3 w-3" weight="bold" />
+      </button>
+      <button
+        onClick={onMoveDown}
+        disabled={!canMoveDown}
+        className="flex items-center justify-center h-6 w-6 rounded-md bg-white border border-gray-200 text-zinc-500 hover:text-zinc-900 hover:border-blue-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-zinc-500"
+        title="Move down"
+      >
+        <CaretDown className="h-3 w-3" weight="bold" />
+      </button>
+    </div>
   )
 }
 
