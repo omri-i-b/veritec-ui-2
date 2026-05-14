@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full antialiased">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VeriTec — Settings</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .vt-tile { transition:border-color .15s, box-shadow .15s; }
+  [draggable=true] { cursor:grab; }
+  [draggable=true]:active { cursor:grabbing; }
+  textarea { resize:vertical; }
+</style>
+</head>
+<body class="text-zinc-900 antialiased h-full bg-white">
+<div id="root" class="h-full"></div>
+<script>
+const { useState, useRef } = React;
+const h = React.createElement;
+
+/* ─── tokens ──────────────────────────────────────── */
+const TAG = {
+  blue:'bg-blue-50 text-blue-700 border-blue-200', teal:'bg-teal-50 text-teal-700 border-teal-200',
+  purple:'bg-purple-50 text-purple-700 border-purple-200', emerald:'bg-emerald-50 text-emerald-700 border-emerald-200',
+  amber:'bg-amber-50 text-amber-700 border-amber-200', rose:'bg-rose-50 text-rose-700 border-rose-200',
+  zinc:'bg-zinc-100 text-zinc-600 border-zinc-200',
+};
+const Q_TYPES = {
+  structured:     { label:'Structured',      color:'blue'   },
+  body_map:       { label:'Body Map',         color:'teal'   },
+  boolean_detail: { label:'Boolean + Detail', color:'purple' },
+  system_check:   { label:'System Check',     color:'emerald'},
+  text:           { label:'Free Text',        color:'zinc'   },
+  date_time:      { label:'Date & Time',      color:'amber'  },
+};
+const BODY_REGIONS = [
+  {id:'head_neck',label:'Head & Neck'},{id:'shoulders',label:'Shoulders'},{id:'upper_back',label:'Upper Back'},
+  {id:'lower_back',label:'Lower Back'},{id:'chest',label:'Chest'},{id:'abdomen',label:'Abdomen'},
+  {id:'arms',label:'Arms'},{id:'hands_wrists',label:'Hands/Wrists'},{id:'hips',label:'Hips'},
+  {id:'knees',label:'Knees'},{id:'ankles_feet',label:'Ankles & Feet'},
+];
+const LANGUAGES = [
+  {id:'en-US',label:'English (US)',    flag:'🇺🇸'},
+  {id:'en-GB',label:'English (UK)',    flag:'🇬🇧'},
+  {id:'es-US',label:'Spanish (US)',    flag:'🇺🇸'},
+  {id:'es-MX',label:'Spanish (Mexico)',flag:'🇲🇽'},
+  {id:'fr-FR',label:'French',          flag:'🇫🇷'},
+  {id:'pt-BR',label:'Portuguese (BR)', flag:'🇧🇷'},
+  {id:'zh-CN',label:'Mandarin',        flag:'🇨🇳'},
+  {id:'tl',   label:'Tagalog',         flag:'🇵🇭'},
+  {id:'vi',   label:'Vietnamese',      flag:'🇻🇳'},
+  {id:'ko',   label:'Korean',          flag:'🇰🇷'},
+];
+const DEFAULT_QUESTIONS = [
+  { id:'q1',label:'Accident date, location & type',key:'accident_info',type:'structured',required:true,enabled:true,
+    prompt:'Can you tell me the date and location of the accident? What type of accident was it?',
+    subFields:[
+      {id:'sf1',label:'Accident date',key:'accident_date',type:'date_time',required:true},
+      {id:'sf2',label:'Accident location',key:'accident_location',type:'text',required:true},
+      {id:'sf3',label:'Accident type',key:'accident_type',type:'text',required:true,hint:'MVA · Slip & Fall · Dog Bite · Premises · Workplace'},
+    ]},
+  { id:'q2',label:'Injury description',key:'injury_description',type:'body_map',required:true,enabled:true,
+    prompt:'Can you describe your injuries and where on your body you were hurt?',
+    bodyRegions:['head_neck','upper_back','lower_back','shoulders','chest','knees'],askSeverity:true,askOngoing:true },
+  { id:'q3',label:'At-fault party identified',key:'at_fault_party',type:'boolean_detail',required:true,enabled:true,
+    prompt:'Was the other party clearly responsible for the accident?',
+    followUp:'Can you describe what they did that caused the accident?' },
+  { id:'q4',label:'Insurance info collected',key:'insurance_info',type:'structured',required:true,enabled:true,
+    prompt:"Do you have the other party's insurance information?",
+    subFields:[
+      {id:'sf4',label:'Insurance carrier',key:'carrier_name',type:'text',required:true},
+      {id:'sf5',label:'Policy number',key:'policy_number',type:'text',required:false},
+      {id:'sf6',label:'Adjuster name',key:'adjuster_name',type:'text',required:false},
+    ]},
+  { id:'q5',label:'Witnesses & police report',key:'witnesses_police',type:'boolean_detail',required:false,enabled:true,
+    prompt:'Were there any witnesses? Was a police report filed?',followUp:"Do you have the officer's name or report number?" },
+  { id:'q6',label:'Prior injuries flagged',key:'prior_injuries',type:'boolean_detail',required:true,enabled:true,
+    prompt:'Have you had prior injuries to the same areas of your body?',followUp:'Can you tell me more about those prior injuries?' },
+  { id:'q7',label:'Conflict check',key:'conflict_check',type:'system_check',required:true,enabled:true,prompt:null,
+    checkSystem:'CRM conflict database',passResult:'Cleared',failAction:'Route to attorney review' },
+  { id:'q8',label:'SOL check',key:'sol_check',type:'system_check',required:true,enabled:true,prompt:null,
+    checkSystem:'SOL calculator (state + case type)',passResult:'Within SOL',failAction:'Flag — route to attorney review' },
+];
+
+/* ════════ PRIMITIVES ════════════════════════════════ */
+function Tag({ color='zinc',onRemove,children }) {
+  return h('span',{className:`inline-flex items-center gap-1 rounded-md border px-1.5 py-0 text-[10px] font-medium ${TAG[color]||TAG.zinc}`},
+    children, onRemove&&h('button',{onClick:onRemove,className:'ml-0.5 opacity-50 hover:opacity-100 leading-none'},'×'));
+}
+function Toggle({ checked,onChange,sm }) {
+  const w=sm?'w-7 h-4':'w-9 h-5',tb=sm?'w-3 h-3 top-0.5':'w-4 h-4 top-0.5',tx=checked?(sm?'translate-x-3.5':'translate-x-4'):'translate-x-0.5';
+  return h('button',{role:'switch','aria-checked':checked,onClick:()=>onChange(!checked),
+    className:`relative inline-flex shrink-0 ${w} rounded-full transition-colors ${checked?'bg-blue-700':'bg-zinc-200'}`},
+    h('span',{className:`absolute ${tb} ${tx} rounded-full bg-white shadow-sm transition-transform`}));
+}
+function Btn({ onClick,variant='outline',size='md',disabled,children,className='' }) {
+  const sz=size==='sm'?'h-7 px-2.5 text-[11px]':size==='lg'?'h-10 px-5 text-sm':'h-9 px-4 text-xs';
+  const v={primary:'bg-blue-800 hover:bg-blue-900 text-white border border-blue-800',
+    outline:'bg-white hover:bg-zinc-50 text-zinc-800 border border-gray-200',
+    ghost:'bg-transparent hover:bg-zinc-100 text-zinc-700 border-0',
+    danger:'bg-rose-600 hover:bg-rose-700 text-white border border-rose-600'};
+  return h('button',{onClick,disabled,className:`inline-flex items-center justify-center gap-1.5 font-medium transition-colors rounded-md ${sz} ${v[variant]||v.outline} disabled:opacity-40 ${className}`},children);
+}
+function Input({ value,onChange,placeholder,type='text',className='' }) {
+  return h('input',{type,value,placeholder,onChange:e=>onChange(e.target.value),
+    className:`w-full h-9 rounded-md border border-gray-200 px-3 text-sm text-zinc-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition ${className}`});
+}
+function Textarea({ value,onChange,placeholder,rows=2 }) {
+  return h('textarea',{value,placeholder,rows,onChange:e=>onChange(e.target.value),
+    className:'w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition leading-relaxed'});
+}
+function FSel({ value,onChange,options,className='' }) {
+  return h('select',{value,onChange:e=>onChange(e.target.value),
+    className:`h-9 rounded-md border border-gray-200 px-3 text-sm text-zinc-900 outline-none focus:border-blue-400 bg-white ${className}`},
+    options.map(o=>h('option',{key:o.value,value:o.value},o.label)));
+}
+function FLabel({ children,sub }) {
+  return h('div',{className:'mb-1.5'},
+    h('p',{className:'text-sm font-medium text-zinc-900'},children),
+    sub&&h('p',{className:'text-xs text-zinc-500 mt-0.5'},sub));
+}
+function SectionCard({ title,sub,children,action }) {
+  return h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+    h('div',{className:'px-5 py-4 border-b border-gray-100 bg-zinc-50/60 flex items-start justify-between'},
+      h('div',null,h('p',{className:'text-sm font-semibold text-zinc-900'},title),sub&&h('p',{className:'text-xs text-zinc-500 mt-0.5'},sub)),
+      action&&h('div',null,action)),
+    h('div',{className:'p-5'},children));
+}
+function Divider() { return h('div',{className:'border-t border-gray-100 my-4'}); }
+
+/* ─── icons ──────────────────────────────────────── */
+const IC = {
+  Grip:    ()=>h('svg',{viewBox:'0 0 16 16',className:'h-4 w-4',fill:'currentColor'},...[4,8,12].flatMap(y=>[5,11].map(x=>h('circle',{key:`${x}${y}`,cx:x,cy:y,r:1.4})))),
+  Up:      ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m18 15-6-6-6 6'})),
+  Down:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m6 9 6 6 6-6'})),
+  Trash:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M3 6h18'}),h('path',{d:'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6'}),h('path',{d:'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'})),
+  Plus:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M12 5v14'}),h('path',{d:'M5 12h14'})),
+  Check:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M20 6 9 17l-5-5'})),
+  X:       ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M18 6 6 18'}),h('path',{d:'m6 6 12 12'})),
+  Info:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('circle',{cx:12,cy:12,r:10}),h('path',{d:'M12 16v-4'}),h('path',{d:'M12 8h.01'})),
+  Phone:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.35 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'})),
+  PhoneIn: ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('polyline',{points:'16 2 16 8 22 8'}),h('line',{x1:23,y1:1,x2:16,y2:8}),h('path',{d:'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.35 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6'})),
+  PhoneOut:()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('polyline',{points:'23 7 23 1 17 1'}),h('line',{x1:16,y1:8,x2:23,y2:1}),h('path',{d:'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.35 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.1a16 16 0 0 0 6 6'})),
+  Globe:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('circle',{cx:12,cy:12,r:10}),h('line',{x1:2,y1:12,x2:22,y2:12}),h('path',{d:'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'})),
+  Bot:     ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M12 8V4H8'}),h('rect',{width:16,height:12,x:4,y:8,rx:2}),h('path',{d:'M2 14h2'}),h('path',{d:'M20 14h2'}),h('path',{d:'M15 13v2'}),h('path',{d:'M9 13v2'})),
+  Back:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m15 18-6-6 6-6'})),
+  Settings:()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('circle',{cx:12,cy:12,r:3}),h('path',{d:'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'})),
+  Users:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}),h('circle',{cx:9,cy:7,r:4}),h('path',{d:'M22 21v-2a4 4 0 0 0-3-3.87'}),h('path',{d:'M16 3.13a4 4 0 0 1 0 7.75'})),
+  Inbox:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('polyline',{points:'22 12 16 12 14 15 10 15 8 12 2 12'}),h('path',{d:'M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'})),
+  Scale:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z'}),h('path',{d:'m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z'}),h('path',{d:'M7 21h10'}),h('path',{d:'M12 3v18'}),h('path',{d:'M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2'})),
+  Key:     ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('circle',{cx:7.5,cy:15.5,r:5.5}),h('path',{d:'m21 2-9.6 9.6'}),h('path',{d:'m15.5 7.5 3 3L22 7l-3-3'})),
+  Share:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('circle',{cx:18,cy:5,r:3}),h('circle',{cx:6,cy:12,r:3}),h('circle',{cx:18,cy:19,r:3}),h('line',{x1:8.59,y1:13.51,x2:15.42,y2:17.49}),h('line',{x1:15.41,y1:6.51,x2:8.59,y2:10.49})),
+  Pencil:  ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'})),
+  Mail:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('rect',{width:20,height:16,x:2,y:4,rx:2}),h('path',{d:'m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'})),
+  Msg:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'})),
+  Spark:  ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3z'})),
+  FetchI: ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'}),h('polyline',{points:'7 10 12 15 17 10'}),h('line',{x1:12,y1:15,x2:12,y2:3})),
+  Layers: ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('polygon',{points:'12 2 2 7 12 12 22 7 12 2'}),h('polyline',{points:'2 17 12 22 22 17'}),h('polyline',{points:'2 12 12 17 22 12'})),
+  DB:     ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('ellipse',{cx:12,cy:5,rx:9,ry:3}),h('path',{d:'M21 12c0 1.66-4 3-9 3s-9-1.34-9-3'}),h('path',{d:'M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5'})),
+  Zap:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-4 w-4',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('polygon',{points:'13 2 3 14 12 14 11 22 21 10 12 10 13 2'})),
+  Copy:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('rect',{width:14,height:14,x:8,y:8,rx:2,ry:2}),h('path',{d:'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2'})),
+  Refresh:()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M3 12a9 9 0 0 1 15-6.7L21 8'}),h('path',{d:'M21 3v5h-5'}),h('path',{d:'M21 12a9 9 0 0 1-15 6.7L3 16'}),h('path',{d:'M3 21v-5h5'})),
+  Alert:  ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'}),h('path',{d:'M12 9v4'}),h('path',{d:'M12 17h.01'})),
+  Heart:  ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z'})),
+  Scales: ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z'}),h('path',{d:'m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z'}),h('path',{d:'M7 21h10'}),h('path',{d:'M12 3v18'})),
+  Bookmark:()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'})),
+  Grid:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('rect',{width:7,height:7,x:3,y:3,rx:1}),h('rect',{width:7,height:7,x:14,y:3,rx:1}),h('rect',{width:7,height:7,x:14,y:14,rx:1}),h('rect',{width:7,height:7,x:3,y:14,rx:1})),
+  Doc:    ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3.5 w-3.5',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}),h('polyline',{points:'14 2 14 8 20 8'})),
+  Play:   ()=>h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'currentColor',stroke:'currentColor',strokeWidth:1,strokeLinecap:'round',strokeLinejoin:'round'},h('polygon',{points:'6 3 20 12 6 21 6 3'})),
+};
+
+/* ════════ AGENT BUILDER DATA ═══════════════════════ */
+const AB_STEP_TYPES={
+  outbound_voice:{label:'Outbound Voice',color:'purple'},
+  prompt:        {label:'Prompt',        color:'blue'},
+  fetch:         {label:'Fetch',         color:'teal'},
+  format:        {label:'Format',        color:'amber'},
+  send_email:    {label:'Send Email',    color:'emerald'},
+  send_sms:      {label:'Send SMS',      color:'rose'},
+};
+const AB_TRIGGER_OPTS=[
+  {value:'webhook',  label:'Webhook / API trigger'},
+  {value:'scheduled',label:'On schedule'},
+  {value:'manual',   label:'Manual / on demand'},
+  {value:'form',     label:'Form submission'},
+];
+const AB_FIELD_TYPES=[
+  {v:'phone',l:'PHONE'},{v:'text',l:'SHORT TEXT'},{v:'long_text',l:'LONG TEXT'},
+  {v:'email',l:'EMAIL'},{v:'knowledge_base',l:'KNOWLEDGE BASE'},
+  {v:'dataset',l:'DATASET'},{v:'number',l:'NUMBER'},{v:'date',l:'DATE'},{v:'boolean',l:'YES / NO'},
+];
+const AB_RTYPE={
+  text:    {icon:'T',cls:'bg-white border-gray-200 text-zinc-700'},
+  select:  {icon:'≡',cls:'bg-orange-50 border-orange-200 text-orange-700'},
+  date:    {icon:'◷',cls:'bg-orange-50 border-orange-200 text-orange-700'},
+  boolean: {icon:'✓',cls:'bg-blue-50 border-blue-200 text-blue-700'},
+  long_text:{icon:'¶',cls:'bg-white border-gray-200 text-zinc-700'},
+  number:  {icon:'#',cls:'bg-white border-gray-200 text-zinc-700'},
+};
+const AB_STEP_STYLE={
+  outbound_voice:{bg:'bg-purple-100',tx:'text-purple-700',bd:'border-purple-200'},
+  prompt:        {bg:'bg-blue-100',  tx:'text-blue-700',  bd:'border-blue-200'},
+  fetch:         {bg:'bg-teal-100',  tx:'text-teal-700',  bd:'border-teal-200'},
+  format:        {bg:'bg-amber-100', tx:'text-amber-700', bd:'border-amber-200'},
+  send_email:    {bg:'bg-emerald-100',tx:'text-emerald-700',bd:'border-emerald-200'},
+  send_sms:      {bg:'bg-rose-100',  tx:'text-rose-700',  bd:'border-rose-200'},
+};
+const AB_STEP_ICON={outbound_voice:IC.Bot,prompt:IC.Spark,fetch:IC.FetchI,format:IC.Layers,send_email:IC.Mail,send_sms:IC.Msg};
+const AB_METHOD_ICON={phone:IC.Phone,email:IC.Mail,sms:IC.Msg};
+const AB_METHOD_CLR={phone:'bg-purple-50 text-purple-700 border-purple-200',email:'bg-emerald-50 text-emerald-700 border-emerald-200',sms:'bg-blue-50 text-blue-700 border-blue-200'};
+const AB_CONTACT_LBL={phone:'Outbound Voice',email:'Email',sms:'SMS'};
+const AB_CONTACT_CLR={phone:'purple',email:'emerald',sms:'blue'};
+const AB_TRIGGER_LBL={webhook:'Webhook',scheduled:'Scheduled',manual:'Manual',form:'Form'};
+const AB_AGENTS_INIT=[
+  {id:'ab1',name:'Qualify & Book Consult',status:'active',contactMethod:'phone',trigger:'webhook',
+   inputs:[
+     {id:'i1',label:'Lead phone',key:'lead_phone',type:'phone',required:true},
+     {id:'i2',label:'Lead name',key:'lead_name',type:'text',required:true},
+     {id:'i3',label:'Form summary',key:'form_summary',type:'long_text',required:true},
+     {id:'i4',label:'Reference library',key:'ref_library',type:'knowledge_base',required:false},
+   ],
+   steps:[{id:'s1',type:'outbound_voice',name:'Qualify and book consult',
+     prompt:"You are a warm, plainspoken intake specialist for Veritec Law calling {{Lead name}} back about their inquiry. Your goal is to qualify the lead and book a consult if appropriate.",
+     returns:[
+       {id:'r1',label:'Caller name',type:'text'},{id:'r2',label:'Matter type',type:'select'},
+       {id:'r3',label:'Incident date',type:'date'},{id:'r4',label:'Injury reported',type:'text'},
+       {id:'r5',label:'Treatment started',type:'text'},{id:'r6',label:'Already represented',type:'boolean'},
+       {id:'r7',label:'Consult booked',type:'boolean'},{id:'r8',label:'Outcome',type:'select'},
+       {id:'r9',label:'Outcome reason',type:'text'},
+     ]}]},
+  {id:'ab2',name:'Follow-up Reminder',status:'active',contactMethod:'sms',trigger:'scheduled',
+   inputs:[{id:'i1',label:'Contact list',key:'contact_list',type:'dataset',required:true}],
+   steps:[{id:'s1',type:'prompt',name:'Generate reminder',
+     prompt:'Generate a brief, friendly follow-up message for {{Lead name}} who enquired about {{Matter type}}.',
+     returns:[{id:'r1',label:'Message text',type:'text'}]}]},
+  {id:'ab3',name:'Document Request',status:'paused',contactMethod:'email',trigger:'manual',
+   inputs:[
+     {id:'i1',label:'Client email',key:'client_email',type:'email',required:true},
+     {id:'i2',label:'Case notes',key:'case_notes',type:'long_text',required:false},
+   ],
+   steps:[
+     {id:'s1',type:'prompt',name:'Draft request email',
+      prompt:'Draft a professional email requesting outstanding documents for a personal injury case.',
+      returns:[{id:'r1',label:'Email subject',type:'text'},{id:'r2',label:'Email body',type:'long_text'}]},
+     {id:'s2',type:'send_email',name:'Send to client',to:'{{client_email}}',subject:'{{Email subject}}',returns:[]},
+   ]},
+];
+
+/* ════════ VOICE INTAKE CONFIG HELPERS ══════════════ */
+function PromptField({ label,value,onChange,placeholder }) {
+  return h('div',{className:'space-y-1'},
+    h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500'},label||'VOICE PROMPT'),
+    h(Textarea,{value:value||'',onChange,placeholder:placeholder||'What the agent says to the client…',rows:2}));
+}
+function AddSubFieldRow({ onAdd }) {
+  const [show,setShow]=useState(false),[label,setLabel]=useState(''),[type,setType]=useState('text'),[req,setReq]=useState(false);
+  const commit=()=>{ if(!label.trim()) return; onAdd({id:'sf'+Date.now(),label:label.trim(),key:label.trim().toLowerCase().replace(/\s+/g,'_'),type,required:req}); setLabel('');setType('text');setReq(false);setShow(false); };
+  if(!show) return h(Btn,{onClick:()=>setShow(true),variant:'ghost',size:'sm',className:'text-blue-700 hover:text-blue-800 hover:bg-blue-50 mt-1'},h(IC.Plus),'Add field');
+  return h('div',{className:'flex items-center gap-2 rounded-md border border-dashed border-blue-200 bg-blue-50/40 px-3 py-2 mt-1'},
+    h('input',{autoFocus:true,value:label,onChange:e=>setLabel(e.target.value),placeholder:'Field label',onKeyDown:e=>e.key==='Enter'&&commit(),
+      className:'flex-1 min-w-0 h-7 rounded border border-gray-200 px-2 text-xs text-zinc-900 outline-none focus:border-blue-400 bg-white'}),
+    h(FSel,{value:type,onChange:setType,options:[{value:'text',label:'Text'},{value:'date_time',label:'Date/Time'},{value:'boolean',label:'Yes/No'},{value:'number',label:'Number'}]}),
+    h('label',{className:'flex items-center gap-1.5 text-[11px] text-zinc-600 shrink-0'},h(Toggle,{checked:req,onChange:setReq,sm:true}),'Req'),
+    h(Btn,{onClick:commit,variant:'primary',size:'sm',disabled:!label.trim()},'Add'),
+    h(Btn,{onClick:()=>setShow(false),variant:'ghost',size:'sm'},h(IC.X)));
+}
+function ExpandedConfig({ q,onChange }) {
+  if(q.type==='body_map') {
+    const toggle=id=>{ const cur=q.bodyRegions||[]; onChange({...q,bodyRegions:cur.includes(id)?cur.filter(r=>r!==id):[...cur,id]}); };
+    return h('div',{className:'mt-4 pt-4 border-t border-gray-100 space-y-4'},
+      h('div',null,
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500 mb-2'},'Injury regions to ask about'),
+        h('div',{className:'flex flex-wrap gap-1.5'},BODY_REGIONS.map(r=>{
+          const sel=(q.bodyRegions||[]).includes(r.id);
+          return h('button',{key:r.id,onClick:()=>toggle(r.id),
+            className:`rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${sel?'bg-blue-50 border-blue-300 text-blue-800':'bg-white border-gray-200 text-zinc-600 hover:border-gray-300'}`},r.label);
+        }))),
+      h('div',{className:'flex gap-6'},
+        h('label',{className:'flex items-center gap-2 text-[11px] text-zinc-700'},h(Toggle,{checked:q.askSeverity||false,onChange:v=>onChange({...q,askSeverity:v}),sm:true}),'Ask pain severity (1–10)'),
+        h('label',{className:'flex items-center gap-2 text-[11px] text-zinc-700'},h(Toggle,{checked:q.askOngoing||false,onChange:v=>onChange({...q,askOngoing:v}),sm:true}),'Ask if symptoms are ongoing')),
+      h(PromptField,{value:q.prompt,onChange:v=>onChange({...q,prompt:v}),placeholder:'Can you describe your injuries and where on your body you were hurt?'}));
+  }
+  if(q.type==='structured') {
+    const upd=(i,f)=>{ const n=[...q.subFields];n[i]=f;onChange({...q,subFields:n}); };
+    return h('div',{className:'mt-4 pt-4 border-t border-gray-100 space-y-3'},
+      h(PromptField,{value:q.prompt,onChange:v=>onChange({...q,prompt:v})}),
+      h('div',null,
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500 mb-2'},'Sub-Fields'),
+        h('div',{className:'space-y-1.5'},
+          (q.subFields||[]).map((f,i)=>
+            h('div',{key:f.id,className:'flex items-center gap-2 rounded-md border border-gray-200 bg-zinc-50 px-3 py-2'},
+              h('input',{value:f.label,onChange:e=>upd(i,{...f,label:e.target.value}),className:'flex-1 min-w-0 bg-transparent text-[11px] font-medium text-zinc-900 outline-none'}),
+              f.hint&&h('span',{className:'text-[10px] text-zinc-400 truncate max-w-[140px]'},f.hint),
+              h(Tag,{color:Q_TYPES[f.type]?.color||'zinc'},f.type),
+              h('label',{className:'flex items-center gap-1.5 text-[10px] text-zinc-500 shrink-0'},h(Toggle,{checked:f.required,sm:true,onChange:v=>upd(i,{...f,required:v})}),'Req'),
+              h('button',{onClick:()=>onChange({...q,subFields:q.subFields.filter((_,x)=>x!==i)}),className:'text-zinc-300 hover:text-rose-500'},h(IC.X)))),
+          h(AddSubFieldRow,{onAdd:f=>onChange({...q,subFields:[...(q.subFields||[]),f]})}))));
+  }
+  if(q.type==='boolean_detail') return h('div',{className:'mt-4 pt-4 border-t border-gray-100 space-y-3'},
+    h(PromptField,{label:'PRIMARY PROMPT',value:q.prompt,onChange:v=>onChange({...q,prompt:v})}),
+    h(PromptField,{label:'IF YES — FOLLOW-UP',value:q.followUp,onChange:v=>onChange({...q,followUp:v}),placeholder:'Follow-up question when client says yes…'}));
+  if(q.type==='system_check') return h('div',{className:'mt-4 pt-4 border-t border-gray-100 space-y-3'},
+    h('div',{className:'grid grid-cols-3 gap-2'},
+      h('div',{className:'rounded-md bg-zinc-50 border border-gray-200 p-2.5'},h('p',{className:'text-[10px] font-semibold text-zinc-500 mb-1'},'SYSTEM'),h('p',{className:'text-[11px] text-zinc-800'},q.checkSystem)),
+      h('div',{className:'rounded-md bg-emerald-50 border border-emerald-200 p-2.5'},h('p',{className:'text-[10px] font-semibold text-emerald-700 mb-1'},'PASS RESULT'),h('p',{className:'text-[11px] text-emerald-800'},q.passResult)),
+      h('div',{className:'rounded-md bg-rose-50 border border-rose-200 p-2.5'},h('p',{className:'text-[10px] font-semibold text-rose-700 mb-1'},'FAIL ACTION'),h('p',{className:'text-[11px] text-rose-800'},q.failAction))),
+    h('div',{className:'flex items-center gap-1.5 text-[10px] text-zinc-400'},h(IC.Info),'Runs automatically — no voice prompt played to client'));
+  return null;
+}
+function QuestionCard({ q,idx,total,onMove,onUpdate,onDelete,onToggle,dragHandlers }) {
+  const [open,setOpen]=useState(false); const t=Q_TYPES[q.type];
+  return h('div',{className:`vt-tile rounded-[10px] border bg-white p-3 ${q.enabled?'border-gray-200':'border-dashed border-gray-200 opacity-55'}`,
+    draggable:true,onDragStart:dragHandlers.start(idx),onDragOver:dragHandlers.over(idx),onDrop:dragHandlers.drop(idx),onDragEnd:dragHandlers.end},
+    h('div',{className:'flex items-center gap-2'},
+      h('div',{className:'flex items-center gap-1 text-zinc-300 hover:text-zinc-500 shrink-0'},h(IC.Grip),h('span',{className:'text-[10px] font-bold text-zinc-400 w-4 text-center tabular-nums'},idx+1)),
+      h('input',{className:'flex-1 min-w-0 text-sm font-medium text-zinc-900 bg-transparent border-0 outline-none rounded px-1 -mx-1 h-7 focus:bg-zinc-50',value:q.label,onChange:ev=>onUpdate({...q,label:ev.target.value})}),
+      t&&h(Tag,{color:t.color},t.label),
+      q.required?h(Tag,{color:'rose'},'Required'):h(Tag,{color:'zinc'},'Optional'),
+      h('div',{className:'flex flex-col gap-px shrink-0'},
+        h('button',{onClick:()=>onMove(idx,idx-1),disabled:idx===0,className:'h-4 w-4 flex items-center justify-center text-zinc-300 hover:text-zinc-600 disabled:opacity-20'},h(IC.Up)),
+        h('button',{onClick:()=>onMove(idx,idx+1),disabled:idx===total-1,className:'h-4 w-4 flex items-center justify-center text-zinc-300 hover:text-zinc-600 disabled:opacity-20'},h(IC.Down))),
+      h(Toggle,{checked:q.enabled,onChange:v=>onToggle(q.id,v)}),
+      h('button',{onClick:()=>setOpen(!open),className:'h-6 w-6 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100'},open?h(IC.Up):h(IC.Down)),
+      h('button',{onClick:()=>onDelete(q.id),className:'h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-rose-600 hover:bg-rose-50'},h(IC.Trash))),
+    open&&h(ExpandedConfig,{q,onChange:onUpdate}));
+}
+function AddModal({ onAdd,onClose }) {
+  const [label,setLabel]=useState(''),[type,setType]=useState('text'),[req,setReq]=useState(false);
+  return h('div',{className:'fixed inset-0 bg-black/20 z-50 flex items-center justify-center',onClick:ev=>{if(ev.target===ev.currentTarget)onClose();}},
+    h('div',{className:'bg-white rounded-[12px] border border-gray-200 shadow-xl w-[440px] p-5'},
+      h('p',{className:'text-sm font-semibold text-zinc-900 mb-4'},'Add Question'),
+      h('div',{className:'space-y-4'},
+        h('div',null,h(FLabel,null,'Question label'),h(Input,{value:label,onChange:setLabel,placeholder:'e.g. Emergency contact info'})),
+        h('div',null,h(FLabel,null,'Question type'),h('div',{className:'grid grid-cols-3 gap-1.5 mt-1.5'},Object.entries(Q_TYPES).map(([k,v])=>
+          h('button',{key:k,onClick:()=>setType(k),className:`rounded-md border px-3 py-2 text-left transition-colors ${type===k?'border-blue-300 bg-blue-50':'border-gray-200 hover:border-gray-300 bg-white'}`},h('p',{className:'text-[11px] font-medium text-zinc-900'},v.label))))),
+        h('label',{className:'flex items-center gap-2 text-[11px] text-zinc-700'},h(Toggle,{checked:req,onChange:setReq,sm:true}),'Required question')),
+      h('div',{className:'flex justify-end gap-2 mt-5'},
+        h(Btn,{onClick:onClose},'Cancel'),
+        h(Btn,{variant:'primary',disabled:!label.trim(),onClick:()=>{ onAdd({id:'q'+Date.now(),label:label.trim(),key:label.trim().toLowerCase().replace(/\s+/g,'_'),type,required:req,enabled:true,prompt:''}); onClose(); }},'Add Question'))));
+}
+function VoicePreview({ questions }) {
+  const enabled=questions.filter(q=>q.enabled);
+  return h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+    h('div',{className:'px-4 py-3 border-b border-gray-100 bg-zinc-50 flex items-baseline justify-between'},
+      h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500'},'Voice Flow Preview'),
+      h('p',{className:'text-[10px] text-zinc-400'},`${enabled.length} steps`)),
+    h('div',{className:'divide-y divide-gray-50'},enabled.map((q,i)=>{
+      const t=Q_TYPES[q.type];
+      return h('div',{key:q.id,className:'flex items-start gap-2.5 px-4 py-2.5'},
+        h('div',{className:'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[9px] font-bold text-blue-800 mt-0.5 tabular-nums'},i+1),
+        h('div',{className:'flex-1 min-w-0'},
+          h('p',{className:'text-[11px] font-medium text-zinc-900 leading-tight'},q.label),
+          q.type==='system_check'?h('p',{className:'text-[10px] text-emerald-600 mt-0.5'},'⚙ Automated')
+            :q.prompt&&h('p',{className:'text-[10px] text-zinc-400 mt-0.5 italic truncate'},`"${q.prompt}"`)),
+        t&&h(Tag,{color:t.color},t.label));
+    })));
+}
+function SourcesTab() {
+  const [questions,setQuestions]=useState(DEFAULT_QUESTIONS),[showAdd,setShowAdd]=useState(false),[saved,setSaved]=useState(false);
+  const dragFrom=useRef(null);
+  const move=(f,t)=>{ if(t<0||t>=questions.length) return; const a=[...questions];const [r]=a.splice(f,1);a.splice(t,0,r);setQuestions(a); };
+  const dragHandlers={start:i=>()=>{dragFrom.current=i;},over:i=>ev=>ev.preventDefault(),drop:i=>ev=>{ev.preventDefault();if(dragFrom.current!==null&&dragFrom.current!==i)move(dragFrom.current,i);dragFrom.current=null;},end:()=>{dragFrom.current=null;}};
+  const save=()=>{ setSaved(true);setTimeout(()=>setSaved(false),2000); };
+  return h('div',{className:'space-y-8'},
+    h('div',null,
+      h('div',{className:'flex items-start justify-between mb-4'},
+        h('div',null,h('p',{className:'text-sm font-semibold text-zinc-900'},'AI Voice Intake'),h('p',{className:'text-xs text-zinc-500 mt-0.5'},'Questions your AI agent asks during intake calls')),
+        h('div',{className:'flex items-center gap-2'},
+          h(Btn,{onClick:()=>setShowAdd(true),variant:'outline',size:'sm'},h(IC.Plus),'Add Question'),
+          h(Btn,{onClick:save,variant:'primary',size:'sm',className:saved?'bg-emerald-600 border-emerald-600':''},saved?h(IC.Check):null,saved?'Saved':'Save'))),
+      h('div',{className:'grid grid-cols-[1fr_252px] gap-4 items-start'},
+        h('div',{className:'space-y-2'},questions.map((q,i)=>h(QuestionCard,{key:q.id,q,idx:i,total:questions.length,
+          onMove:move,onUpdate:u=>setQuestions(questions.map(x=>x.id===u.id?u:x)),onDelete:id=>setQuestions(questions.filter(x=>x.id!==id)),
+          onToggle:(id,v)=>setQuestions(questions.map(x=>x.id===id?{...x,enabled:v}:x)),dragHandlers}))),
+        h(VoicePreview,{questions}))),
+    h('div',null,
+      h('p',{className:'text-sm font-semibold text-zinc-900 mb-3'},'Other Sources'),
+      h('div',{className:'grid grid-cols-2 gap-3'},
+        ...[{icon:'📧',label:'Email Inbox',sub:'Connect a mailbox via IMAP/SMTP'},{icon:'📠',label:'Fax Inbox',sub:'Receive faxes via Twilio Fax'}].map(s=>
+          h('div',{key:s.label,className:'rounded-[10px] border border-dashed border-gray-200 bg-white p-4 flex items-center gap-3'},
+            h('span',{className:'text-xl shrink-0'},s.icon),h('div',{className:'flex-1 min-w-0'},h('p',{className:'text-sm font-medium text-zinc-900'},s.label),h('p',{className:'text-xs text-zinc-500'},s.sub)),h(Btn,{variant:'outline',size:'sm'},'Connect'))))),
+    showAdd&&h(AddModal,{onAdd:q=>setQuestions([...questions,q]),onClose:()=>setShowAdd(false)}));
+}
+
+/* ════════ FILEFLOW PAGE ═════════════════════════════ */
+const FF_TABS=['Settings','Sources','Destinations','Structure & Rules','Calendar','Usage'];
+function FileFlowInboxPage() {
+  const [tab,setTab]=useState('Sources'),[enabled,setEnabled]=useState(false);
+  return h('div',null,
+    h('div',{className:'mb-6'},h('h1',{className:'text-xl font-semibold text-zinc-900'},'FileFlow Inbox Settings'),h('p',{className:'text-sm text-zinc-500 mt-0.5'},'Manage your FileFlow Inbox configuration')),
+    h('div',{className:'border-b border-gray-200 mb-6'},h('div',{className:'flex'},FF_TABS.map(t=>h('button',{key:t,onClick:()=>setTab(t),className:`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab===t?'border-blue-700 text-blue-700':'border-transparent text-zinc-500 hover:text-zinc-800'}`},t)))),
+    tab==='Settings'&&h('div',{className:'space-y-4 max-w-xl'},
+      h('div',{className:'rounded-[10px] border border-gray-200 bg-white px-5 py-4 flex items-center gap-4'},h(Toggle,{checked:enabled,onChange:setEnabled}),h('div',null,h('p',{className:'text-sm font-medium text-zinc-900'},'Enable FileFlow Inbox'),h('p',{className:'text-xs text-zinc-500 mt-0.5'},'Turn on document processing and routing'))),
+      !enabled&&h('div',{className:'rounded-[10px] border border-gray-200 bg-zinc-50 px-5 py-4'},h('p',{className:'text-sm font-semibold text-zinc-700 mb-2'},'FileFlow will be enabled once you complete the following:'),h('ul',{className:'space-y-1.5 text-sm text-zinc-500 list-disc list-inside'},h('li',null,'Connect at least one data source (email or document source)'),h('li',null,'Connect at least one destination (Clio or FileVine)'),h('li',null,'Set up at least one routing rule')))),
+    tab==='Sources'&&h(SourcesTab,null),
+    (tab==='Destinations'||tab==='Structure & Rules'||tab==='Calendar'||tab==='Usage')&&h('div',{className:'rounded-[10px] border border-dashed border-gray-200 bg-zinc-50 p-12 text-center'},h('p',{className:'text-sm text-zinc-400'},tab+' — coming soon')));
+}
+
+/* ════════ ORG GENERAL PAGE ════════════════════════ */
+function OrgGeneralPage() {
+  const [name,setName]=useState('Veritec AI'),[tz,setTz]=useState('America/Los_Angeles'),[addr,setAddr]=useState(''),[saved,setSaved]=useState(false);
+  const save=()=>{ setSaved(true);setTimeout(()=>setSaved(false),2000); };
+  return h('div',{className:'space-y-6 max-w-2xl'},
+    h('div',{className:'mb-2'},h('h1',{className:'text-xl font-semibold text-zinc-900'},'General'),h('p',{className:'text-sm text-zinc-500 mt-0.5'},'Basic information about your organisation')),
+    h(SectionCard,{title:'Organisation Details',sub:'Used across documents and correspondence'},
+      h('div',{className:'space-y-4'},
+        h('div',null,h(FLabel,null,'Organisation name'),h(Input,{value:name,onChange:setName})),
+        h('div',null,h(FLabel,null,'Timezone'),h(FSel,{value:tz,onChange:setTz,options:[{value:'America/Los_Angeles',label:'Pacific Time (PT)'},{value:'America/Denver',label:'Mountain Time (MT)'},{value:'America/Chicago',label:'Central Time (CT)'},{value:'America/New_York',label:'Eastern Time (ET)'}]})),
+        h('div',null,h(FLabel,{sub:'Used on documents and correspondence'},'Address'),h(Textarea,{value:addr,onChange:setAddr,placeholder:'123 Main St, Suite 100\nLos Angeles, CA 90001',rows:3})))),
+    h('div',{className:'flex justify-end'},h(Btn,{onClick:save,variant:'primary',className:saved?'bg-emerald-600 border-emerald-600':''},saved?h(IC.Check):null,saved?'Saved':'Save Changes')));
+}
+
+/* ════════ AGENT BUILDER COMPONENTS ════════════════ */
+function ABConnector(){return h('div',{className:'flex justify-center'},h('div',{className:'w-px h-7 bg-gray-300'}));}
+
+function ABTriggerNode({agent,onUpdate}){
+  const [open,setOpen]=useState(true);
+  const [showAdd,setShowAdd]=useState(false);
+  const [nl,setNl]=useState('');const [nt,setNt]=useState('text');const [nr,setNr]=useState(false);
+  const inputs=agent.inputs||[];
+  const addField=()=>{if(!nl.trim())return;onUpdate({...agent,inputs:[...inputs,{id:'i'+Date.now(),label:nl.trim(),key:nl.trim().toLowerCase().replace(/\s+/g,'_'),type:nt,required:nr}]});setNl('');setNt('text');setNr(false);setShowAdd(false);};
+  return h('div',{className:'bg-white rounded-[10px] border border-gray-200 shadow-sm overflow-hidden'},
+    h('div',{className:'flex items-center gap-3 px-4 py-3 cursor-pointer select-none',onClick:()=>setOpen(!open)},
+      h('div',{className:'w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0'},h(IC.DB)),
+      h('div',{className:'flex-1'},h('p',{className:'text-sm font-semibold text-zinc-900'},'Inputs collected'),h('p',{className:'text-xs text-zinc-400'},`${inputs.length} field${inputs.length!==1?'s':''}`)),
+      h('div',{className:'flex items-center gap-2'},
+        h('div',{onClick:e=>e.stopPropagation()},
+          h('select',{value:agent.trigger||'webhook',onChange:e=>onUpdate({...agent,trigger:e.target.value}),
+            className:'h-7 rounded-md border border-gray-200 px-2 text-xs bg-white outline-none focus:border-blue-400 text-zinc-600'},
+            AB_TRIGGER_OPTS.map(t=>h('option',{key:t.value,value:t.value},t.label)))),
+        open?h(IC.Up):h(IC.Down))),
+    open&&h('div',{className:'border-t border-gray-100'},
+      inputs.length>0&&h('div',{className:'px-4 divide-y divide-gray-50'},
+        inputs.map(f=>{
+          const ft=AB_FIELD_TYPES.find(t=>t.v===f.type);
+          return h('div',{key:f.id,className:'flex items-center gap-2.5 py-2'},
+            h('span',{className:'w-4 text-[10px] font-bold text-zinc-300 shrink-0'},f.type==='phone'||f.type==='knowledge_base'||f.type==='dataset'?h(f.type==='phone'?IC.Phone:IC.DB):'T'),
+            h('span',{className:'flex-1 text-sm text-zinc-800'},f.label),
+            f.required&&h('span',{className:'text-[9px] font-bold text-rose-500 tracking-widest'},'REQ'),
+            h('span',{className:'text-[9px] font-semibold text-zinc-400 tracking-widest'},ft?.l||f.type),
+            h('button',{onClick:()=>onUpdate({...agent,inputs:inputs.filter(x=>x.id!==f.id)}),className:'text-zinc-200 hover:text-rose-500 transition-colors'},h(IC.X)));
+        })),
+      showAdd
+        ?h('div',{className:'flex items-center gap-2 px-4 py-2 bg-blue-50/40 border-t border-blue-100'},
+            h('input',{autoFocus:true,value:nl,onChange:e=>setNl(e.target.value),placeholder:'Field label',onKeyDown:e=>e.key==='Enter'&&addField(),
+              className:'flex-1 min-w-0 h-7 rounded border border-gray-200 px-2 text-xs bg-white outline-none focus:border-blue-400'}),
+            h('select',{value:nt,onChange:e=>setNt(e.target.value),className:'h-7 rounded border border-gray-200 px-1.5 text-xs bg-white outline-none'},
+              AB_FIELD_TYPES.map(t=>h('option',{key:t.v,value:t.v},t.l))),
+            h('label',{className:'flex items-center gap-1 text-[10px] text-zinc-500 shrink-0 cursor-pointer'},
+              h('input',{type:'checkbox',checked:nr,onChange:e=>setNr(e.target.checked),className:'w-3 h-3'}),'Req'),
+            h('button',{onClick:addField,disabled:!nl.trim(),className:'h-7 px-2.5 rounded bg-blue-800 text-white text-xs font-medium disabled:opacity-40'},'Add'),
+            h('button',{onClick:()=>setShowAdd(false),className:'text-zinc-300 hover:text-zinc-600'},h(IC.X)))
+        :h('button',{onClick:()=>setShowAdd(true),className:'w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-zinc-400 hover:text-blue-700 hover:bg-blue-50/50 transition-colors'},h(IC.Plus),'Add input')));
+}
+
+function ABReturnTag({field,onRemove}){
+  const rt=AB_RTYPE[field.type]||AB_RTYPE.text;
+  return h('span',{className:`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${rt.cls}`},
+    h('span',{className:'text-[9px] opacity-50'},rt.icon),field.label,
+    onRemove&&h('button',{onClick:onRemove,className:'ml-0.5 opacity-40 hover:opacity-100 leading-none'},'×'));
+}
+
+function ABStepNode({step,idx,total,onUpdate,onDelete,onMove}){
+  const [open,setOpen]=useState(true);
+  const [showRet,setShowRet]=useState(false);
+  const [rl,setRl]=useState('');const [rt,setRt]=useState('text');
+  const st=AB_STEP_TYPES[step.type];const ss=AB_STEP_STYLE[step.type]||AB_STEP_STYLE.prompt;
+  const StepIco=AB_STEP_ICON[step.type]||IC.Spark;
+  const returns=step.returns||[];
+  const addRet=()=>{if(!rl.trim())return;onUpdate({...step,returns:[...returns,{id:'r'+Date.now(),label:rl.trim(),type:rt}]});setRl('');setRt('text');setShowRet(false);};
+  return h('div',{className:'bg-white rounded-[10px] border border-gray-200 shadow-sm overflow-hidden'},
+    h('div',{className:'flex items-center gap-3 px-4 py-3'},
+      h('div',{className:`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${ss.bg} ${ss.tx} ${ss.bd}`},h(StepIco)),
+      h('input',{value:step.name,onChange:e=>onUpdate({...step,name:e.target.value}),className:'flex-1 min-w-0 text-sm font-semibold text-zinc-900 bg-transparent outline-none rounded px-1 -mx-1 hover:bg-zinc-50 focus:bg-zinc-50'}),
+      h(Tag,{color:st?.color||'zinc'},st?.label||step.type),
+      h('div',{className:'flex items-center gap-0.5 shrink-0'},
+        h('button',{onClick:()=>onMove(idx,idx-1),disabled:idx===0,className:'h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-zinc-700 hover:bg-zinc-100 disabled:opacity-20'},h(IC.Up)),
+        h('button',{onClick:()=>onMove(idx,idx+1),disabled:idx===total-1,className:'h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-zinc-700 hover:bg-zinc-100 disabled:opacity-20'},h(IC.Down)),
+        h('button',{onClick:()=>setOpen(!open),className:'h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-zinc-700 hover:bg-zinc-100'},open?h(IC.Up):h(IC.Down)),
+        h('button',{onClick:()=>onDelete(step.id),className:'h-6 w-6 flex items-center justify-center rounded text-zinc-300 hover:text-rose-600 hover:bg-rose-50'},h(IC.Trash)))),
+    open&&h('div',{className:'border-t border-gray-100 px-4 py-3 space-y-3'},
+      (step.type==='outbound_voice'||step.type==='prompt')&&h('div',null,
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 mb-1.5'},step.type==='outbound_voice'?'SYSTEM PROMPT':'PROMPT'),
+        h(Textarea,{value:step.prompt||'',onChange:v=>onUpdate({...step,prompt:v}),placeholder:'Describe what this step should do…',rows:3})),
+      step.type==='fetch'&&h('div',{className:'space-y-2'},
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400'},'ENDPOINT'),
+        h(Input,{value:step.url||'',onChange:v=>onUpdate({...step,url:v}),placeholder:'https://api.example.com/endpoint'}),
+        h('div',{className:'grid grid-cols-2 gap-2'},
+          h('div',null,h('p',{className:'text-[10px] text-zinc-400 mb-1'},'METHOD'),
+            h(FSel,{value:step.method||'GET',onChange:v=>onUpdate({...step,method:v}),options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'},{value:'PUT',label:'PUT'}]})),
+          h('div',null,h('p',{className:'text-[10px] text-zinc-400 mb-1'},'AUTH'),
+            h(FSel,{value:step.auth||'none',onChange:v=>onUpdate({...step,auth:v}),options:[{value:'none',label:'None'},{value:'bearer',label:'Bearer'},{value:'api_key',label:'API Key'}]})))),
+      step.type==='format'&&h('div',null,
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 mb-1.5'},'OUTPUT TEMPLATE'),
+        h(Textarea,{value:step.template||'',onChange:v=>onUpdate({...step,template:v}),placeholder:'Use {{field_name}} to reference inputs and previous outputs…',rows:3})),
+      step.type==='send_email'&&h('div',{className:'space-y-2'},
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400'},'SEND EMAIL'),
+        h(Input,{value:step.to||'',onChange:v=>onUpdate({...step,to:v}),placeholder:'To: {{client_email}}'}),
+        h(Input,{value:step.subject||'',onChange:v=>onUpdate({...step,subject:v}),placeholder:'Subject…'}),
+        h(Textarea,{value:step.body||'',onChange:v=>onUpdate({...step,body:v}),placeholder:'Body — use {{field}} for dynamic values',rows:3})),
+      step.type==='send_sms'&&h('div',{className:'space-y-2'},
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400'},'SEND SMS'),
+        h(Input,{value:step.to||'',onChange:v=>onUpdate({...step,to:v}),placeholder:'To: {{lead_phone}}'}),
+        h(Textarea,{value:step.message||'',onChange:v=>onUpdate({...step,message:v}),placeholder:'Message (under 160 chars)',rows:2})),
+      (returns.length>0||(step.type==='outbound_voice'||step.type==='prompt'))&&h('div',null,
+        h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 mb-2'},'RETURNS'),
+        h('div',{className:'flex flex-wrap gap-1.5'},
+          returns.map(r=>h(ABReturnTag,{key:r.id,field:r,onRemove:()=>onUpdate({...step,returns:returns.filter(x=>x.id!==r.id)})})),
+          showRet
+            ?h('div',{className:'flex items-center gap-1.5'},
+                h('input',{autoFocus:true,value:rl,onChange:e=>setRl(e.target.value),placeholder:'Field name',onKeyDown:e=>e.key==='Enter'&&addRet(),
+                  className:'h-6 w-28 rounded border border-gray-200 px-2 text-[11px] bg-white outline-none focus:border-blue-400'}),
+                h('select',{value:rt,onChange:e=>setRt(e.target.value),className:'h-6 rounded border border-gray-200 px-1 text-[11px] bg-white outline-none'},
+                  [{v:'text',l:'Text'},{v:'select',l:'Select'},{v:'date',l:'Date'},{v:'boolean',l:'Bool'},{v:'number',l:'Number'}].map(o=>h('option',{key:o.v,value:o.v},o.l))),
+                h('button',{onClick:addRet,disabled:!rl.trim(),className:'h-6 px-2 rounded bg-blue-700 text-white text-[10px] font-medium disabled:opacity-40'},'Add'),
+                h('button',{onClick:()=>setShowRet(false),className:'text-zinc-300 hover:text-zinc-600'},h(IC.X)))
+            :h('button',{onClick:()=>setShowRet(true),className:'inline-flex items-center gap-1 rounded-md border border-dashed border-gray-200 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-blue-300 hover:text-blue-700 transition-colors'},h(IC.Plus),'Add')))));
+}
+
+function ABAddStepRow({onAdd}){
+  const opts=[
+    {type:'fetch',          label:'Add Fetch',          I:IC.FetchI,cls:'hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50'},
+    {type:'prompt',         label:'Add Prompt',         I:IC.Spark, cls:'hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50'},
+    {type:'format',         label:'Add Format',         I:IC.Layers,cls:'hover:border-amber-300 hover:text-amber-700 hover:bg-amber-50'},
+    {type:'outbound_voice', label:'Add Outbound Voice', I:IC.Bot,   cls:'hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50'},
+    {type:'send_email',     label:'Add Send Email',     I:IC.Mail,  cls:'hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'},
+    {type:'send_sms',       label:'Add Send SMS',       I:IC.Msg,   cls:'hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50'},
+  ];
+  return h('div',{className:'flex justify-center'},
+    h('div',{className:'flex flex-wrap items-center gap-2 justify-center'},
+      opts.map(o=>h('button',{key:o.type,onClick:()=>onAdd(o.type),
+        className:`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors ${o.cls}`},
+        h(o.I),o.label))));
+}
+
+function ABEndNode(){
+  return h('div',{className:'flex justify-center'},
+    h('div',{className:'inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-zinc-500 shadow-sm'},
+      h('span',{className:'w-2 h-2 rounded-full bg-gray-400 shrink-0'}),
+      'Ends — result is saved to the Runs table'));
+}
+
+function ABWorkflowBuilder({agent,onSave,onBack}){
+  const [draft,setDraft]=useState(agent);
+  const [saved,setSaved]=useState(false);
+  const save=()=>{onSave(draft);setSaved(true);setTimeout(()=>setSaved(false),2000);};
+  const addStep=type=>{
+    const defs={outbound_voice:{prompt:''},prompt:{prompt:''},fetch:{url:'',method:'GET',auth:'none'},format:{template:''},send_email:{to:'',subject:'',body:''},send_sms:{to:'',message:''}};
+    setDraft({...draft,steps:[...draft.steps,{id:'s'+Date.now(),type,name:AB_STEP_TYPES[type]?.label||type,returns:[],...(defs[type]||{})}]});
+  };
+  const moveStep=(from,to)=>{if(to<0||to>=draft.steps.length)return;const s=[...draft.steps];const[r]=s.splice(from,1);s.splice(to,0,r);setDraft({...draft,steps:s});};
+  return h('div',{className:'space-y-0'},
+    h('div',{className:'flex items-center justify-between mb-4'},
+      h('button',{onClick:onBack,className:'flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 transition-colors'},h(IC.Back),'All agents'),
+      h('div',{className:'flex items-center gap-2'},
+        h('div',{className:'flex items-center gap-1'},
+          ['phone','email','sms'].map(m=>h('button',{key:m,onClick:()=>setDraft({...draft,contactMethod:m}),
+            className:`h-7 w-7 flex items-center justify-center rounded-md border transition-colors ${draft.contactMethod===m?AB_METHOD_CLR[m]:'border-gray-200 text-zinc-400 hover:border-gray-300'}`},
+            h(AB_METHOD_ICON[m])))),
+        h('button',{onClick:()=>setDraft({...draft,status:draft.status==='active'?'paused':'active'}),
+          className:`h-7 px-2.5 rounded-md border text-[11px] font-medium transition-colors ${draft.status==='active'?'bg-green-50 text-green-700 border-green-200':'bg-zinc-100 text-zinc-500 border-zinc-200'}`},
+          draft.status==='active'?'Active':'Paused'),
+        h(Btn,{onClick:save,variant:'primary',size:'sm',className:saved?'bg-emerald-600 border-emerald-600':''},saved?h(IC.Check):null,saved?'Saved':'Save'))),
+    h('div',{className:'rounded-[10px] border border-gray-200 overflow-hidden'},
+      h('div',{style:{backgroundColor:'#f9fafb',backgroundImage:'radial-gradient(circle,#d1d5db 1px,transparent 1px)',backgroundSize:'22px 22px'},className:'p-8'},
+        h('div',{className:'max-w-[560px] mx-auto space-y-0'},
+          h(ABTriggerNode,{agent:draft,onUpdate:setDraft}),
+          h(ABConnector),
+          draft.steps.map((step,i)=>h('div',{key:step.id},
+            h(ABStepNode,{step,idx:i,total:draft.steps.length,
+              onUpdate:u=>setDraft({...draft,steps:draft.steps.map(x=>x.id===u.id?u:x)}),
+              onDelete:id=>setDraft({...draft,steps:draft.steps.filter(x=>x.id!==id)}),
+              onMove:moveStep}),
+            h(ABConnector))),
+          h(ABAddStepRow,{onAdd:addStep}),
+          h(ABConnector),
+          h(ABEndNode)))));
+}
+
+function ABAgentCard({agent,onOpen}){
+  const typeKey=agent.contactMethod==='phone'?'outbound_voice':agent.contactMethod==='email'?'send_email':'send_sms';
+  const ss=AB_STEP_STYLE[typeKey]||AB_STEP_STYLE.prompt;
+  const MIco=AB_METHOD_ICON[agent.contactMethod]||IC.Phone;
+  return h('div',{onClick:onOpen,className:'group bg-white rounded-[10px] border border-gray-200 p-5 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all'},
+    h('div',{className:'flex items-start justify-between mb-3'},
+      h('div',{className:`w-9 h-9 rounded-lg flex items-center justify-center border ${ss.bg} ${ss.tx} ${ss.bd}`},h(MIco)),
+      h('span',{className:`text-[10px] font-medium px-2 py-0.5 rounded-full border ${agent.status==='active'?'bg-green-50 text-green-700 border-green-200':'bg-zinc-100 text-zinc-500 border-zinc-200'}`},agent.status==='active'?'Active':'Paused')),
+    h('p',{className:'text-sm font-semibold text-zinc-900 group-hover:text-blue-800 transition-colors mb-2'},agent.name),
+    h('div',{className:'flex flex-wrap gap-1.5'},
+      h(Tag,{color:AB_CONTACT_CLR[agent.contactMethod]||'zinc'},AB_CONTACT_LBL[agent.contactMethod]||agent.contactMethod),
+      h(Tag,{color:'zinc'},AB_TRIGGER_LBL[agent.trigger]||'Manual')),
+    h('div',{className:'flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 text-[11px] text-zinc-400'},
+      h('span',null,`${(agent.inputs||[]).length} input${(agent.inputs||[]).length!==1?'s':''}`),
+      h('span',{className:'text-zinc-200'},'·'),
+      h('span',null,`${(agent.steps||[]).length} step${(agent.steps||[]).length!==1?'s':''}`)));
+}
+
+/* ════════ VOICE AGENT PAGE ════════════════════════ */
+
+/* -- Phone number row (shared by inbound + outbound) -- */
+function PhoneRow({ phone,onEdit,onDelete,onSetDefault,showDefault,editingId,setEditingId,onSave,isOutbound }) {
+  const isEditing=editingId===phone.id;
+  const [draft,setDraft]=useState(phone);
+  const commit=()=>{ onSave(draft);setEditingId(null); };
+  if(isEditing) return h('div',{className:'rounded-md border border-blue-200 bg-blue-50/30 px-4 py-3 space-y-3'},
+    h('div',{className:'grid grid-cols-2 gap-3'},
+      h('div',null,h(FLabel,null,'Phone number'),h(Input,{value:draft.number,onChange:v=>setDraft({...draft,number:v}),placeholder:'+1 (555) 000-0000'})),
+      h('div',null,h(FLabel,null,'Label'),h(Input,{value:draft.label,onChange:v=>setDraft({...draft,label:v}),placeholder:'e.g. Primary intake line'}))),
+    isOutbound&&h('div',{className:'grid grid-cols-2 gap-3'},
+      h('div',null,h(FLabel,{sub:'Overrides global caller ID for this number'},'Caller ID name'),h(Input,{value:draft.callerId||'',onChange:v=>setDraft({...draft,callerId:v}),placeholder:'Leave blank to use global'})),
+      h('div',null,h(FLabel,null,'Max retries'),h(FSel,{value:String(draft.maxRetries||3),onChange:v=>setDraft({...draft,maxRetries:Number(v)}),options:[{value:'1',label:'1 attempt'},{value:'2',label:'2 attempts'},{value:'3',label:'3 attempts'},{value:'5',label:'5 attempts'},{value:'7',label:'7 attempts'}]}))),
+    h('div',{className:'flex justify-end gap-2'},
+      h(Btn,{onClick:()=>setEditingId(null),variant:'outline',size:'sm'},'Cancel'),
+      h(Btn,{onClick:commit,variant:'primary',size:'sm'},'Save')));
+  return h('div',{className:'flex items-center gap-3 rounded-md border border-gray-200 bg-white px-4 py-3'},
+    h('div',{className:`flex h-8 w-8 items-center justify-center rounded-full shrink-0 ${isOutbound?'bg-blue-50 text-blue-700':'bg-teal-50 text-teal-700'}`},isOutbound?h(IC.PhoneOut):h(IC.PhoneIn)),
+    h('div',{className:'flex-1 min-w-0'},
+      h('p',{className:'text-sm font-medium text-zinc-900'},phone.number),
+      h('p',{className:'text-xs text-zinc-500'},phone.label+(phone.callerId?` · Caller ID: ${phone.callerId}`:'')+(phone.maxRetries?` · ${phone.maxRetries} retries`:''))),
+    h('div',{className:'flex items-center gap-1.5'},
+      phone.status==='active'?h(Tag,{color:'emerald'},'Active'):h(Tag,{color:'zinc'},'Paused'),
+      showDefault&&phone.default&&h(Tag,{color:'blue'},'Default'),
+      showDefault&&!phone.default&&h(Btn,{variant:'ghost',size:'sm',onClick:()=>onSetDefault(phone.id)},'Set default'),
+      h(Btn,{variant:'ghost',size:'sm',onClick:()=>{ setDraft(phone);setEditingId(phone.id); }},h(IC.Pencil)),
+      h(Btn,{variant:'ghost',size:'sm',onClick:()=>onDelete(phone.id)},h(IC.Trash))));
+}
+
+/* -- Inline add row -- */
+function AddPhoneRow({ onAdd,isOutbound }) {
+  const [show,setShow]=useState(false),[num,setNum]=useState(''),[lbl,setLbl]=useState('');
+  const commit=()=>{ if(!num.trim()) return; onAdd({id:'ph'+Date.now(),number:num.trim(),label:lbl.trim()||'Intake line',default:false,status:'active',maxRetries:3}); setNum('');setLbl('');setShow(false); };
+  if(!show) return h(Btn,{onClick:()=>setShow(true),variant:'ghost',size:'sm',className:'text-blue-700 hover:bg-blue-50 hover:text-blue-800'},h(IC.Plus),'Add phone number');
+  return h('div',{className:'flex items-center gap-2 rounded-md border border-dashed border-blue-200 bg-blue-50/40 px-3 py-2'},
+    h('input',{autoFocus:true,value:num,onChange:e=>setNum(e.target.value),placeholder:'+1 (555) 000-0000',onKeyDown:e=>e.key==='Enter'&&commit(),className:'flex-1 min-w-0 h-7 rounded border border-gray-200 px-2 text-sm outline-none focus:border-blue-400 bg-white'}),
+    h('input',{value:lbl,onChange:e=>setLbl(e.target.value),placeholder:'Label',className:'flex-1 min-w-0 h-7 rounded border border-gray-200 px-2 text-sm outline-none focus:border-blue-400 bg-white'}),
+    h(Btn,{variant:'primary',size:'sm',disabled:!num.trim(),onClick:commit},'Add'),
+    h(Btn,{variant:'ghost',size:'sm',onClick:()=>setShow(false)},h(IC.X)));
+}
+
+function VoiceAgentPage() {
+  /* inbound */
+  const [inbound,setInbound]=useState([{id:'ib1',number:'+1 (424) 555-0100',label:'Primary intake line',status:'active',default:true}]);
+  const [inEditId,setInEditId]=useState(null);
+  const delIn=id=>setInbound(inbound.filter(p=>p.id!==id));
+  const saveIn=p=>setInbound(inbound.map(x=>x.id===p.id?p:x));
+
+  /* outbound */
+  const [outbound,setOutbound]=useState([{id:'ob1',number:'+1 (424) 555-0182',label:'Primary outbound line',default:true,status:'active',maxRetries:3}]);
+  const [outEditId,setOutEditId]=useState(null);
+  const [callerId,setCallerId]=useState('VeriTec AI');
+  const [callWindow,setCallWindow]=useState({start:'08:00',end:'20:00'});
+  const delOut=id=>setOutbound(outbound.filter(p=>p.id!==id));
+  const saveOut=p=>setOutbound(outbound.map(x=>x.id===p.id?p:x));
+  const setDefOut=id=>setOutbound(outbound.map(p=>({...p,default:p.id===id})));
+
+  /* languages */
+  const [langs,setLangs]=useState([{id:'en-US',voice:'female',primary:true,active:true}]);
+  const [autoDetect,setAutoDetect]=useState(false);
+  const [showLangPicker,setShowLangPicker]=useState(false);
+  const addLang=id=>{ if(langs.find(l=>l.id===id)) return; setLangs([...langs,{id,voice:'female',primary:false,active:true}]);setShowLangPicker(false); };
+  const delLang=id=>setLangs(langs.filter(l=>l.id!==id));
+  const updLang=(id,k,v)=>setLangs(langs.map(l=>l.id===id?{...l,[k]:v}:l));
+
+  const [saved,setSaved]=useState(false);
+  const save=()=>{ setSaved(true);setTimeout(()=>setSaved(false),2000); };
+
+  const TIMES=[{value:'06:00',label:'6:00 AM'},{value:'07:00',label:'7:00 AM'},{value:'08:00',label:'8:00 AM'},{value:'09:00',label:'9:00 AM'},{value:'17:00',label:'5:00 PM'},{value:'18:00',label:'6:00 PM'},{value:'19:00',label:'7:00 PM'},{value:'20:00',label:'8:00 PM'},{value:'21:00',label:'9:00 PM'},{value:'22:00',label:'10:00 PM'}];
+
+  return h('div',{className:'space-y-6 max-w-2xl'},
+    h('div',{className:'mb-2'},
+      h('h1',{className:'text-xl font-semibold text-zinc-900'},'Voice'),
+      h('p',{className:'text-sm text-zinc-500 mt-0.5'},'Phone numbers and language settings — shared across voice agents')),
+
+    /* ── Inbound Numbers ─────────────────────────────── */
+    h(SectionCard,{title:'Inbound Numbers',sub:'Numbers clients dial to reach your AI agent'},
+      h('div',{className:'space-y-2'},
+        inbound.map(p=>h(PhoneRow,{key:p.id,phone:p,onDelete:delIn,onSave:saveIn,onSetDefault:id=>setInbound(inbound.map(x=>({...x,default:x.id===id}))),showDefault:false,editingId:inEditId,setEditingId:setInEditId,isOutbound:false})),
+        h(AddPhoneRow,{onAdd:p=>setInbound([...inbound,p]),isOutbound:false}))),
+
+    /* ── Outbound Numbers ────────────────────────────── */
+    h(SectionCard,{title:'Outbound Numbers',sub:'Numbers the agent uses when calling clients'},
+      h('div',{className:'space-y-4'},
+        h('div',{className:'space-y-2'},
+          outbound.map(p=>h(PhoneRow,{key:p.id,phone:p,onDelete:delOut,onSave:saveOut,onSetDefault:setDefOut,showDefault:true,editingId:outEditId,setEditingId:setOutEditId,isOutbound:true})),
+          h(AddPhoneRow,{onAdd:p=>setOutbound([...outbound,{...p,maxRetries:3}]),isOutbound:true})),
+        h(Divider),
+        h('p',{className:'text-xs font-semibold text-zinc-700 mb-3'},'Global outbound settings'),
+        h('div',{className:'grid grid-cols-2 gap-4'},
+          h('div',null,
+            h(FLabel,{sub:'Shown on client phone screens when the agent calls'},'Caller ID display name'),
+            h(Input,{value:callerId,onChange:setCallerId,placeholder:'Your firm name'})),
+          h('div',null,
+            h(FLabel,{sub:'Agent will only make outbound calls in this window'},'Call window'),
+            h('div',{className:'flex items-center gap-2'},
+              h(FSel,{value:callWindow.start,onChange:v=>setCallWindow({...callWindow,start:v}),options:TIMES,className:'flex-1'}),
+              h('span',{className:'text-zinc-400 text-sm'},'to'),
+              h(FSel,{value:callWindow.end,onChange:v=>setCallWindow({...callWindow,end:v}),options:TIMES,className:'flex-1'})))))),
+
+    /* ── Languages ───────────────────────────────────── */
+    h(SectionCard,{title:'Languages',sub:'Languages the agent can conduct intake calls in'},
+      h('div',{className:'space-y-4'},
+        h('label',{className:'flex items-center gap-2.5 text-sm text-zinc-700'},
+          h(Toggle,{checked:autoDetect,onChange:setAutoDetect}),
+          h('div',null,h('p',{className:'font-medium text-zinc-900'},'Auto-detect language'),h('p',{className:'text-xs text-zinc-500'},"Automatically switch to the caller's language if supported"))),
+        h(Divider),
+        h('p',{className:'text-xs font-semibold text-zinc-700 mb-2'},'Active languages'),
+        h('div',{className:'space-y-2'},
+          langs.map(l=>{
+            const info=LANGUAGES.find(x=>x.id===l.id);
+            return h('div',{key:l.id,className:'flex items-center gap-3 rounded-md border border-gray-200 bg-white px-4 py-3'},
+              h('span',{className:'text-lg shrink-0'},info?.flag),
+              h('div',{className:'flex-1 min-w-0'},
+                h('p',{className:'text-sm font-medium text-zinc-900'},info?.label||l.id)),
+              l.primary&&h(Tag,{color:'blue'},'Primary'),
+              h('div',{className:'flex items-center gap-2'},
+                h(FSel,{value:l.voice,onChange:v=>updLang(l.id,'voice',v),options:[{value:'female',label:'Female'},{value:'male',label:'Male'}],className:'w-28'}),
+                !l.primary&&h(Btn,{variant:'ghost',size:'sm',onClick:()=>delLang(l.id)},h(IC.Trash))))
+          })),
+        showLangPicker
+          ? h('div',{className:'rounded-md border border-dashed border-blue-200 bg-blue-50/40 p-3'},
+              h('p',{className:'text-[11px] font-medium text-zinc-700 mb-2'},'Select a language to add:'),
+              h('div',{className:'flex flex-wrap gap-1.5'},
+                LANGUAGES.filter(l=>!langs.find(a=>a.id===l.id)).map(l=>
+                  h('button',{key:l.id,onClick:()=>addLang(l.id),
+                    className:'flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-zinc-700 hover:border-blue-300 hover:bg-blue-50 transition-colors'},
+                    h('span',null,l.flag),l.label))),
+              h('div',{className:'mt-2'},h(Btn,{onClick:()=>setShowLangPicker(false),variant:'ghost',size:'sm'},h(IC.X),'Cancel')))
+          : h(Btn,{onClick:()=>setShowLangPicker(true),variant:'ghost',size:'sm',className:'text-blue-700 hover:bg-blue-50 hover:text-blue-800'},h(IC.Plus),'Add language'))),
+
+    h('div',{className:'flex justify-end'},
+      h(Btn,{onClick:save,variant:'primary',className:saved?'bg-emerald-600 border-emerald-600':''},saved?h(IC.Check):null,saved?'Saved':'Save Changes')));
+}
+
+/* ════════ AGENT WORKFLOWS PAGE ════════════════════ */
+function AgentWorkflowsPage(){
+  const [agents,setAgents]=useState(AB_AGENTS_INIT);
+  const [selectedId,setSelectedId]=useState(null);
+  const selected=agents.find(a=>a.id===selectedId);
+  const newAgent=()=>{const a={id:'ab'+Date.now(),name:'Untitled Agent',status:'paused',contactMethod:'phone',trigger:'manual',inputs:[],steps:[]};setAgents([...agents,a]);setSelectedId(a.id);};
+
+  if(selectedId&&selected){
+    return h(ABWorkflowBuilder,{agent:selected,
+      onSave:u=>setAgents(agents.map(a=>a.id===u.id?u:a)),
+      onBack:()=>setSelectedId(null)});
+  }
+  return h('div',null,
+    h('div',{className:'mb-6 flex items-start justify-between'},
+      h('div',null,
+        h('h1',{className:'text-xl font-semibold text-zinc-900'},'Workflows'),
+        h('p',{className:'text-sm text-zinc-500 mt-0.5'},'Automated agents that collect data and take action')),
+      h(Btn,{onClick:newAgent,variant:'primary'},h(IC.Plus),'New agent')),
+    h('div',{className:'grid grid-cols-3 gap-4'},
+      agents.map(a=>h(ABAgentCard,{key:a.id,agent:a,onOpen:()=>setSelectedId(a.id)})),
+      h('div',{onClick:newAgent,className:'rounded-[10px] border-2 border-dashed border-gray-200 p-5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all min-h-[160px]'},
+        h('div',{className:'w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400'},h(IC.Plus)),
+        h('p',{className:'text-sm font-medium text-zinc-500'},'New agent'))));
+}
+
+/* ════════ AI AGENTS ════════════════════════════════ */
+const AGENT_DEFS=[
+  {id:'demand-letter',label:'Demand Letter',icon:'Spark',iconBg:'bg-violet-50',iconBd:'border-violet-200',iconTx:'text-violet-700',
+   description:'Generates demand letters with med-chron, multiplier calculation, and firm-specific formatting',
+   isVoice:true,status:'active',runCount:47,runUnit:'runs',
+   defaultIdentity:{name:'Morgan',voice:'female',greeting:"Hi, this is Morgan from Veritec Law calling regarding the demand letter for {{client_name}}'s case. Do you have a moment to discuss?"},
+   defaultPrompt:"You are a legal demand letter drafting assistant for personal-injury cases.\n\nCompose a complete demand letter using:\n• The medical chronology and provider list\n• The multiplier calculation and special damages summary\n• The firm's letterhead, tone, and formatting conventions\n\nOutput a polished letter ready for attorney review."},
+  {id:'medchron',label:'MedChron',icon:'Layers',iconBg:'bg-sky-50',iconBd:'border-sky-200',iconTx:'text-sky-700',
+   description:'Builds medical chronology from uploaded records with provider timeline and gap detection',
+   isVoice:true,status:'active',runCount:38,runUnit:'runs',
+   defaultIdentity:{name:'Riley',voice:'female',greeting:"Hi, this is Riley from Veritec Law. I'm calling to request medical records for our client {{client_name}}. May I speak with the records department?"},
+   defaultPrompt:"You analyze uploaded medical records to construct a chronological treatment timeline.\n\nFor each visit, extract:\n• Date, provider, and facility\n• Diagnoses and ICD codes\n• Treatments rendered\n• Gaps in care (>30 days between visits)\n\nFlag inconsistencies and surface gaps for attorney review."},
+  {id:'voice-intake',label:'Voice Intake',icon:'Phone',iconBg:'bg-emerald-50',iconBd:'border-emerald-200',iconTx:'text-emerald-700',
+   description:'24/7 inbound call handling with auto-extraction, conflict check, and SOL validation',
+   isVoice:true,status:'active',runCount:156,runUnit:'calls',
+   defaultIdentity:{name:'Alex',voice:'female',greeting:"Hi, I'm Alex calling from VeriTec AI. I'm here to help walk you through your intake — this should only take a few minutes."},
+   defaultPrompt:"You are a warm, plainspoken intake specialist for Veritec Law.\n\nYour goals on each call:\n1. Qualify the lead (matter type, jurisdiction, basic facts)\n2. Collect required intake fields\n3. Run conflict check against the CRM database\n4. Validate SOL for the matter type and incident date\n5. Schedule a consult if cleared, otherwise route to attorney review"},
+  {id:'discovery-response',label:'Discovery Response',icon:'Pencil',iconBg:'bg-amber-50',iconBd:'border-amber-200',iconTx:'text-amber-700',
+   description:'Drafts interrogatory, RFA, and RFP responses with per-attorney objection KB',
+   isVoice:true,status:'active',runCount:22,runUnit:'runs',
+   defaultIdentity:{name:'Jordan',voice:'male',greeting:"Hi, this is Jordan from Veritec Law calling about the discovery responses for case {{case_id}}. Is now a good time to walk through them?"},
+   defaultPrompt:"You draft discovery responses (interrogatories, RFAs, RFPs).\n\nUse:\n• The case file context\n• The assigned attorney's objection knowledge base\n• Standard form language adapted to the specific request\n\nOutput numbered responses with objections preserved and substantive answers where appropriate."},
+  {id:'depo-prep',label:'Depo Prep',icon:'Bot',iconBg:'bg-orange-50',iconBd:'border-orange-200',iconTx:'text-orange-700',
+   description:'Analyzes case materials and generates deposition questions with source citations and reasoning',
+   isVoice:true,status:'active',runCount:null,
+   defaultIdentity:{name:'Casey',voice:'female',greeting:"Hi, this is Casey from Veritec Law calling to schedule a deposition for {{matter_name}}. I'd like to coordinate a time that works for you."},
+   defaultPrompt:"You generate deposition outlines for plaintiff and defense witnesses.\n\nFor each topic area, produce:\n• A short list of pointed questions\n• A specific record citation (Bates or page reference) supporting the line of questioning\n• Brief reasoning for why the question matters\n\nOrganize by witness role and topic."},
+  {id:'sol-monitor',label:'SOL Monitor',icon:'Zap',iconBg:'bg-rose-50',iconBd:'border-rose-200',iconTx:'text-rose-700',
+   description:'Daily scan of all active cases. Alerts at 90, 60, 30, and 7 day thresholds.',
+   isVoice:true,status:'active',runCount:null,
+   defaultIdentity:{name:'Sam',voice:'male',greeting:"Hi, this is Sam from Veritec Law calling about case {{case_id}}. We're approaching an important deadline and wanted to give you advance notice."},
+   defaultPrompt:"You scan all active matters once daily and surface SOL alerts.\n\nThresholds: 90 days, 60 days, 30 days, 7 days from the statute date.\nGroup alerts by responsible attorney. Include matter ID, statute date, and days remaining.\nEscalate any 7-day alerts immediately."},
+];
+const AGENT_BY_ID=Object.fromEntries(AGENT_DEFS.map(a=>[a.id,a]));
+
+/* ─── runs data + components ──────────────────────── */
+const AGENT_RUNS={
+  'demand-letter':[
+    {id:'r1',status:'success',case:'CVSA-1189',output:{type:'doc',name:'Smith Demand Letter.docx',meta:[['CLAIM','$2.4M']]},started:'8m ago',duration:'42.1s',by:{name:'James Rivera',color:'purple'}},
+    {id:'r2',status:'success',case:'2025CI01899',output:{type:'doc',name:'Park Demand Letter.docx',meta:[['CLAIM','$3.8M']]},started:'5h ago',duration:'38.7s',by:{name:'Dylan Park',color:'amber'}},
+    {id:'r3',status:'success',case:'CVSA-0998',output:{type:'doc',name:'Lopez Demand Letter.docx',meta:[['CLAIM','$1.6M']]},started:'1d ago',duration:'29.4s',by:{name:'Vanessa Kim',color:'rose'}},
+    {id:'r4',status:'running',case:'CVSA-1234',output:{type:'progress',text:'Drafting demand letter…'},started:'30s ago',duration:null,by:{name:'John Lawyer',color:'blue'}},
+    {id:'r5',status:'failed',case:'CVSA-0542',output:{type:'error',text:'Multiplier calculation timed out'},started:'Yesterday',duration:'45.2s',by:{name:'Sam Torres',color:'rose'}},
+  ],
+  'medchron':[
+    {id:'r1',status:'running',case:'CVSA-1234',output:{type:'progress',text:'Analyzing 42 records…'},started:'12s ago',duration:null,by:{name:'John Lawyer',color:'blue'}},
+    {id:'r2',status:'success',case:'CVSA-1189',output:{type:'metrics',meta:[['RECORDS','47'],['GAPS','3'],['CONFIDENCE','94%']]},started:'4m ago',duration:'18.2s',by:{name:'James Rivera',color:'purple'}},
+    {id:'r3',status:'success',case:'2025CI02115',output:{type:'metrics',meta:[['RECORDS','31'],['GAPS','5'],['CONFIDENCE','87%']]},started:'1h ago',duration:'14.6s',by:{name:'Dylan Park',color:'amber'}},
+    {id:'r4',status:'queued',case:'CVSA-1276',output:{type:'progress',text:'Waiting for records upload'},started:'4h ago',duration:null,by:{name:'James Rivera',color:'purple'}},
+    {id:'r5',status:'failed',case:'CVSA-0542',output:{type:'error',text:'LLM timeout'},started:'Yesterday',duration:'30.0s',by:{name:'Sam Torres',color:'rose'}},
+  ],
+  'voice-intake':[
+    {id:'r1',status:'running',case:'INBOUND',output:{type:'progress',text:'Caller on the line — qualifying…'},started:'45s ago',duration:null,by:{name:'Auto Inbound',color:'blue'}},
+    {id:'r2',status:'success',case:'CVSA-1389',output:{type:'metrics',meta:[['TRANSCRIPT','18 min'],['CASE CREATED','CVSA-1389'],['PARTIES','3 ID\'d']]},started:'22m ago',duration:'3.2s',by:{name:'Sam Torres',color:'rose'}},
+    {id:'r3',status:'success',case:'CVSA-1402',output:{type:'metrics',meta:[['DISPOSITION','Qualified'],['CONSULT','Booked Mon 10am']]},started:'1h ago',duration:'2.9s',by:{name:'James Rivera',color:'purple'}},
+    {id:'r4',status:'success',case:'CVSA-1399',output:{type:'metrics',meta:[['DISPOSITION','SOL expired'],['ROUTED','Attorney review']]},started:'2h ago',duration:'2.1s',by:{name:'Vanessa Kim',color:'rose'}},
+    {id:'r5',status:'failed',case:'CVSA-1395',output:{type:'error',text:'Caller disconnected before consent'},started:'3h ago',duration:'18.4s',by:{name:'Auto Inbound',color:'blue'}},
+  ],
+  'discovery-response':[
+    {id:'r1',status:'success',case:'CVSA-0874',output:{type:'metrics',meta:[['RESPONSES','28'],['OBJECTIONS','6'],['PRODUCED','22']]},started:'2h ago',duration:'17.8s',by:{name:'Bob Chen',color:'teal'}},
+    {id:'r2',status:'success',case:'CVSA-0823',output:{type:'metrics',meta:[['RESPONSES','41'],['OBJECTIONS','12'],['PRODUCED','29']]},started:'1d ago',duration:'24.1s',by:{name:'Vanessa Kim',color:'rose'}},
+    {id:'r3',status:'running',case:'CVSA-0945',output:{type:'progress',text:'Drafting RFP responses…'},started:'1m ago',duration:null,by:{name:'James Rivera',color:'purple'}},
+  ],
+  'depo-prep':[
+    {id:'r1',status:'success',case:'CVSA-1189',output:{type:'metrics',meta:[['DEPONENT','Cruz Lopez'],['QUESTIONS','127'],['CONTRADICTIONS','4']]},started:'6m ago',duration:'34.8s',by:{name:'Vanessa Kim',color:'rose'}},
+    {id:'r2',status:'success',case:'CVSA-0998',output:{type:'metrics',meta:[['DEPONENT','Dr. Patel'],['QUESTIONS','48'],['CONTRADICTIONS','0']]},started:'1h ago',duration:'19.2s',by:{name:'Vanessa Kim',color:'rose'}},
+    {id:'r3',status:'success',case:'2025CI03480',output:{type:'metrics',meta:[['DEPONENT','John Doe'],['QUESTIONS','89'],['CONTRADICTIONS','2']]},started:'14m ago',duration:'18.1s',by:{name:'Bob Chen',color:'teal'}},
+  ],
+  'sol-monitor':[
+    {id:'r1',status:'success',case:'DAILY SCAN',output:{type:'metrics',meta:[['SCANNED','248'],['ALERTS','4'],['CRITICAL','2 at 7d']]},started:'6h ago',duration:'2m 14s',by:{name:'Auto Schedule',color:'zinc'}},
+    {id:'r2',status:'success',case:'DAILY SCAN',output:{type:'metrics',meta:[['SCANNED','246'],['ALERTS','3'],['CRITICAL','1 at 7d']]},started:'1d ago',duration:'2m 09s',by:{name:'Auto Schedule',color:'zinc'}},
+    {id:'r3',status:'success',case:'DAILY SCAN',output:{type:'metrics',meta:[['SCANNED','245'],['ALERTS','5'],['CRITICAL','2 at 7d']]},started:'2d ago',duration:'2m 11s',by:{name:'Auto Schedule',color:'zinc'}},
+  ],
+};
+const AVATAR_CLR={purple:'bg-purple-200 text-purple-800',blue:'bg-blue-200 text-blue-800',amber:'bg-amber-200 text-amber-800',rose:'bg-rose-200 text-rose-800',teal:'bg-teal-200 text-teal-800',zinc:'bg-zinc-200 text-zinc-700',green:'bg-green-200 text-green-800'};
+
+function StatusPill({ status }){
+  const cfg={
+    success:{cls:'bg-green-50 text-green-700 border-green-200',label:'Success',dot:'bg-green-500'},
+    running:{cls:'bg-blue-50 text-blue-700 border-blue-200',label:'Running',dot:'bg-blue-500 animate-pulse'},
+    failed:{cls:'bg-rose-50 text-rose-700 border-rose-200',label:'Failed',dot:'bg-rose-500'},
+    queued:{cls:'bg-zinc-100 text-zinc-600 border-zinc-200',label:'Queued',dot:'bg-zinc-400'},
+  }[status]||{cls:'bg-zinc-100 text-zinc-600 border-zinc-200',label:status,dot:'bg-zinc-400'};
+  return h('span',{className:`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${cfg.cls}`},
+    h('span',{className:`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`}),cfg.label);
+}
+function CasePill({ caseId }){
+  return h('span',{className:'inline-flex items-center gap-1 rounded-md border border-gray-200 bg-zinc-50 px-1.5 py-0.5 text-[11px] text-zinc-700 font-medium whitespace-nowrap'},
+    h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3 text-zinc-400 shrink-0',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},
+      h('path',{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}),h('polyline',{points:'14 2 14 8 20 8'})),
+    caseId);
+}
+function Avatar({ name,color }){
+  const initials=(name||'').split(' ').map(s=>s[0]||'').slice(0,2).join('').toUpperCase();
+  return h('span',{className:`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold shrink-0 ${AVATAR_CLR[color]||AVATAR_CLR.zinc}`},initials);
+}
+function OutputCell({ output,status }){
+  if(status==='running') return h('div',{className:'flex items-center gap-1.5 min-w-0'},
+    h('span',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider shrink-0'},'Progress'),
+    h('span',{className:'text-xs text-zinc-700 truncate'},output.text));
+  if(status==='failed') return h('div',{className:'flex items-center gap-1.5 min-w-0'},
+    h('span',{className:'text-[10px] font-semibold text-rose-500 uppercase tracking-wider shrink-0'},'Error'),
+    h('span',{className:'text-xs text-rose-600 truncate'},output.text));
+  if(status==='queued') return h('div',{className:'flex items-center gap-1.5 min-w-0'},
+    h('span',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider shrink-0'},'Status'),
+    h('span',{className:'text-xs text-zinc-500 truncate'},output.text));
+  if(output.type==='doc') return h('div',{className:'flex items-center gap-2 flex-wrap min-w-0'},
+    h('span',{className:'inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700 font-medium'},
+      h('svg',{viewBox:'0 0 24 24',className:'h-3 w-3',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},
+        h('path',{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}),h('polyline',{points:'14 2 14 8 20 8'})),output.name),
+    output.meta&&output.meta.map(([k,v],i)=>h('span',{key:i,className:'flex items-center gap-1'},
+      h('span',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider'},k),
+      h('span',{className:'text-xs font-semibold text-emerald-700'},v))));
+  return h('div',{className:'flex items-center gap-3 flex-wrap min-w-0'},
+    output.meta&&output.meta.map(([k,v],i)=>h('span',{key:i,className:'flex items-center gap-1'},
+      h('span',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider'},k),
+      h('span',{className:'text-xs font-semibold text-zinc-800'},v))));
+}
+
+/* ─── run detail data ─────────────────────────────── */
+const FLAG_STYLE={
+  contradiction:{cls:'bg-rose-50 text-rose-700 border-rose-200',label:'Contradiction',ico:IC.Alert},
+  discrepancy:  {cls:'bg-amber-50 text-amber-700 border-amber-200',label:'Discrepancy',ico:IC.Alert},
+  liability:    {cls:'bg-blue-50 text-blue-700 border-blue-200',label:'Liability',ico:IC.Scales},
+  medical:      {cls:'bg-teal-50 text-teal-700 border-teal-200',label:'Medical',ico:IC.Heart},
+  evidence:     {cls:'bg-purple-50 text-purple-700 border-purple-200',label:'Evidence',ico:IC.Spark},
+  damages:      {cls:'bg-emerald-50 text-emerald-700 border-emerald-200',label:'Damages',ico:IC.Grid},
+  standard:     {cls:'bg-zinc-100 text-zinc-600 border-zinc-200',label:'Standard',ico:IC.Bookmark},
+};
+
+function getRunDetail(run, agentId){
+  const def=AGENT_BY_ID[agentId];
+  const runId='run_'+(run.id+'XXXXX').slice(1,6).toUpperCase();
+
+  /* Voice Intake — rich extraction outputs with transcript sources */
+  if(agentId==='voice-intake'&&run.case==='CVSA-1389'){
+    const T=(timestamp,question,answer)=>({type:'transcript',timestamp,question,answer,callId:'call_'+run.id});
+    return {
+      runId,
+      outputs:[
+        {label:'CLIENT REACHED',value:'Yes',confidence:100,source:T('00:08',"Hi, this is Alex from Veritec Law. Am I speaking with Maria Lopez?","Yes, this is Maria.")},
+        {label:'CALLER NAME',value:'Maria Lopez',phi:true,confidence:100,source:T('00:18',"Could you confirm your full name for the file?","Maria Elena Lopez.")},
+        {label:'MATTER TYPE',value:'Motor vehicle accident',confidence:98,source:T('00:34',"What happened — can you walk me through it?","I was rear-ended on the 101 about a month ago. The other driver was on his phone.")},
+        {label:'INCIDENT DATE',value:'March 12, 2025',confidence:96,source:T('00:48',"Do you remember the exact date?","March 12th. I won't forget it.")},
+        {label:'INJURY REPORTED',value:'Whiplash, left shoulder pain',phi:true,confidence:94,source:T('01:12',"Were you injured in the accident?","My neck and my left shoulder. The shoulder is the worst — I can barely lift my arm.")},
+        {label:'PROVIDER',value:'Dr. Han — SF Sports Medicine',phi:true,confidence:97,source:T('01:34',"Have you been treated by a doctor?","Yes, I've been seeing Dr. Han at SF Sports Medicine, twice a week.")},
+        {label:'TREATMENT CADENCE',value:'Tue + Thu, weekly',phi:true,confidence:96,source:T('01:42',"How often are you going in?","Tuesdays and Thursdays. Started the week after the accident.")},
+        {label:'SYMPTOM TRAJECTORY',value:'Improving slowly; ROM still limited',phi:true,confidence:91,source:T('02:04',"How is it feeling now?","Better than it was, but my range of motion isn't what it used to be. Dr. Han says it'll take a while.")},
+        {label:'ALREADY REPRESENTED',value:'No',confidence:100,source:T('02:48',"Are you working with any other attorney on this?","No — you're the first firm I've called.")},
+        {label:'CONSULT BOOKED',value:'Mon Apr 14 at 10:00 AM',confidence:100,source:T('14:22',"I have Monday at 10am or Tuesday at 2pm. Which works for you?","Monday at 10 is great.")},
+      ],
+      inputs:[
+        {label:'CASE',value:run.case,icon:'Doc'},
+        {label:'CALL DURATION',value:'18 min',icon:'Clock'},
+        {label:'CALLER PHONE',value:'+1 (424) 555-0100',icon:'Phone'},
+      ],
+      steps:[
+        {label:'Stream caller audio',duration:'1.0s',status:'success'},
+        {label:'Transcribe + extract fields',duration:'1.2s',status:'success'},
+        {label:'CRM conflict + SOL check',duration:'1.0s',status:'success'},
+      ],
+    };
+  }
+
+  /* Depo Prep — full visual fidelity for CVSA-1189 */
+  if(agentId==='depo-prep'&&run.case==='CVSA-1189'){
+    const C=(field,excerpt)=>({type:'case_file',field,excerpt,document:'CVSA-1189 case file'});
+    return {
+      runId,
+      outputs:[
+        {label:'DEPONENT NAME',value:'Maria Lopez',phi:true,confidence:100,source:C('Plaintiff','Plaintiff: Maria Elena Lopez (DOB 1991-04-22), residing at 1244 Mariposa St, San Francisco, CA.')},
+        {label:'DEPONENT TYPE',value:'Plaintiff',confidence:100,source:C('Case role','Maria Lopez is named as the plaintiff in CVSA-1189, filed 2025-03-22 in San Francisco Superior Court.')},
+        {label:'QUESTION COUNT',value:'127',confidence:null,source:null},
+      ],
+      questions:[
+        {n:1,text:"Ms. Lopez, when you spoke to Officer Martinez at the scene, do you recall telling him you were looking for your phone?",flag:'contradiction'},
+        {n:2,text:"In your interrogatory responses, you stated you were not using your phone at the time of impact. Is that accurate?",flag:'contradiction'},
+        {n:3,text:"Can you explain the difference between what you told the officer and what you stated in your interrogatories?",flag:'contradiction'},
+        {n:4,text:"At approximately what speed were you traveling just before the collision?",flag:'discrepancy'},
+        {n:5,text:"Were you cited at the scene? And do you know what the citation was for?",flag:'liability'},
+        {n:6,text:"When did you first seek medical treatment after the accident?",flag:'medical'},
+        {n:7,text:"Why didn't you seek medical attention for four months after the accident?",flag:'medical'},
+        {n:8,text:"Did you take any photographs at the scene of the accident?",flag:'evidence'},
+        {n:9,text:"Ms. Lopez, what is your educational background?",flag:'standard'},
+        {n:10,text:"Have you ever been involved in any other motor vehicle accidents?",flag:'standard'},
+        {n:11,text:"Have you ever been convicted of a crime?",flag:'standard'},
+        {n:12,text:"Is the $45,000 future medical cost estimate based on you returning to full-time work?",flag:'damages'},
+      ],
+      inputs:[
+        {label:'CASE',value:run.case,icon:'Doc'},
+        {label:'DEPOSITION SAMPLES',value:'Plaintiff Depositions (23 files)',icon:'Layers'},
+        {label:'DEPONENT TYPE',value:'Plaintiff',icon:'T'},
+      ],
+      steps:[
+        {label:'Load case context',duration:'1.2s',status:'success'},
+        {label:'Retrieve depo samples',duration:'0.8s',status:'success'},
+        {label:'Find weaknesses & generate questions',duration:'16.2s',status:'success'},
+      ],
+    };
+  }
+
+  /* Generic detail — derived from run.output.meta */
+  const outputs=(run.output?.meta||[]).map(([k,v])=>({label:k,value:v,type:/^[\d$%]/.test(v)?'number':'text'}));
+  if(run.output?.type==='doc') outputs.unshift({label:'Document',value:run.output.name,type:'doc'});
+  const stepsByAgent={
+    'demand-letter':[{label:'Load case + medical chronology',duration:'2.4s',status:'success'},{label:'Calculate multiplier & damages',duration:'4.1s',status:'success'},{label:'Draft demand letter',duration:'31.6s',status:'success'},{label:'Apply firm formatting',duration:'4.0s',status:'success'}],
+    'medchron':[{label:'Parse uploaded records',duration:'3.2s',status:'success'},{label:'Build provider timeline',duration:'8.4s',status:'success'},{label:'Detect treatment gaps',duration:'6.6s',status:'success'}],
+    'voice-intake':[{label:'Stream caller audio',duration:'1.0s',status:'success'},{label:'Transcribe + extract',duration:'1.2s',status:'success'},{label:'CRM conflict + SOL check',duration:'1.0s',status:'success'}],
+    'discovery-response':[{label:'Load case file',duration:'2.1s',status:'success'},{label:'Match attorney objection KB',duration:'4.6s',status:'success'},{label:'Draft responses',duration:'11.1s',status:'success'}],
+    'depo-prep':[{label:'Load case context',duration:'1.2s',status:'success'},{label:'Retrieve depo samples',duration:'0.8s',status:'success'},{label:'Find weaknesses & generate questions',duration:'16.2s',status:'success'}],
+    'sol-monitor':[{label:'Pull active matter list',duration:'18.2s',status:'success'},{label:'Compute days to SOL',duration:'42.0s',status:'success'},{label:'Trigger alerts + email recap',duration:'1m 14s',status:'success'}],
+  };
+  return {
+    runId,
+    outputs,
+    inputs:[{label:'CASE',value:run.case,icon:'Doc'}].concat(
+      def&&def.isVoice?[{label:'AGENT',value:def.label+' Agent',icon:'Bot'}]:[]),
+    steps:stepsByAgent[agentId]||[{label:'Run agent',duration:run.duration||'—',status:run.status==='failed'?'failed':'success'}],
+  };
+}
+
+function SourceModal({ output, onClose }){
+  if(!output||!output.source) return null;
+  const s=output.source;
+  return h('div',{onClick:e=>e.target===e.currentTarget&&onClose(),
+    className:'fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-8'},
+    h('div',{className:'bg-white rounded-[12px] border border-gray-200 shadow-xl w-full max-w-lg overflow-hidden'},
+      h('div',{className:'px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3'},
+        h('div',{className:'min-w-0'},
+          h('p',{className:'text-sm font-semibold text-zinc-900'},output.label),
+          h('p',{className:'text-[11px] text-zinc-400 mt-0.5'},
+            s.type==='transcript'?`Call transcript · ${s.callId} · ${s.timestamp}`:
+            s.type==='case_file'?`Case file · ${s.document} · ${s.field}`:
+            s.type==='document'?`Document · ${s.document} · page ${s.page}`:
+            'Source')),
+        h('button',{onClick:onClose,className:'h-6 w-6 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 shrink-0'},h(IC.X))),
+      h('div',{className:'p-5'},
+        s.type==='transcript'&&h('div',{className:'space-y-3'},
+          h('div',{className:'flex items-start gap-3'},
+            h('div',{className:'w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0'},'AI'),
+            h('div',{className:'flex-1 min-w-0'},
+              h('p',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5'},`Agent · ${s.timestamp}`),
+              h('p',{className:'text-sm text-zinc-700 leading-relaxed bg-zinc-50 rounded-md px-3 py-2'},s.question))),
+          h('div',{className:'flex items-start gap-3'},
+            h('div',{className:'w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0'},'C'),
+            h('div',{className:'flex-1 min-w-0'},
+              h('p',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5'},'Caller'),
+              h('p',{className:'text-sm text-zinc-900 leading-relaxed bg-emerald-50 rounded-md px-3 py-2'},`"${s.answer}"`))),
+          h('div',{className:'flex items-center justify-between pt-2 border-t border-gray-100 mt-3'},
+            h('div',{className:'flex items-center gap-1.5 text-[11px] text-zinc-400'},
+              h(IC.Phone),`Heard at ${s.timestamp}`),
+            h('button',{className:'flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800'},
+              h(IC.Play),'Play audio'))),
+        s.type==='case_file'&&h('div',{className:'space-y-2'},
+          h('p',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider'},`Excerpt · ${s.field}`),
+          h('p',{className:'text-sm text-zinc-700 leading-relaxed bg-zinc-50 rounded-md px-3 py-3 border-l-2 border-blue-300'},s.excerpt),
+          h('div',{className:'flex items-center justify-end pt-2 border-t border-gray-100 mt-3'},
+            h('button',{className:'flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800'},
+              h(IC.Doc),`Open ${s.document}`))),
+        s.type==='document'&&h('div',{className:'space-y-2'},
+          h('p',{className:'text-[10px] font-semibold text-zinc-400 uppercase tracking-wider'},`Page ${s.page}`),
+          h('p',{className:'text-sm text-zinc-700 leading-relaxed bg-zinc-50 rounded-md px-3 py-3 border-l-2 border-blue-300'},s.excerpt||''),
+          h('div',{className:'flex items-center justify-end pt-2 border-t border-gray-100 mt-3'},
+            h('button',{className:'flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800'},
+              h(IC.Doc),`Open ${s.document}`))))));
+}
+
+function OutputCard({ output, onSourceClick }){
+  const conf=output.confidence;
+  const confCls=conf==null?'':conf>=95?'bg-green-50 text-green-700 border-green-200':conf>=90?'bg-emerald-50 text-emerald-700 border-emerald-200':conf>=80?'bg-amber-50 text-amber-700 border-amber-200':'bg-rose-50 text-rose-700 border-rose-200';
+  return h('div',{className:'rounded-[10px] border border-gray-200 bg-white p-4'},
+    h('div',{className:'flex items-center justify-between gap-3 mb-2'},
+      h('div',{className:'flex items-center gap-2 flex-wrap'},
+        h('span',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500'},output.label),
+        output.phi&&h('span',{className:'inline-flex items-center px-1 rounded text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200'},'PHI'),
+        conf!=null&&h('span',{className:`inline-flex items-center px-1.5 rounded text-[10px] font-semibold border ${confCls}`},conf+'%')),
+      output.source&&h('button',{onClick:()=>onSourceClick(output),
+        className:'flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 transition-colors shrink-0'},
+        'Source',
+        h('svg',{viewBox:'0 0 24 24',className:'h-2.5 w-2.5',fill:'none',stroke:'currentColor',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'},
+          h('path',{d:'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'}),
+          h('polyline',{points:'15 3 21 3 21 9'}),
+          h('line',{x1:10,y1:14,x2:21,y2:3})))),
+    h('p',{className:'text-base text-zinc-900'},output.value));
+}
+
+function RunDetailPage({ run, agentId, onBack }){
+  const def=AGENT_BY_ID[agentId];
+  const detail=getRunDetail(run,agentId);
+  const Ico=IC[def.icon]||IC.Bot;
+  const [flagFilter,setFlagFilter]=useState('all');
+  const [qSearch,setQSearch]=useState('');
+  const [sourceOpen,setSourceOpen]=useState(null);
+
+  /* tally flag counts if questions present */
+  const flagCounts={};
+  (detail.questions||[]).forEach(q=>{flagCounts[q.flag]=(flagCounts[q.flag]||0)+1;});
+  const filteredQ=(detail.questions||[]).filter(q=>(flagFilter==='all'||q.flag===flagFilter)&&(!qSearch||q.text.toLowerCase().includes(qSearch.toLowerCase())));
+
+  return h('div',{className:'space-y-4'},
+    /* Header bar */
+    h('div',{className:'flex items-center gap-3 flex-wrap'},
+      h('button',{onClick:onBack,className:'h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 hover:bg-zinc-50 transition-colors text-zinc-500'},h(IC.Back)),
+      h('div',{className:`w-7 h-7 rounded-md flex items-center justify-center border ${def.iconBg} ${def.iconBd} ${def.iconTx} shrink-0`},h(Ico)),
+      h('span',{className:'text-base font-semibold text-zinc-900'},def.label),
+      h('span',{className:'text-zinc-300'},'/'),
+      h('span',{className:'text-sm font-mono text-zinc-500'},detail.runId),
+      h(StatusPill,{status:run.status}),
+      h('div',{className:'flex-1'}),
+      h(Btn,{variant:'outline',size:'sm'},h(IC.Copy),'Copy'),
+      h(Btn,{variant:'outline',size:'sm'},h(IC.Refresh),'Re-run'),
+      h(Btn,{variant:'outline',size:'sm'},h(IC.FetchI),'Download')),
+
+    /* Body grid */
+    h('div',{className:'grid grid-cols-3 gap-4'},
+      /* Left: outputs + questions */
+      h('div',{className:'col-span-2 space-y-4'},
+        h('div',null,
+          h('p',{className:'text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500 mb-2'},
+            'OUTPUTS ',h('span',{className:'text-zinc-300 font-normal normal-case tracking-normal'},'· extractions from this run')),
+          h('div',{className:'space-y-2'},
+            detail.outputs.map((o,i)=>h(OutputCard,{key:i,output:o,onSourceClick:setSourceOpen})))),
+
+        /* Questions table (only if present) */
+        detail.questions&&h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+          h('div',{className:'px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3'},
+            h('div',{className:'flex items-center gap-2 min-w-0'},
+              h('div',{className:'w-7 h-7 rounded-md bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center shrink-0'},h(IC.Layers)),
+              h('div',{className:'min-w-0'},
+                h('div',{className:'flex items-center gap-2 flex-wrap'},
+                  h('p',{className:'text-sm font-semibold text-zinc-900'},'Questions'),
+                  h(Tag,{color:'purple'},'Records · 4 columns'),
+                  h('span',{className:'text-[11px] text-zinc-400'},`${detail.questions.length} total · showing ${filteredQ.length}`)),
+                h('p',{className:'text-[11px] text-zinc-400 mt-0.5'},'One row per question — the core deliverable'))),
+            h(Btn,{variant:'outline',size:'sm'},h(IC.FetchI),'CSV')),
+
+          /* Search + filters */
+          h('div',{className:'px-4 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap'},
+            h('div',{className:'relative w-56'},
+              h('input',{value:qSearch,onChange:e=>setQSearch(e.target.value),placeholder:'Search questions…',
+                className:'w-full h-7 rounded-md border border-gray-200 pl-7 pr-2 text-xs outline-none focus:border-blue-400'}),
+              h('svg',{viewBox:'0 0 24 24',className:'absolute left-2 top-1.5 h-3.5 w-3.5 text-zinc-400 pointer-events-none',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},
+                h('circle',{cx:11,cy:11,r:8}),h('path',{d:'m21 21-4.3-4.3'}))),
+            h('button',{onClick:()=>setFlagFilter('all'),
+              className:`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors ${flagFilter==='all'?'bg-blue-50 border-blue-300 text-blue-700':'bg-white border-gray-200 text-zinc-600 hover:border-gray-300'}`},
+              'All ',h('span',{className:'opacity-60'},detail.questions.length)),
+            Object.keys(FLAG_STYLE).filter(f=>flagCounts[f]).map(f=>{
+              const fs=FLAG_STYLE[f];const active=flagFilter===f;
+              return h('button',{key:f,onClick:()=>setFlagFilter(active?'all':f),
+                className:`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors ${active?fs.cls:'bg-white border-gray-200 text-zinc-600 hover:border-gray-300'}`},
+                h(fs.ico),fs.label,h('span',{className:'opacity-60'},flagCounts[f]));
+            })),
+
+          /* Question rows */
+          h('table',{className:'w-full text-sm'},
+            h('thead',{className:'bg-zinc-50/60 border-b border-gray-100'},
+              h('tr',null,
+                h('th',{className:'text-left px-4 py-2 font-medium text-zinc-400 text-[10px] uppercase tracking-[0.08em] w-10'},'#'),
+                h('th',{className:'text-left px-2 py-2 font-medium text-zinc-400 text-[10px] uppercase tracking-[0.08em]'},'Question'),
+                h('th',{className:'text-left px-3 py-2 font-medium text-zinc-400 text-[10px] uppercase tracking-[0.08em] w-32'},'Flag'))),
+            h('tbody',null,
+              filteredQ.map(q=>{
+                const fs=FLAG_STYLE[q.flag]||FLAG_STYLE.standard;
+                return h('tr',{key:q.n,className:'border-b border-gray-50 last:border-0 hover:bg-zinc-50/30'},
+                  h('td',{className:'px-4 py-2.5 text-zinc-400 text-xs tabular-nums'},q.n),
+                  h('td',{className:'px-2 py-2.5 text-sm text-zinc-800 leading-relaxed'},q.text),
+                  h('td',{className:'px-3 py-2.5'},
+                    h('span',{className:`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${fs.cls}`},
+                      h(fs.ico),fs.label)));
+              }))))),
+
+      /* Right: sidebar */
+      h('div',{className:'space-y-3'},
+        /* Inputs */
+        h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+          h('div',{className:'px-4 py-3 border-b border-gray-100'},
+            h('p',{className:'text-sm font-semibold text-zinc-900'},'Inputs'),
+            h('p',{className:'text-[11px] text-zinc-400 mt-0.5'},'What was passed in')),
+          h('div',{className:'px-4 py-3 space-y-3'},
+            detail.inputs.map((inp,i)=>{
+              const InIco=IC[inp.icon]||(()=>h('span',{className:'text-[10px] font-bold text-zinc-400'},'T'));
+              return h('div',{key:i},
+                h('div',{className:'flex items-center gap-1.5 text-[10px] font-semibold text-zinc-400 tracking-[0.08em] mb-1'},
+                  h(InIco),inp.label),
+                h('p',{className:'text-sm text-zinc-800'},inp.value));
+            }))),
+
+        /* Timeline */
+        h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+          h('div',{className:'px-4 py-3 border-b border-gray-100'},
+            h('p',{className:'text-sm font-semibold text-zinc-900'},'Timeline')),
+          h('div',{className:'px-4 py-3 text-sm space-y-2'},
+            h('div',{className:'flex items-center justify-between'},
+              h('span',{className:'text-zinc-500 text-xs'},'Started'),
+              h('span',{className:'text-zinc-800 text-xs'},run.started)),
+            h('div',{className:'flex items-center justify-between'},
+              h('span',{className:'text-zinc-500 text-xs'},'Duration'),
+              h('span',{className:'text-zinc-800 text-xs tabular-nums'},run.duration||'—')),
+            h('div',{className:'flex items-center justify-between'},
+              h('span',{className:'text-zinc-500 text-xs'},'Triggered by'),
+              h('div',{className:'flex items-center gap-1.5'},
+                h(Avatar,{name:run.by.name,color:run.by.color}),
+                h('span',{className:'text-zinc-800 text-xs'},run.by.name))),
+            h('div',{className:'flex items-center justify-between'},
+              h('span',{className:'text-zinc-500 text-xs'},'Case'),
+              h(CasePill,{caseId:run.case})))),
+
+        /* Execution log */
+        h('div',{className:'rounded-[10px] border border-gray-200 bg-white overflow-hidden'},
+          h('div',{className:'px-4 py-3 border-b border-gray-100'},
+            h('p',{className:'text-sm font-semibold text-zinc-900'},'Execution log'),
+            h('p',{className:'text-[11px] text-zinc-400 mt-0.5'},`${detail.steps.length} steps`)),
+          h('div',{className:'px-4 py-3 space-y-2'},
+            detail.steps.map((s,i)=>h('div',{key:i,className:'flex items-start gap-2 text-sm'},
+              h('span',{className:'text-[10px] font-bold text-zinc-400 tabular-nums w-3 mt-0.5'},i+1),
+              h('span',{className:`shrink-0 mt-1 w-3 h-3 rounded-full flex items-center justify-center ${s.status==='failed'?'bg-rose-100 text-rose-600':'bg-emerald-100 text-emerald-600'}`},
+                h('svg',{viewBox:'0 0 24 24',className:'h-2 w-2',fill:'none',stroke:'currentColor',strokeWidth:3,strokeLinecap:'round',strokeLinejoin:'round'},
+                  h('path',{d:s.status==='failed'?'M18 6 6 18M6 6l12 12':'M20 6 9 17l-5-5'}))),
+              h('span',{className:'flex-1 text-xs text-zinc-700 leading-tight'},s.label),
+              h('span',{className:'text-[10px] text-zinc-400 tabular-nums shrink-0'},s.duration))))))),
+    sourceOpen&&h(SourceModal,{output:sourceOpen,onClose:()=>setSourceOpen(null)}));
+}
+
+function RunsTab({ agentId }){
+  const runs=AGENT_RUNS[agentId]||[];
+  const [search,setSearch]=useState('');
+  const [range,setRange]=useState('24h');
+  const [selectedRunId,setSelectedRunId]=useState(null);
+  const selectedRun=runs.find(r=>r.id===selectedRunId);
+  if(selectedRun){
+    return h(RunDetailPage,{run:selectedRun,agentId,onBack:()=>setSelectedRunId(null)});
+  }
+  const filtered=runs.filter(r=>!search||r.case.toLowerCase().includes(search.toLowerCase()));
+  return h('div',null,
+    h('div',{className:'flex items-center gap-2 mb-3'},
+      h('div',{className:'relative max-w-xs flex-1'},
+        h('input',{value:search,onChange:e=>setSearch(e.target.value),placeholder:'Search by case, run ID…',
+          className:'w-full h-8 rounded-md border border-gray-200 pl-8 pr-3 text-xs outline-none focus:border-blue-400'}),
+        h('svg',{viewBox:'0 0 24 24',className:'absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400 pointer-events-none',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},
+          h('circle',{cx:11,cy:11,r:8}),h('path',{d:'m21 21-4.3-4.3'}))),
+      h('select',{value:range,onChange:e=>setRange(e.target.value),
+        className:'h-8 rounded-md border border-gray-200 px-2 text-xs bg-white outline-none'},
+        [{v:'24h',l:'Last 24 hours'},{v:'7d',l:'Last 7 days'},{v:'30d',l:'Last 30 days'},{v:'all',l:'All time'}].map(o=>h('option',{key:o.v,value:o.v},o.l))),
+      h('div',{className:'flex-1'}),
+      h(Btn,{variant:'primary',size:'sm'},h(IC.Plus),'New run')),
+    h('div',{className:'rounded-[10px] border border-gray-200 overflow-hidden bg-white'},
+      h('div',{className:'overflow-x-auto'},
+        h('table',{className:'w-full text-sm'},
+          h('thead',{className:'bg-zinc-50 border-b border-gray-100'},
+            h('tr',null,['Status','Case','Output','Started','Duration','Triggered by'].map(c=>
+              h('th',{key:c,className:'text-left px-3 py-2 font-medium text-zinc-400 text-[10px] uppercase tracking-[0.08em] whitespace-nowrap'},c)))),
+          h('tbody',null,
+            filtered.length===0
+              ?h('tr',null,h('td',{colSpan:6,className:'px-3 py-12 text-center text-sm text-zinc-400'},'No runs to show'))
+              :filtered.map(r=>h('tr',{key:r.id,onClick:()=>setSelectedRunId(r.id),className:'border-b border-gray-50 last:border-0 hover:bg-zinc-50/50 cursor-pointer'},
+                  h('td',{className:'px-3 py-2.5 whitespace-nowrap'},h(StatusPill,{status:r.status})),
+                  h('td',{className:'px-3 py-2.5 whitespace-nowrap'},h(CasePill,{caseId:r.case})),
+                  h('td',{className:'px-3 py-2.5'},h(OutputCell,{output:r.output,status:r.status})),
+                  h('td',{className:'px-3 py-2.5 text-zinc-500 text-xs whitespace-nowrap'},r.started),
+                  h('td',{className:'px-3 py-2.5 text-zinc-700 text-xs tabular-nums whitespace-nowrap'},r.duration||'—'),
+                  h('td',{className:'px-3 py-2.5 whitespace-nowrap'},
+                    h('div',{className:'flex items-center gap-1.5'},
+                      h(Avatar,{name:r.by.name,color:r.by.color}),
+                      h('span',{className:'text-xs text-zinc-700'},r.by.name)))))))))
+    ,
+    h('div',{className:'flex items-center justify-between mt-2 text-[11px] text-zinc-400'},
+      h('span',null,`Showing ${filtered.length} of ${runs.length} run${runs.length!==1?'s':''}`),
+      h('span',{className:'flex items-center gap-1.5'},
+        h('span',{className:'w-1.5 h-1.5 rounded-full bg-green-500'}),'Live · 10s auto-refresh')));
+}
+
+function AIAgentCard({ def, onClick }) {
+  const Ico=IC[def.icon]||IC.Bot;
+  return h('div',{onClick,className:'group bg-white rounded-[10px] border border-gray-200 p-5 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all flex flex-col'},
+    h('div',{className:`w-9 h-9 rounded-lg flex items-center justify-center border ${def.iconBg} ${def.iconBd} ${def.iconTx} mb-3`},h(Ico)),
+    h('p',{className:'text-sm font-semibold text-zinc-900 group-hover:text-blue-800 transition-colors mb-1.5'},def.label+' Agent'),
+    h('p',{className:'text-xs text-zinc-500 leading-relaxed mb-4 flex-1'},def.description),
+    h('div',{className:'flex items-center gap-2 text-xs'},
+      h('span',{className:`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${def.status==='active'?'bg-green-50 text-green-700 border-green-200':'bg-zinc-100 text-zinc-500 border-zinc-200'}`},
+        def.status==='active'?'Active':'Paused'),
+      def.runCount!=null&&h('span',{className:'text-zinc-400'},`${def.runCount} ${def.runUnit||'runs'} this month`)));
+}
+
+function AIAgentsListPage(){
+  const [selectedId,setSelectedId]=useState(null);
+  if(selectedId){
+    return h('div',{className:'space-y-4'},
+      h('button',{onClick:()=>setSelectedId(null),className:'flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 transition-colors'},h(IC.Back),'All agents'),
+      h(AgentConfigPage,{agentId:selectedId,key:selectedId}));
+  }
+  return h('div',null,
+    h('div',{className:'flex items-start justify-between mb-6'},
+      h('div',null,
+        h('h1',{className:'text-xl font-semibold text-zinc-900'},'AI Agents'),
+        h('p',{className:'text-sm text-zinc-500 mt-0.5'},'Specialized agents that handle a single task')),
+      h(Btn,{variant:'primary'},h(IC.Plus),'New Agent')),
+    h('div',{className:'grid grid-cols-2 lg:grid-cols-4 gap-4'},
+      AGENT_DEFS.map(d=>h(AIAgentCard,{key:d.id,def:d,onClick:()=>setSelectedId(d.id)}))));
+}
+
+function AgentConfigPage({ agentId }) {
+  const def=AGENT_BY_ID[agentId];
+  if(!def) return h('div',null,'Unknown agent');
+  const [name,setName]=useState(def.defaultIdentity?.name||def.label);
+  const [voice,setVoice]=useState(def.defaultIdentity?.voice||'female');
+  const [greeting,setGreeting]=useState(def.defaultIdentity?.greeting||'');
+  const [prompt,setPrompt]=useState(def.defaultPrompt||'');
+  const [active,setActive]=useState(true);
+  const [saved,setSaved]=useState(false);
+  const [tab,setTab]=useState('editor');
+  const save=()=>{ setSaved(true);setTimeout(()=>setSaved(false),2000); };
+  const Ico=IC[def.icon]||IC.Bot;
+
+  return h('div',{className:'space-y-6'},
+    /* Header */
+    h('div',{className:'flex items-start gap-4'},
+      h('div',{className:`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border ${def.iconBg} ${def.iconBd} ${def.iconTx}`},h(Ico)),
+      h('div',{className:'flex-1 min-w-0'},
+        h('h1',{className:'text-xl font-semibold text-zinc-900'},def.label+' Agent'),
+        h('p',{className:'text-sm text-zinc-500 mt-0.5'},def.description)),
+      h('button',{onClick:()=>setActive(!active),
+        className:`h-7 px-2.5 rounded-md border text-[11px] font-medium transition-colors shrink-0 ${active?'bg-green-50 text-green-700 border-green-200':'bg-zinc-100 text-zinc-500 border-zinc-200'}`},
+        active?'Active':'Paused')),
+
+    /* Tabs */
+    h('div',{className:'border-b border-gray-200 -mt-2'},
+      h('div',{className:'flex'},
+        [{id:'editor',label:'Editor'},{id:'runs',label:'Runs',count:(AGENT_RUNS[agentId]||[]).length}].map(t=>
+          h('button',{key:t.id,onClick:()=>setTab(t.id),
+            className:`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab===t.id?'border-blue-700 text-blue-700':'border-transparent text-zinc-500 hover:text-zinc-800'}`},
+            t.label,
+            t.count!=null&&h('span',{className:`text-[10px] font-semibold rounded-full px-1.5 py-px ${tab===t.id?'bg-blue-100 text-blue-700':'bg-zinc-100 text-zinc-500'}`},t.count))))),
+
+    /* Editor tab */
+    tab==='editor'&&h('div',{className:'space-y-6 max-w-2xl'},
+      h(SectionCard,{title:'Agent Identity',sub:'How the agent introduces itself to callers'},
+        h('div',{className:'space-y-4'},
+          h('div',{className:'grid grid-cols-2 gap-4'},
+            h('div',null,
+              h(FLabel,{sub:'The name the agent uses when greeting callers'},'Agent name'),
+              h(Input,{value:name,onChange:setName,placeholder:def.label})),
+            h('div',null,
+              h(FLabel,{sub:'Voice used for all languages unless overridden'},'Default voice'),
+              h(FSel,{value:voice,onChange:setVoice,options:[{value:'female',label:'Female'},{value:'male',label:'Male'}]}))),
+          h('div',null,
+            h(FLabel,{sub:'First thing the agent says when a caller connects'},'Greeting script'),
+            h(Textarea,{value:greeting,onChange:setGreeting,rows:3,placeholder:`Hi, I'm ${name||def.label}…`}),
+            h('p',{className:'text-[10px] text-zinc-400 mt-1.5'},'Use {client_name} to personalise the greeting if the caller is already in your CRM.')))),
+      h(SectionCard,{title:'System Prompt',sub:'The instructions that define this agent\'s behaviour'},
+        h('div',{className:'space-y-2'},
+          h(Textarea,{value:prompt,onChange:setPrompt,rows:10,placeholder:'Describe what this agent should do…'}),
+          h('div',{className:'flex items-center justify-between text-[10px] text-zinc-400'},
+            h('span',null,prompt.length+' characters'),
+            h('button',{onClick:()=>setPrompt(def.defaultPrompt||''),className:'hover:text-blue-700 transition-colors'},'Reset to default')))),
+      h('div',{className:'flex justify-end'},
+        h(Btn,{onClick:save,variant:'primary',className:saved?'bg-emerald-600 border-emerald-600':''},
+          saved?h(IC.Check):null,saved?'Saved':'Save Changes'))),
+
+    /* Runs tab */
+    tab==='runs'&&h(RunsTab,{agentId}));
+}
+
+/* ════════ SIDEBAR ══════════════════════════════════ */
+const NAV_SECTIONS=[
+  {section:'Account',items:[{id:'acct-general',label:'General',icon:'Settings'}]},
+  {section:'Organisation',items:[
+    {id:'org-general',label:'General',icon:'Settings'},
+    {id:'team',label:'Team Members',icon:'Users'},
+    {id:'fileflow',label:'FileFlow Inbox',icon:'Inbox'},
+    {id:'lithub',label:'Lithub',icon:'Scale'},
+    {id:'api-keys',label:'API Keys',icon:'Key'},
+    {id:'sharing',label:'Sharing',icon:'Share'},
+  ]},
+  {section:'Agents',items:[
+    {id:'voice-agent',label:'Voice',icon:'Phone'},
+    {id:'ai-agents',label:'Agents',icon:'Bot'},
+    {id:'agent-workflows',label:'Workflows',icon:'Zap'},
+  ]},
+];
+const BREADCRUMBS={'acct-general':['Settings','General'],'org-general':['Settings','General'],'team':['Settings','Team Members'],'fileflow':['Settings','FileFlow Inbox'],'lithub':['Settings','Lithub'],'api-keys':['Settings','API Keys'],'sharing':['Settings','Sharing'],'voice-agent':['Settings','Voice'],'ai-agents':['Settings','Agents'],'agent-workflows':['Settings','Workflows']};
+
+function Sidebar({ active,setActive }) {
+  return h('aside',{className:'w-48 shrink-0 border-r border-gray-200 bg-white flex flex-col h-full overflow-y-auto'},
+    h('a',{href:'#',className:'flex items-center gap-2 px-4 py-4 text-sm font-medium text-zinc-700 hover:text-zinc-900 border-b border-gray-100 transition-colors shrink-0'},h(IC.Back),'Back to app'),
+    h('nav',{className:'flex-1 py-3'},NAV_SECTIONS.map(sec=>
+      h('div',{key:sec.section,className:'mb-5'},
+        h('p',{className:'px-4 mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400'},sec.section),
+        sec.items.map(item=>{
+          const IcoComp=IC[item.icon]; const isActive=item.id===active;
+          return h('button',{key:item.id,onClick:()=>setActive(item.id),
+            className:`w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left transition-colors ${isActive?'bg-blue-50 text-blue-800 font-medium':'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'}`},
+            IcoComp&&h(IcoComp),item.label);
+        })))));
+}
+
+/* ════════ ROOT ═════════════════════════════════════ */
+function App() {
+  const [nav,setNav]=useState('voice-agent');
+  const crumbs=BREADCRUMBS[nav]||['Settings'];
+  const renderPage=()=>{
+    switch(nav){
+      case 'org-general':  return h(OrgGeneralPage,null);
+      case 'fileflow':     return h(FileFlowInboxPage,null);
+      case 'voice-agent':  return h(VoiceAgentPage,null);
+      case 'ai-agents':    return h(AIAgentsListPage,null);
+      case 'agent-workflows': return h(AgentWorkflowsPage,null);
+      default:
+        return h('div',null,
+          h('h1',{className:'text-xl font-semibold text-zinc-900 mb-6'},crumbs[crumbs.length-1]),
+          h('div',{className:'rounded-[10px] border border-dashed border-gray-200 bg-zinc-50 p-12 text-center'},h('p',{className:'text-sm text-zinc-400'},crumbs[crumbs.length-1]+' — coming soon')));
+    }
+  };
+  return h('div',{className:'flex h-screen bg-white'},
+    h(Sidebar,{active:nav,setActive:setNav}),
+    h('div',{className:'flex-1 min-w-0 overflow-auto bg-white'},
+      h('div',{className:'max-w-[860px] mx-auto px-8 py-8'},
+        h('div',{className:'flex items-center gap-1.5 text-sm text-zinc-500 mb-6'},crumbs.map((c,i)=>
+          h('span',{key:c,className:'flex items-center gap-1.5'},i>0&&h('span',{className:'text-zinc-300'},'›'),h('span',{className:i===crumbs.length-1?'text-zinc-900 font-medium':''},c)))),
+        renderPage())));
+}
+ReactDOM.render(h(App,null),document.getElementById('root'));
+</script>
+</body>
+</html>

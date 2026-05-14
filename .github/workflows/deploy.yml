@@ -22,8 +22,25 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+
+      # ── Main Next.js app → out/ ──────────────────────────────────────
       - run: npm ci
       - run: NEXT_PUBLIC_BASE_PATH="/veritec-ui-2" npm run build
+
+      # ── Agents-workflows Vite app → out/agents/ ──────────────────────
+      - name: Install agents-workflows deps
+        working-directory: agents-workflows
+        run: npm ci
+      - name: Build agents-workflows
+        working-directory: agents-workflows
+        env:
+          VERITEC_BASE: /veritec-ui-2/agents/
+        run: npm run build
+      - name: Merge agents-workflows dist into out/
+        run: |
+          mkdir -p out/agents
+          cp -r agents-workflows/dist/. out/agents/
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
